@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<!-- 華夏風雲錄 — 歷史卡牌對決 | 開發者：Antigravity -->
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>華夏風雲錄 — 歷史卡牌對戰</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- 載入畫面 (Loading Screen) -->
+<div id="loading-screen" class="hidden">
+    <div class="loading-content">
+        <span class="loading-dragon">🐉</span>
+        <h1 class="loading-title">華夏風雲錄</h1>
+        <p class="loading-sub">PREPARING FOR GLORY</p>
+        <div class="loading-bar-wrap"><div id="loading-bar"></div></div>
+    </div>
+</div>
+
+<!-- 遊戲結束畫面 (Game Over Screen) -->
+<div id="game-over-screen" class="hidden">
+    <div class="gameover-content">
+        <div id="gameover-icon">🏆</div>
+        <h1 id="gameover-title">勝利！</h1>
+        <p id="gameover-sub">您已稱霸華夏大陸。</p>
+        <button class="gameover-btn" onclick="location.reload()">再戰一局</button>
+    </div>
+</div>
+
+<!-- 等待室 (Room Wait Screen) -->
+<div id="room-wait-screen" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.95); display:flex; align-items:center; justify-content:center; z-index:8600;">
+    <div class="wait-wrap" style="width:400px;text-align:center;background:rgba(12,18,28,0.95);padding:32px;border-radius:20px;border:1px solid rgba(212,175,55,0.3);">
+        <h2 style="color:var(--gold); margin-bottom:20px;">戰鬥待命</h2>
+        <div style="font-size:48px; font-family:monospace; color:#fff; letter-spacing:10px; margin:20px 0; border:2px dashed var(--gold); padding:20px;" id="wait-room-code">-----</div>
+        <p id="wait-status" style="margin-bottom:20px;">正在等待對方加入...</p>
+        <div id="wait-countdown-wrap" style="color:#c0392b; font-weight:900; margin-bottom:20px;">超時切換 AI：<span id="wait-countdown">30</span>s</div>
+        <button id="btn-cancel-wait" class="lobby-btn" style="background:#333; color:#fff; border-color:#555;">取消等待</button>
+    </div>
+</div>
+
+<!-- 史詩開場畫面 -->
+<div id="intro-screen">
+    <div id="intro-ui">
+        <div style="text-align:center; padding-top:40px;">
+            <h1 class="intro-game-title">華夏風雲錄</h1>
+            <p class="intro-game-subtitle">千古英雄 · 全球對決</p>
+        </div>
+
+        <div id="river-of-time-layer">
+            <div class="river-strip" id="river-strip">
+                <!-- 由 JS 動態注入歷史節點 -->
+            </div>
+        </div>
+
+        <div id="marvel-tokens-container">
+            <!-- 由 JS 注入漫威式英雄卡 -->
+        </div>
+
+        <button id="btn-enter-lobby" class="intro-start-btn">開 啟 征 途</button>
+    </div>
+</div>
+
+<!-- 大廳畫面 -->
+<div id="lobby-screen" class="hidden">
+    <div class="lobby-wrap">
+        <div class="lobby-logo-area">
+            <span class="loading-dragon" style="font-size:72px;">🐉</span>
+            <h1 class="lobby-title">華夏風雲錄</h1>
+            <p class="lobby-subtitle">千古英雄 · 全球對決</p>
+            <div id="lobby-silver-display" style="color:var(--gold); font-weight:900; font-size:20px; margin-top:10px; text-shadow:0 0 10px rgba(212,175,55,0.5);">💰 當前餘額: 0 兩</div>
+        </div>
+        <div class="lobby-card" style="margin-top:0;">
+            <div style="display:flex; gap:10px; margin-bottom:15px;">
+                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
+                <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
+            </div>
+            <button id="btn-vs-ai" class="lobby-btn">🤖 對決 智能 AI (單機)</button>
+            <div style="margin:20px 0; color:#555; display:flex; align-items:center; gap:10px;">
+                <hr style="flex:1; border:0; border-top:1px solid #333"> 聯網對戰 <hr style="flex:1; border:0; border-top:1px solid #333">
+            </div>
+            <button id="btn-create-room" class="lobby-btn" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:#fff; border-color:#1e3c72;">🌐 建立戰鬥房間</button>
+            <div style="display:flex; margin-top:15px; gap:10px;">
+                <input id="join-code-input" maxlength="5" placeholder="輸入 5 位代碼" style="flex:1; padding:15px; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff; font-size:18px; text-align:center; font-family:monospace;">
+                <button id="btn-join-room" class="lobby-btn" style="width:120px; margin-top:0;">加入</button>
+            </div>
+            <div id="lobby-error" class="hidden" style="margin-top:15px; color:#e74c3c; font-weight:700;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 遊戲視窗 -->
+<div id="game-container" class="hidden">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 16px; background:rgba(8,12,16,0.98); border-bottom:1px solid rgba(212,175,55,0.15);">
+        <div id="turn-indicator" class="turn-badge">🔵 載入中...</div>
+        <div style="display:flex; align-items:center; gap:20px;">
+            <span id="phase-display" style="font-size:12px; color:#888; font-weight:700;"></span>
+            <span style="font-size:11px; color:rgba(212,175,55,0.5);">華夏風雲錄</span>
+        </div>
+    </div>
+    
+    <!-- 敵方區域 HUD -->
+    <div class="player-hud" style="justify-content: space-between; z-index: 10;">
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div class="hud-avatar-opp" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">👺</div>
+            <div>
+                <div style="font-weight:900; color:#cc3333; font-size:14px;">敵軍大本營</div>
+                <div style="font-size:10px; opacity:0.6;">手牌: <span id="opp-hand-count">0</span></div>
+                <div class="monarch-hp-wrap" style="margin-top:4px;">
+                    <span class="monarch-hp-label">👺 主公</span>
+                    <div class="monarch-hp-bar-outer">
+                        <div id="opp-monarch-hp-fill" class="monarch-hp-fill opp-fill" style="width:100%"></div>
+                    </div>
+                    <span id="opp-monarch-hp" class="monarch-hp-text">--/--</span>
+                </div>
+            </div>
+        </div>
+        <div id="opp-hand-container" class="hand-container opp-hand-area">
+            <div id="opp-hand" class="hand-list"></div>
+        </div>
+        <div style="width:100px;"></div> <!-- Spacer -->
+    </div>
+    
+    <div class="battlefield-main">
+        <!-- 左側輔助區 (敵方的右側，放置敵方牌庫與墳場) -->
+        <div class="side-zone left-side">
+            <div id="opp-deck-slot" class="visual-slot deck-slot" title="敵方牌組">
+                <div class="slot-label">牌組</div>
+                <div id="opp-deck-count" class="slot-count">0</div>
+            </div>
+            <div id="opp-grave-slot" class="visual-slot grave-slot" title="敵方墳場" style="margin-top:15px;">
+                <div class="slot-label">墳場</div>
+                <div id="opp-grave-count" class="slot-count">0</div>
+            </div>
+            <div style="flex:1;"></div>
+        </div>
+
+        <div class="battlefield-container" style="flex:1; display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0;">
+            <!-- 敵方戰陣 (後排/備戰區) -->
+            <div class="battlefield" id="opp-bench-zone" style="opacity:0.8; transform:scale(0.9);">
+                <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
+            </div>
+            <!-- 敵方戰陣 (前排/戰鬥區) -->
+            <div class="battlefield" id="opp-active-zone">
+                <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
+            </div>
+            
+            <div class="battle-divider">
+                <div class="divider-text">楚 河 漢 界</div>
+            </div>
+            
+            <!-- 我方戰陣 (前排/戰鬥區) -->
+            <div class="battlefield" id="my-active-zone">
+                <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
+            </div>
+            <!-- 我方戰陣 (後排/備戰區) -->
+            <div class="battlefield" id="my-bench-zone" style="opacity:0.8; transform:scale(0.9);">
+                <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
+            </div>
+        </div>
+
+        <!-- 右側輔助區 (我方的右側，放置我方牌庫與墳場) -->
+        <div class="side-zone right-side">
+            <div style="flex:1;"></div>
+            <div id="my-grave-slot" class="visual-slot grave-slot" title="我方墳場" style="margin-bottom:15px;">
+                <div class="slot-label">墳場</div>
+                <div id="my-grave-count" class="slot-count">0</div>
+            </div>
+            <div id="my-deck-slot" class="visual-slot deck-slot interactive-deck" title="我方牌組">
+                <div class="slot-label">牌組</div>
+                <div id="my-deck-count" class="slot-count">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 我方區域 HUD -->
+    <div id="my-hand-container" class="hand-container my-hand-area">
+        <div id="my-hand" class="hand-list fan-hand"></div>
+    </div>
+
+    <div class="player-hud my-bottom-hud" style="justify-content: space-between; background:rgba(16,40,30,0.9); border-color:rgba(46,204,113,0.3); z-index: 10;">
+        <div style="display:flex; align-items:center; gap:15px; text-align:left;">
+            <div class="hud-avatar-my" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">🛡️</div>
+            <div>
+                <div style="font-weight:900; color:#2ecc71; font-size:14px;">我軍大門</div>
+                <div style="font-size:10px; opacity:0.6;">手牌: <span id="my-hand-count">0</span></div>
+                <div class="monarch-hp-wrap" style="margin-top:4px;">
+                    <span class="monarch-hp-label">👑 主公</span>
+                    <div class="monarch-hp-bar-outer">
+                        <div id="my-monarch-hp-fill" class="monarch-hp-fill my-fill" style="width:100%"></div>
+                    </div>
+                    <span id="my-monarch-hp" class="monarch-hp-text">--/--</span>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <button id="end-turn-btn" class="action-btn pulse-btn" style="width:140px; height:44px; font-size:18px;">結束回合</button>
+            <button onclick="toggleBattleLog()" style="width:44px; height:44px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#888; font-size:16px; cursor:pointer;" title="戰報">📜</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<div id="card-preview" class="hidden" style="position:fixed; left:20px; top:50%; transform:translateY(-50%); z-index:9999; pointer-events:none;"></div>
+<div id="action-hint" class="hidden" style="position:fixed; bottom:160px; left:50%; transform:translateX(-50%); background:rgba(212,175,55,0.9); color:#000; padding:8px 24px; border-radius:20px; font-weight:900; font-size:18px; z-index:1000; box-shadow:0 0 20px rgba(0,0,0,0.5);">提示訊息</div>
+<div id="skill-fx-layer" style="position:fixed; inset:0; pointer-events:none; z-index:9000;"></div>
+
+<!-- 側邊欄：社交與競價公告 (Social & Bidding Center) -->
+<div id="social-sidebar" class="glass-sidebar">
+    <button id="close-sidebar-btn" class="sidebar-close-btn" onclick="toggleSidebar()">×</button>
+    <button id="open-sidebar-btn" class="open-sidebar-trigger hidden" onclick="toggleSidebar()">‹</button>
+    
+    <div class="sidebar-tabs">
+        <button id="tab-btn-chat" class="tab-btn active" onclick="switchTab('chat')">💬 通訊<span id="chat-notif-dot" class="notif-dot hidden"></span></button>
+        <button id="tab-btn-leaderboard" class="tab-btn" onclick="switchTab('leaderboard')">⚔️ 英雄榜</button>
+        <button id="tab-btn-announcements" class="tab-btn" onclick="switchTab('announcements')">📜 皇榜</button>
+    </div>
+    
+    <div id="tab-chat" class="tab-content active">
+        <!-- 玩家暱稱 -->
+        <div class="nickname-row">
+            <span class="nickname-label">🏷️ 名號：</span>
+            <input type="text" id="nickname-input" class="nickname-input" maxlength="12" placeholder="無名大將">
+        </div>
+        <!-- 聊天模式切換 -->
+        <div class="chat-mode-toggle">
+            <button id="chat-mode-global" class="sub-tab-btn active" onclick="switchChatMode('global')">🏠 全域</button>
+            <button id="chat-mode-room" class="sub-tab-btn" onclick="switchChatMode('room')">⚔️ 房間</button>
+            <button id="chat-mode-friend" class="sub-tab-btn" onclick="switchChatMode('friend')">👤 好友</button>
+        </div>
+
+        <div id="chat-announce-board" class="announce-board">
+            <!-- 廣播區 -->
+        </div>
+
+        <div id="chat-context-header" style="background:#1a202c; padding:5px 15px; font-size:12px; color:var(--gold); border-bottom:1px solid #333; display:none;">
+            正在與 [未知好友] 私聊...
+        </div>
+
+        <!-- 好友管理與搜尋 -->
+        <div id="friend-list-area" class="friend-list-container hidden">
+            <div style="display:flex; gap:8px; padding:10px; border-bottom:1px solid #333;">
+                <button class="lobby-btn" style="flex:1; margin:0; padding:6px; font-size:12px;" onclick="openAddFriendModal()">➕ 增加好友</button>
+            </div>
+            <div id="friend-items-list">
+                <!-- 內容由 JS 渲染 -->
+            </div>
+        </div>
+
+        <div id="chat-messages" class="chat-area">
+            <div class="sys-msg">正在切換全域通訊頻道...</div>
+        </div>
+        
+        <div class="chat-input-wrapper">
+            <input type="text" id="chat-input" placeholder="運籌帷幄...">
+            <button id="btn-send-chat">發送</button>
+        </div>
+    </div>
+    
+    <!-- 英雄榜分頁 -->
+    <div id="tab-leaderboard" class="tab-content hidden">
+        <div class="leaderboard-area">
+            <h3 style="color:var(--gold); margin-bottom:15px; text-align:center; letter-spacing:2px;">⚔️ 華夏連勝英雄榜</h3>
+            <div id="leaderboard-stats-bar" style="background:rgba(212,175,55,0.1); padding:12px 16px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-around; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="text-align:center;">
+                    <div style="font-size:10px; color:#666; margin-bottom:2px;">當前連勝 (PvP)</div>
+                    <div id="my-current-streak" style="color:var(--gold); font-weight:900; font-size:24px; line-height:1;">0</div>
+                </div>
+                <div style="width:1px; height:36px; background:#333;"></div>
+                <div style="text-align:center;">
+                    <div style="font-size:10px; color:#666; margin-bottom:2px;">個人最高紀錄</div>
+                    <div id="my-best-streak" style="color:#d4af37; font-weight:900; font-size:24px; line-height:1;">0</div>
+                </div>
+                <div style="width:100%; font-size:10px; color:#444; text-align:center; margin-top:2px;">⚔ 僅計算真人對戰勝場，AI 對戰不計入</div>
+            </div>
+            <div id="leaderboard-list">
+                <!-- 排行榜由 JS 渲染 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 皇榜歷史與發布分頁 -->
+    <div id="tab-announcements" class="tab-content hidden">
+        <div class="bidding-area">
+            <h3 style="color:var(--gold); margin-bottom:10px; text-align:center;">📜 天下皇榜歷史</h3>
+            <div id="announcement-history-list" style="color:#aaa; text-align:center; padding: 10px;">
+                目前尚未有英雄躋身皇榜...
+            </div>
+        </div>
+        <button id="btn-publish-board" class="lobby-btn" style="width:100%; margin:0; padding:10px; font-size:14px;">發布皇榜 (10 銀兩)</button>
+    </div>
+</div>
+
+<!-- 聊天玩家右鍵互動選單 -->
+<div id="chat-context-menu" class="context-menu hidden">
+    <div class="ctx-menu-header" id="ctx-menu-player-name">玩家</div>
+    <button class="ctx-menu-btn" id="ctx-add-friend">🤝 加為好友</button>
+    <button class="ctx-menu-btn" id="ctx-private-msg">💬 發起私聊</button>
+    <button class="ctx-menu-btn ctx-close" id="ctx-close">✖ 關閉</button>
+</div>
+
+
+<!-- 君王選擇 Modal -->
+<div id="monarch-select-modal" class="gacha-modal hidden">
+    <div class="lobby-wrap" style="width:95vw; max-width:1200px; text-align:center; background:rgba(0,0,0,0.8); padding:40px; border-radius:30px; border:2px solid var(--gold);">
+        <h2 style="color:var(--gold); font-size:36px; margin-bottom:30px; letter-spacing:8px;">請選擇出征君主</h2>
+        <div id="monarch-select-list" class="card-grid-5" style="max-height:60vh; overflow-y:auto;"></div>
+        <div style="margin-top:40px; display:flex; gap:20px; justify-content:center;">
+            <button id="btn-confirm-monarch" class="lobby-btn" style="width:200px; font-size:20px;" disabled>確認出征</button>
+            <button class="lobby-btn" style="width:200px; font-size:20px; background:#333; color:#fff;" onclick="document.getElementById('monarch-select-modal').classList.add('hidden')">返回大廳</button>
+        </div>
+    </div>
+</div>
+
+<!-- 點將臺 / 牌庫 Modal -->
+<div id="gacha-modal" class="gacha-modal hidden">
+    <div id="gacha-sidebar" class="modal-sidebar">
+        <h3 style="color:var(--gold); text-align:center; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px;">分類篩選</h3>
+        <button class="filter-btn active" data-type="all">📔 全部卡牌</button>
+        <button class="filter-btn" data-type="君王">👑 君主</button>
+        <button class="filter-btn" data-type="大將軍">⚔️ 大將軍</button>
+        <button class="filter-btn" data-type="將軍">🐎 將軍</button>
+        <button class="filter-btn" data-type="軍師">📜 軍師</button>
+        <button class="filter-btn" data-type="後勤">🏛️ 後勤</button>
+        <button class="filter-btn" data-type="內政">🏮 內政</button>
+        <button class="filter-btn" data-type="監察">⚖️ 監察</button>
+        <button class="filter-btn" data-type="計策">♟️ 計策卡</button>
+        <button class="filter-btn" data-type="突發事件">🌩️ 突發事件</button>
+    </div>
+    
+    <div class="modal-main">
+        <div class="modal-close-btn" id="btn-gacha-close">×</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h1 id="gacha-title" style="color:var(--gold); margin:0; font-size:32px; letter-spacing:4px;">天下豪傑</h1>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <div id="gacha-silver-banner" style="background:rgba(212,175,55,0.15); padding:8px 20px; border-radius:30px; border:1px solid var(--gold); font-size:14px; color:var(--gold); font-weight:bold; box-shadow:0 0 10px rgba(212,175,55,0.2);">
+                    💰 當前餘額：<span id="gacha-silver-val">1000</span> 兩
+                </div>
+                <div id="collection-stats" style="background:rgba(255,255,255,0.05); padding:8px 20px; border-radius:30px; border:1px solid #444; font-size:14px; color:#aaa;">
+                    🎴 收集進度: <span id="collection-percent" style="color:#eee;">0%</span> (<span id="collection-count">0/0</span>)
+                </div>
+            </div>
+        </div>
+        
+        <div class="split-body">
+            <div id="gacha-controls-area" class="gacha-controls" style="padding-top:10px;">
+
+                <div class="gacha-actions-stack" style="display:flex; flex-direction:column; gap:15px;">
+                    <button id="btn-gacha-single" class="lobby-btn" style="background:#444;">招募一位 (50 銀兩)</button>
+                    <button id="btn-gacha-ten" class="lobby-btn" style="background:linear-gradient(135deg, #8b0000, #b22222); border-color:var(--gold);">十連招募 (500 銀兩)</button>
+                    <button id="btn-gacha-twenty-five" class="lobby-btn" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; border-color:#fff; text-shadow:0 0 5px #fff; font-weight:900;">二十五連招募 (1200 銀兩)</button>
+                    <button id="btn-gacha-pool-view" class="lobby-btn" style="background:#222; border:1px solid #444;">📜 查看完整圖鑑</button>
+                </div>
+                <div id="gacha-result-hint" style="margin-top:20px; color:#666; font-size:12px; font-style:italic;">招募結果將顯示於此...</div>
+            </div>
+            
+            <div id="gacha-pool" class="gacha-pool card-grid-5">
+                <!-- 卡片列表動態注入 -->
+            </div>
+            
+            <div id="gacha-result" class="gacha-result">
+                <!-- 招募結果展示層 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 武將詳情彈窗 -->
+<div id="card-detail-modal" class="modal hidden">
+    <div class="modal-content" style="width:500px; padding:0; background:#080a0d;">
+        <div class="modal-header" style="background:linear-gradient(to right, #1a202c, #0d1117); border-bottom:1px solid #333;">
+            <h2 id="detail-card-name" style="color:var(--gold); margin:0;">武將詳情</h2>
+            <div class="close-btn" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">×</div>
+        </div>
+        <div class="modal-body" style="padding:30px; text-align:center;">
+            <div id="detail-card-art" style="font-size:100px; margin-bottom:20px;">👑</div>
+            <div id="detail-card-dynasty" style="color:#888; letter-spacing:3px; margin-bottom:10px;">朝代</div>
+            <div id="detail-card-type" style="display:inline-block; padding:3px 12px; border-radius:4px; font-size:12px; font-weight:bold; margin-bottom:20px;">類型</div>
+            
+            <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:12px; margin-bottom:20px; text-align:left;">
+                <h4 style="color:#ccc; margin-bottom:8px; border-left:3px solid var(--gold); padding-left:10px;">人物簡介</h4>
+                <p id="detail-card-desc" style="color:#aaa; font-size:14px; line-height:1.6;">簡介內容...</p>
+            </div>
+            
+            <div style="background:rgba(212,175,55,0.05); padding:20px; border-radius:12px; border:1px solid rgba(212,175,55,0.1); text-align:left;">
+                <h4 style="color:var(--gold); margin-bottom:8px;">技能：<span id="detail-skill-name">技能名</span></h4>
+                <p id="detail-skill-desc" style="color:#eee; font-size:14px; line-height:1.6;">技能效果...</p>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding:20px; text-align:center; border-top:1px solid #1a202c;">
+            <button class="lobby-btn" style="width:180px; margin:0 auto;" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">返回</button>
+        </div>
+    </div>
+</div>
+
+<!-- 管理員密碼驗證彈窗 -->
+<div id="admin-auth-modal" class="modal hidden" style="z-index: 10000;">
+    <div class="modal-content" style="width:400px; background:#111; border:2px solid var(--crimson);">
+        <div class="modal-header">
+            <h3 style="color:var(--crimson); margin:0;">🔒 管理員身分驗證</h3>
+            <div class="close-btn" onclick="document.getElementById('admin-auth-modal').classList.add('hidden')">×</div>
+        </div>
+        <div class="modal-body" style="padding:20px; text-align:center;">
+            <p style="color:#aaa; font-size:14px; margin-bottom:15px;">請輸入最高權限密碼：</p>
+            <input type="password" id="admin-pwd-input" placeholder="******" style="width:100%; text-align:center; padding:10px; font-size:24px; background:#000; border:1px solid #333; color:var(--gold); border-radius:6px; letter-spacing:10px; margin-bottom:20px;">
+            <button id="btn-admin-verify" class="lobby-btn" style="width:100%; background:linear-gradient(135deg, #800, #400);">驗證</button>
+        </div>
+    </div>
+</div>
+
+<!-- 皇榜發布彈窗 -->
+<div id="announce-modal" class="modal hidden">
+    <div class="modal-content" style="width:600px; background:#0d1117; border:1px solid var(--border);">
+        <div class="modal-header">
+            <h2 id="announce-modal-title" style="color:var(--gold); margin:0; letter-spacing:4px;">📜 發布天下皇榜</h2>
+            <div class="close-btn" onclick="document.getElementById('announce-modal').classList.add('hidden')">×</div>
+        </div>
+        <div class="modal-body" style="padding:25px; text-align:center;">
+            <p style="color:#888; margin-bottom:20px;">選擇您的皇榜階級，震撼天下</p>
+            
+            <div style="display:flex; gap:15px; justify-content:center; margin-bottom:30px;">
+                <div class="tier-card active" data-tier="1" data-cost="10" style="border-color:#b87333;">
+                    <div style="font-size:24px;">🥉</div>
+                    <div style="color:#b87333; font-weight:bold;">銅榜</div>
+                    <div style="font-size:12px; opacity:0.6;">10 銀兩</div>
+                </div>
+                <div class="tier-card" data-tier="2" data-cost="50" style="border-color:silver;">
+                    <div style="font-size:24px;">🥈</div>
+                    <div style="color:silver; font-weight:bold;">銀榜</div>
+                    <div style="font-size:12px; opacity:0.6;">50 銀兩</div>
+                </div>
+                <div class="tier-card" data-tier="3" data-cost="100" style="border-color:gold;">
+                    <div style="font-size:24px;">🥇</div>
+                    <div style="color:gold; font-weight:gold;">金榜</div>
+                    <div style="font-size:12px; opacity:0.6;">100 銀兩</div>
+                </div>
+                <div id="dev-tier-card" class="tier-card" data-tier="9" data-cost="0" style="display:none; border-color:#9f7aea;">
+                    <div style="font-size:24px;">🚀</div>
+                    <div style="color:#9f7aea; font-weight:bold;">開發者</div>
+                    <div style="font-size:12px; opacity:0.6;">0 銀兩</div>
+                </div>
+            </div>
+            
+            <div style="text-align:left; margin-bottom:10px;">
+                <label style="color:var(--gold); font-size:14px;">🚩 皇榜內容：</label>
+            </div>
+            <textarea id="announce-input" placeholder="入木三分，語驚四座..." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none;"></textarea>
+            
+            <div style="margin-top:20px; color:#666; font-size:12px;">
+                發布後將置頂顯示，全軍將士皆能瞻仰。
+            </div>
+        </div>
+        <div class="modal-footer" style="padding:20px; text-align:right; border-top:1px solid #1a202c;">
+            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="document.getElementById('announce-modal').classList.add('hidden')">取消</button>
+            <button id="btn-announce-confirm" class="lobby-btn" style="width:160px; margin:0;">確認發布 (10 兩)</button>
+        </div>
+    </div>
+</div>
+<!-- 增加好友 Modal -->
+<div id="add-friend-modal" class="modal hidden">
+    <div class="modal-content add-friend-modal-content" style="background:#0d1117; border:1px solid var(--gold); border-radius:15px; box-shadow:0 0 30px rgba(212,175,55,0.2);">
+        <div class="modal-header">
+            <h2 style="color:var(--gold); margin:0; font-size:20px;">🤝 結交四海英豪</h2>
+            <div class="close-btn" onclick="document.getElementById('add-friend-modal').classList.add('hidden')">×</div>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <div class="search-row">
+                <input type="text" id="friend-search-input" class="search-input" placeholder="輸入英雄名號...">
+                <button class="search-btn" onclick="searchFriend()">
+                    <span style="font-size:20px;">🔍</span>
+                </button>
+            </div>
+            
+            <div id="search-result-container" class="search-result-area">
+                <div style="color:#666; font-size:14px;">請輸入名稱並開始搜尋</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 開發者專屬皇榜 Modal -->
+<div id="dev-announce-modal" class="modal hidden">
+    <div class="modal-content" style="width:600px; background:#0d1117; border:1px solid #9f7aea; box-shadow: 0 0 30px rgba(159,122,234,0.3);">
+        <div class="modal-header">
+            <h2 style="color:#9f7aea; margin:0; letter-spacing:4px;">🛡️ 開發者專屬皇榜</h2>
+            <div class="close-btn" onclick="closeDevModal()">×</div>
+        </div>
+        <div class="modal-body" style="padding:25px; text-align:center;">
+            <p style="color:#888; margin-bottom:20px;">最高權限已啟動，請發布系統旨意</p>
+            
+            <div style="display:flex; justify-content:center; margin-bottom:30px;">
+                <div class="tier-card active" data-tier="9" data-cost="0" style="border-color:#9f7aea; cursor:default;">
+                    <div style="font-size:24px;">🚀</div>
+                    <div style="color:#9f7aea; font-weight:bold;">開發者 (全服置頂)</div>
+                    <div style="font-size:12px; opacity:0.6;">0 銀兩</div>
+                </div>
+            </div>
+            
+            <div style="text-align:left; margin-bottom:10px;">
+                <label style="color:#9f7aea; font-size:14px;">🚩 系統旨意內容：</label>
+            </div>
+            <textarea id="dev-announce-input" placeholder="系統維護公告、全服活動..." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #9f7aea; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none; box-shadow:inset 0 0 10px rgba(159,122,234,0.1);"></textarea>
+            
+            <div style="margin-top:20px; color:#666; font-size:12px;">
+                發布後將以系統最高優先級顯示。
+            </div>
+        </div>
+        <div class="modal-footer" style="padding:20px; text-align:right; border-top:1px solid #1a202c;">
+            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="closeDevModal()">取消</button>
+            <button id="btn-dev-announce-confirm" class="lobby-btn" style="width:160px; margin:0; background:linear-gradient(135deg, #6b46c1, #4c1d95); border-color:#9f7aea;">確認發布 (0 兩)</button>
+        </div>
+    </div>
+</div>
+
+<!-- 防禦選擇 Modal (Defense Modal) -->
+<div id="defense-modal" class="modal hidden">
+    <div class="modal-content defense-modal-content">
+        <div class="defense-header">⚔ 敵軍突擊！</div>
+        <div class="defense-body" id="defense-text">敵軍發動突擊！</div>
+        <div class="defense-actions">
+            <button id="defense-dodge-btn" class="modal-btn btn-dodge">🛡 閃避</button>
+            <button id="defense-take-btn" class="modal-btn btn-take">💥 硬扛</button>
+        </div>
+    </div>
+</div>
+
+<!-- 墳場查看 Modal (Graveyard Modal) -->
+<div id="graveyard-modal" class="modal hidden">
+    <div class="modal-content graveyard-modal-content">
+        <div class="modal-header">
+            <h2 id="graveyard-title" style="color:var(--gold); margin:0;">☠ 墳場</h2>
+            <div class="close-btn" onclick="closeGraveyardModal()">×</div>
+        </div>
+        <div id="graveyard-list" class="graveyard-list-container"></div>
+    </div>
+</div>
+
+<!-- 戰鬥日誌面板 (Battle Log Panel) -->
+<div id="battle-log-panel" class="hidden">
+    <div class="log-header">
+        📜 戰報
+        <span onclick="toggleBattleLog()" style="cursor:pointer; font-size:16px; color:#888;">×</span>
+    </div>
+    <div id="battle-log-content"></div>
+</div>
+
+<script src="cards.js"></script>
+<script src="network.js"></script>
+<script src="game.js"></script>
+<script src="lobby.js"></script>
+</body>
+</html>

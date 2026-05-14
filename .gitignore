@@ -1,0 +1,39 @@
+# 系統檔案
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器設定
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Node.js (若未來加入建置工具)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 開發臨時檔案
+*.tmp
+*.bak
+*.swp
+*~
+
+# 本地設定
+.env
+.env.local
+
+# PowerShell 腳本 (僅開發用)
+copy_assets.ps1
+
+# 討論紀錄 (不需上傳)
+discussion_summary.md
+
+# Claude Code 設定 (僅開發用)
+.claude/
+
+# 開發測試產生的圖片 (若有正式版本請移至 assets/)
+gen_strategy_art_*.png
+gen_event_art_*.png
