@@ -392,7 +392,7 @@ body {
 
 /* CARD BACK */
 .card-back {
-    background: #500 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="76" height="108"><rect width="76" height="108" fill="%23500"/><circle cx="38" cy="54" r="18" fill="none" stroke="%23d4af37" stroke-width="2.5"/><path d="M20 36 L56 72 M56 36 L20 72" stroke="%23d4af37" stroke-width="1.5"/></svg>') center/cover;
+    background: #1a1008 url('assets/card_back/card_back.png') center/cover no-repeat;
     cursor: default !important;
 }
 .card-back:hover { transform: none !important; box-shadow: none !important; }
@@ -1345,15 +1345,15 @@ body {
     overflow: hidden; border: 2px solid #333;
 }
 .reveal-card-back {
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%);
+    background: #1a1008 url('assets/card_back/card_back.png') center/cover no-repeat;
     display: flex; align-items: center; justify-content: center;
-    color: var(--gold); font-size: 48px; font-family: 'Noto Serif TC', serif;
     box-shadow: 0 8px 25px rgba(0,0,0,0.6);
 }
 .reveal-card-back::after {
     content: ''; position: absolute; inset: 6px;
-    border: 1px solid rgba(212,175,55,0.25); border-radius: 8px;
+    border: 1px solid rgba(212,175,55,0.3); border-radius: 8px;
     pointer-events: none;
+    box-shadow: inset 0 0 12px rgba(212,175,55,0.08);
 }
 .reveal-card-front {
     transform: rotateY(180deg);
