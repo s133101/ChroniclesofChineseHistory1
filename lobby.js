@@ -65,16 +65,69 @@
         const introUi = document.getElementById('intro-ui');
         const riverStrip = document.getElementById('river-strip');
 
-        if (!container || !river || typeof cardDatabase === 'undefined') {
-            const startBtn = document.getElementById('btn-enter-lobby');
-            if (startBtn) {
-                startBtn.addEventListener('click', () => {
-                    _switchScreen('lobby-screen');
-                    setTimeout(() => openSidebar(), 1000);
-                });
-            }
-            return;
+        // ── 開場等待畫面元素 ────────────────────────────────────
+    const _splashEl   = document.getElementById('splash-screen');
+    const _splashBg   = document.getElementById('splash-bg');
+    const _loaderBar  = document.getElementById('splash-loader-bar');
+    const _splashHint = document.getElementById('splash-hint');
+
+    // 立即開始淡入背景圖（非阻塞）
+    if (_splashBg) {
+        const _bgImg = new Image();
+        _bgImg.onload = _bgImg.onerror = () => _splashBg.classList.add('loaded');
+        _bgImg.src = 'assets/華夏文明人皇銘文圖.png';
+    }
+
+    if (!container || !river || typeof cardDatabase === 'undefined') {
+        // 缺少必要元素也要關閉開場畫面
+        if (_splashEl) { _splashEl.classList.add('fade-out'); setTimeout(() => { _splashEl.style.display = 'none'; }, 1400); }
+        const startBtn = document.getElementById('btn-enter-lobby');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                _switchScreen('lobby-screen');
+                setTimeout(() => openSidebar(), 1000);
+            });
         }
+        return;
+    }
+
+    // ── 預載入所有君王卡圖片（修復刷新後圖片消失問題）────────
+    const _monarchImgSrcs = cardDatabase
+        .filter(c => c.type === '君王' && c.name !== '秦二世胡亥' && c.img)
+        .map(c => c.img);
+    let _imgDone = 0;
+    const _imgTotal = _monarchImgSrcs.length;
+
+    await Promise.all(_monarchImgSrcs.map(src => new Promise(res => {
+        const _img = new Image();
+        _img.onload = _img.onerror = () => {
+            _imgDone++;
+            if (_loaderBar && _imgTotal > 0)
+                _loaderBar.style.width = `${Math.round(_imgDone / _imgTotal * 100)}%`;
+            res();
+        };
+        _img.src = src;
+    })));
+
+    // 所有圖片已快取，更新提示文字
+    if (_loaderBar)  _loaderBar.style.width = '100%';
+    if (_splashHint) _splashHint.textContent = '點擊任意處進入 ▶';
+
+    // 等待玩家點擊，或 1.8 秒後自動繼續
+    await new Promise(resolve => {
+        const _auto = setTimeout(resolve, 1800);
+        if (_splashEl) {
+            _splashEl.addEventListener('click', () => { clearTimeout(_auto); resolve(); }, { once: true });
+        }
+    });
+
+    // 淡出開場畫面
+    if (_splashEl) {
+        _splashEl.classList.add('fade-out');
+        await new Promise(r => setTimeout(r, 1400));
+        _splashEl.style.display = 'none';
+    }
+    // ── 開場畫面結束，進入君王登場動畫 ────────────────────────
 
         const historyData = [
             { t: '商朝 · 鳴條之戰', d: '成湯伐桀，終結夏朝統治，開創六百年大商國祚。', img: 'assets/history/h01.jpg' },

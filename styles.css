@@ -80,6 +80,81 @@ body {
     border-radius: 2px; transition: width 0.1s linear;
 }
 
+/* ===================== SPLASH SCREEN ===================== */
+#splash-screen {
+    position: fixed; inset: 0; z-index: 100000;
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 1.4s ease;
+}
+#splash-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+#splash-bg {
+    position: absolute; inset: 0;
+    background: url('assets/華夏文明人皇銘文圖.png') center/cover no-repeat;
+    opacity: 0;
+    transition: opacity 2s ease;
+    filter: brightness(0.8);
+}
+#splash-bg.loaded {
+    opacity: 1;
+}
+.splash-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.45) 0%,
+        rgba(0,0,0,0.05) 45%,
+        rgba(0,0,0,0.6)  100%
+    );
+    pointer-events: none;
+}
+#splash-content {
+    position: relative; z-index: 1;
+    text-align: center;
+    animation: fadeUp 1.2s 0.3s both;
+}
+#splash-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(40px, 8vw, 72px);
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(212,175,55,0.85), 0 2px 6px rgba(0,0,0,0.95);
+    letter-spacing: 10px;
+    margin-bottom: 10px;
+}
+#splash-subtitle {
+    font-size: 15px; color: #ccc;
+    letter-spacing: 6px;
+    margin-bottom: 36px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+}
+#splash-loader {
+    width: 220px; height: 3px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+    overflow: hidden;
+}
+#splash-loader-bar {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 2px;
+    transition: width 0.25s ease;
+}
+#splash-hint {
+    font-size: 13px; color: #999;
+    letter-spacing: 3px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    animation: splashPulse 1.6s ease-in-out infinite;
+}
+@keyframes splashPulse {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 1;    }
+}
+
 /* ===================== GAME OVER ===================== */
 #game-over-screen {
     position: fixed; inset: 0; background: rgba(0,0,0,0.92);
