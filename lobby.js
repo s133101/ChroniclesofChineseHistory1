@@ -113,9 +113,9 @@
     if (_loaderBar)  _loaderBar.style.width = '100%';
     if (_splashHint) _splashHint.textContent = '點擊任意處進入 ▶';
 
-    // 等待玩家點擊，或 1.8 秒後自動繼續
+    // 等待玩家點擊，或 5 秒後自動繼續
     await new Promise(resolve => {
-        const _auto = setTimeout(resolve, 1800);
+        const _auto = setTimeout(resolve, 5000);
         if (_splashEl) {
             _splashEl.addEventListener('click', () => { clearTimeout(_auto); resolve(); }, { once: true });
         }
