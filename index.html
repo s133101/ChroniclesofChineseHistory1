@@ -1,9 +1,15 @@
 <!DOCTYPE html>
-<!-- 華夏風雲錄 — 歷史卡牌對決 | 開發者：Antigravity -->
+<!-- ============================================================
+     華夏風雲錄 — 歷史卡牌對決
+     Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
+     未經開發者書面授權，嚴禁複製、修改或散佈本程式碼。
+     ============================================================ -->
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="linus622wang@gmail.com">
+    <meta name="copyright" content="© 2026 linus622wang@gmail.com All Rights Reserved">
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -547,6 +553,16 @@
         <span onclick="toggleBattleLog()" style="cursor:pointer; font-size:16px; color:#888;">×</span>
     </div>
     <div id="battle-log-content"></div>
+</div>
+
+<!-- 版權標示（不可移除） -->
+<div id="dev-copyright" style="
+    position:fixed; bottom:6px; right:10px; z-index:99999;
+    font-size:10px; color:rgba(212,175,55,0.45);
+    font-family:'Noto Serif TC',serif; letter-spacing:1px;
+    pointer-events:none; user-select:none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+    © 2026 linus622wang@gmail.com
 </div>
 
 <script src="cards.js"></script>

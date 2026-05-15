@@ -1,3 +1,15 @@
+// ============================================================
+//  華夏風雲錄 — cards.js
+//
+//  Copyright © 2026 linus622wang@gmail.com
+//  All Rights Reserved.
+//
+//  未經開發者 linus622wang@gmail.com 書面授權，
+//  嚴禁任何形式的複製、修改、散佈或商業使用。
+//  Unauthorized copying, modification, distribution,
+//  or commercial use of this file is strictly prohibited.
+// ============================================================
+
 const cardDatabase = [
     // === 君王(主公) ===
     { id: "m01", name: "商湯", type: "君王", dynasty: "商", hp: 5, maxHp: 5, symbolItem: "玉圭", img: "assets/monarchs/m01.png", desc: "商朝開國君主，網開一面，仁德服人。", skillName: "網開一面", skillDesc: "被動技：受到致命傷害時，有 50% 機率強行保留 1 滴血不死。" },

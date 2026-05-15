@@ -1,5 +1,13 @@
 /* ============================================================
    華夏風雲錄 — network.js  v2
+
+   Copyright © 2026 linus622wang@gmail.com
+   All Rights Reserved.
+
+   未經開發者 linus622wang@gmail.com 書面授權，
+   嚴禁任何形式的複製、修改、散佈或商業使用。
+   Unauthorized copying, modification, distribution,
+   or commercial use of this file is strictly prohibited.
    PeerJS WebRTC P2P 連線封裝
    房間碼格式：5 位大寫英數字 (A-Z / 2-9，去除易混淆字符)
    PeerID 格式：hxf2026 + 房間碼 (避免與其他應用衝突)

@@ -1,7 +1,13 @@
 /* ============================================================
    華夏風雲錄 — lobby.js
-   大廳介面、配對邏輯、多人遊戲狀態同步
-   依賴：network.js (先載入)、game.js (先載入)
+
+   Copyright © 2026 linus622wang@gmail.com
+   All Rights Reserved.
+
+   未經開發者 linus622wang@gmail.com 書面授權，
+   嚴禁任何形式的複製、修改、散佈或商業使用。
+   Unauthorized copying, modification, distribution,
+   or commercial use of this file is strictly prohibited.
    ============================================================ */
 'use strict';
 

@@ -1,6 +1,13 @@
 // ============================================================
-//  華夏風雲錄 — game.js  (RPG + Multiplayer Edition)
-//  lobby.js 負責控制初始化流程，本檔只定義函數
+//  華夏風雲錄 — game.js
+//
+//  Copyright © 2026 linus622wang@gmail.com
+//  All Rights Reserved.
+//
+//  未經開發者 linus622wang@gmail.com 書面授權，
+//  嚴禁任何形式的複製、修改、散佈或商業使用。
+//  Unauthorized copying, modification, distribution,
+//  or commercial use of this file is strictly prohibited.
 // ============================================================
 
 // ---- 全域模式旗標 ----
@@ -75,6 +82,23 @@ const CARD_ART = {
 // ==============================================================
 //  LOADING SCREEN (called by lobby.js)
 // ==============================================================
+// ── 開發者水印（持續顯示於 console，無法關閉）──
+(function _devWatermark() {
+    const _c = [
+        '%c ╔══════════════════════════════════════╗ ',
+        '%c ║   華夏風雲錄  ©  2026                ║ ',
+        '%c ║   Developer : linus622wang@gmail.com  ║ ',
+        '%c ║   All Rights Reserved.                ║ ',
+        '%c ║   未經授權禁止複製、修改或散佈        ║ ',
+        '%c ╚══════════════════════════════════════╝ ',
+    ];
+    const _s = 'color:#d4af37; background:#0d0d0d; font-family:monospace; font-size:12px;';
+    _c.forEach(line => console.log(line, _s));
+
+    // 每 60 秒重新印一次，確保持續存在
+    setInterval(() => _c.forEach(line => console.log(line, _s)), 60000);
+})();
+
 function runLoadingScreen() {
     return new Promise(resolve => {
         const bar = document.getElementById('loading-bar');
