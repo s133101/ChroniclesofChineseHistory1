@@ -2147,5 +2147,144 @@ body {
 }
 
 /* ============================================================
+   YGO-STYLE DUEL LAYOUT OVERRIDES
+   ============================================================ */
+
+/* 重置 game-container 為無間距全螢幕 flex 欄 */
+#game-container {
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+}
+
+/* ── 頂部欄 ────────────────────────────────────────────────── */
+.game-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 14px;
+    background: rgba(8,12,16,0.98);
+    border-bottom: 1px solid rgba(212,175,55,0.15);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+/* 階段小標籤 */
+.phase-chip {
+    font-size: 11px;
+    color: var(--gold);
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.25);
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* 角落資訊區（敵方右上 / 我方左下） */
+.corner-info       { display: flex; flex-direction: column; gap: 2px; }
+.opp-corner        { align-items: flex-end; }
+.my-corner         { align-items: flex-start; }
+.corner-name       { font-weight: 900; font-size: 13px; }
+.opp-cname         { color: #cc3333; }
+.my-cname          { color: #2ecc71; }
+.corner-handcount  { font-size: 10px; opacity: 0.6; }
+.corner-lp-row     { display: flex; align-items: center; gap: 6px; }
+
+/* ── 敵方手牌橫列 ──────────────────────────────────────────── */
+.hand-container {
+    position: static !important;
+    left: auto !important;
+    transform: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    flex-shrink: 0;
+    overflow: visible;
+    z-index: 5;
+}
+
+.opp-hand-area {
+    height: 68px;
+    background: rgba(35,8,8,0.55);
+    border-bottom: 1px solid rgba(192,57,43,0.2);
+    top: auto !important;
+}
+
+/* ── 主戰場 ────────────────────────────────────────────────── */
+.battlefield-main {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+    overflow: hidden;
+}
+
+.battlefield-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    padding: 4px 8px;
+    min-width: 0;
+}
+
+/* ── 右側欄（雙方牌庫 + 墳場） ─────────────────────────────── */
+.side-zone {
+    width: 100px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 10px 6px !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+}
+
+.right-side {
+    background: rgba(0,0,0,0.4);
+    border-left: 1px solid rgba(212,175,55,0.12);
+}
+
+/* 縮小牌庫/墳場格子以適應窄欄 */
+.visual-slot {
+    width: 82px !important;
+    height: 110px !important;
+}
+
+.slot-count { font-size: 24px !important; }
+
+/* 隱藏舊的左側欄（已不使用） */
+.left-side { display: none !important; }
+
+/* ── 我方手牌橫列 ──────────────────────────────────────────── */
+.my-hand-area {
+    height: 108px;
+    background: rgba(8,22,12,0.55);
+    border-top: 1px solid rgba(46,204,113,0.15);
+    bottom: auto !important;
+}
+
+/* ── 底部欄 ────────────────────────────────────────────────── */
+.game-bottombar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 14px;
+    background: rgba(8,16,10,0.98);
+    border-top: 1px solid rgba(46,204,113,0.2);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+/* ── 覆寫舊的 player-hud（不再使用） ──────────────────────── */
+.player-hud { display: none !important; }
+
+/* ============================================================
    END GACHA & EFFECTS
    ============================================================ */

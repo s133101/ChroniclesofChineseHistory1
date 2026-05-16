@@ -113,78 +113,69 @@
 
 <!-- 遊戲視窗 -->
 <div id="game-container" class="hidden">
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 16px; background:rgba(8,12,16,0.98); border-bottom:1px solid rgba(212,175,55,0.15);">
-        <div id="turn-indicator" class="turn-badge">🔵 載入中...</div>
-        <div style="display:flex; align-items:center; gap:20px;">
-            <span id="phase-display" style="font-size:12px; color:#888; font-weight:700;"></span>
-            <span style="font-size:11px; color:rgba(212,175,55,0.5);">華夏風雲錄</span>
-        </div>
-    </div>
-    
-    <!-- 敵方區域 HUD -->
-    <div class="player-hud" style="justify-content: space-between; z-index: 10;">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <div class="hud-avatar-opp" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">👺</div>
-            <div>
-                <div style="font-weight:900; color:#cc3333; font-size:14px;">敵軍大本營</div>
-                <div style="font-size:10px; opacity:0.6;">手牌: <span id="opp-hand-count">0</span></div>
-                <div class="monarch-hp-wrap" style="margin-top:4px;">
-                    <span class="monarch-hp-label">👺 主公</span>
-                    <div class="monarch-hp-bar-outer">
-                        <div id="opp-monarch-hp-fill" class="monarch-hp-fill opp-fill" style="width:100%"></div>
-                    </div>
-                    <span id="opp-monarch-hp" class="monarch-hp-text">--/--</span>
-                </div>
-            </div>
-        </div>
-        <div id="opp-hand-container" class="hand-container opp-hand-area">
-            <div id="opp-hand" class="hand-list"></div>
-        </div>
-        <div style="width:100px;"></div> <!-- Spacer -->
-    </div>
-    
-    <div class="battlefield-main">
-        <!-- 左側輔助區 (敵方的右側，放置敵方牌庫與墳場) -->
-        <div class="side-zone left-side">
-            <div id="opp-deck-slot" class="visual-slot deck-slot" title="敵方牌組">
-                <div class="slot-label">牌組</div>
-                <div id="opp-deck-count" class="slot-count">0</div>
-            </div>
-            <div id="opp-grave-slot" class="visual-slot grave-slot" title="敵方墳場" style="margin-top:15px;">
-                <div class="slot-label">墳場</div>
-                <div id="opp-grave-count" class="slot-count">0</div>
-            </div>
-            <div style="flex:1;"></div>
-        </div>
 
-        <div class="battlefield-container" style="flex:1; display:flex; flex-direction:column; justify-content:space-around; align-items:center; padding:10px 0;">
-            <!-- 敵方戰陣 (後排/備戰區) -->
+    <!-- ① 頂部欄：回合 | 階段 | 敵方資訊 (右) -->
+    <div class="game-topbar">
+        <div id="turn-indicator" class="turn-badge">🔵 載入中...</div>
+        <span id="phase-display" class="phase-chip"></span>
+        <div style="flex:1;"></div>
+        <div class="corner-info opp-corner">
+            <div class="corner-name opp-cname">👺 敵軍大本營</div>
+            <div class="corner-lp-row">
+                <div class="monarch-hp-bar-outer" style="width:130px;">
+                    <div id="opp-monarch-hp-fill" class="monarch-hp-fill opp-fill" style="width:100%"></div>
+                </div>
+                <span id="opp-monarch-hp" class="monarch-hp-text">--/--</span>
+            </div>
+            <div class="corner-handcount">手牌: <span id="opp-hand-count">0</span></div>
+        </div>
+    </div>
+
+    <!-- ② 敵方手牌橫列 -->
+    <div id="opp-hand-container" class="hand-container opp-hand-area">
+        <div id="opp-hand" class="hand-list"></div>
+    </div>
+
+    <!-- ③ 主戰場 -->
+    <div class="battlefield-main">
+
+        <!-- 中央戰場 -->
+        <div class="battlefield-container">
+            <!-- 敵方後排 -->
             <div class="battlefield" id="opp-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 敵方戰陣 (前排/戰鬥區) -->
+            <!-- 敵方前排 -->
             <div class="battlefield" id="opp-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            
+
             <div class="battle-divider">
                 <div class="divider-text">楚 河 漢 界</div>
             </div>
-            
-            <!-- 我方戰陣 (前排/戰鬥區) -->
+
+            <!-- 我方前排 -->
             <div class="battlefield" id="my-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 我方戰陣 (後排/備戰區) -->
+            <!-- 我方後排 -->
             <div class="battlefield" id="my-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
         </div>
 
-        <!-- 右側輔助區 (我方的右側，放置我方牌庫與墳場) -->
+        <!-- 右側欄：敵方牌庫/墳場 (上) + 我方墳場/牌庫 (下) -->
         <div class="side-zone right-side">
+            <div id="opp-deck-slot" class="visual-slot deck-slot" title="敵方牌組">
+                <div class="slot-label">牌組</div>
+                <div id="opp-deck-count" class="slot-count">0</div>
+            </div>
+            <div id="opp-grave-slot" class="visual-slot grave-slot" title="敵方墳場">
+                <div class="slot-label">墳場</div>
+                <div id="opp-grave-count" class="slot-count">0</div>
+            </div>
             <div style="flex:1;"></div>
-            <div id="my-grave-slot" class="visual-slot grave-slot" title="我方墳場" style="margin-bottom:15px;">
+            <div id="my-grave-slot" class="visual-slot grave-slot" title="我方墳場">
                 <div class="slot-label">墳場</div>
                 <div id="my-grave-count" class="slot-count">0</div>
             </div>
@@ -193,33 +184,36 @@
                 <div id="my-deck-count" class="slot-count">0</div>
             </div>
         </div>
+
     </div>
-    
-    <!-- 我方區域 HUD -->
+
+    <!-- ④ 我方手牌橫列 -->
     <div id="my-hand-container" class="hand-container my-hand-area">
         <div id="my-hand" class="hand-list fan-hand"></div>
     </div>
 
-    <div class="player-hud my-bottom-hud" style="justify-content: space-between; background:rgba(16,40,30,0.9); border-color:rgba(46,204,113,0.3); z-index: 10;">
-        <div style="display:flex; align-items:center; gap:15px; text-align:left;">
+    <!-- ⑤ 底部欄：我方資訊 (左) | 結束回合 (右) -->
+    <div class="game-bottombar">
+        <div style="display:flex; align-items:center; gap:12px;">
             <div class="hud-avatar-my" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">🛡️</div>
-            <div>
-                <div style="font-weight:900; color:#2ecc71; font-size:14px;">我軍大門</div>
-                <div style="font-size:10px; opacity:0.6;">手牌: <span id="my-hand-count">0</span></div>
-                <div class="monarch-hp-wrap" style="margin-top:4px;">
-                    <span class="monarch-hp-label">👑 主公</span>
-                    <div class="monarch-hp-bar-outer">
+            <div class="corner-info my-corner">
+                <div class="corner-name my-cname">🛡️ 我軍大門</div>
+                <div class="corner-lp-row">
+                    <div class="monarch-hp-bar-outer" style="width:130px;">
                         <div id="my-monarch-hp-fill" class="monarch-hp-fill my-fill" style="width:100%"></div>
                     </div>
                     <span id="my-monarch-hp" class="monarch-hp-text">--/--</span>
                 </div>
+                <div class="corner-handcount">手牌: <span id="my-hand-count">0</span></div>
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:15px;">
+        <div style="flex:1;"></div>
+        <div style="display:flex; align-items:center; gap:10px;">
             <button id="end-turn-btn" class="action-btn pulse-btn" style="width:140px; height:44px; font-size:18px;">結束回合</button>
             <button onclick="toggleBattleLog()" style="width:44px; height:44px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#888; font-size:16px; cursor:pointer;" title="戰報">📜</button>
         </div>
     </div>
+
 </div>
 
 <div id="toast-container" class="toast-container"></div>
