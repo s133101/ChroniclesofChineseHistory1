@@ -1365,101 +1365,144 @@
             _saveCollection();
             _refreshGachaPool();
 
-            // 顯示翻牌結果
-            const resDiv = document.getElementById('gacha-result');
-            resDiv.style.display = 'flex';
+            // 電影式逐張揭示
+            _runCinematicReveal(resData, times);
+        };
 
-            resDiv.innerHTML = `
-                <div style="width:100%; text-align:center; padding:16px 20px; max-width:860px; margin:0 auto;">
-                    <h2 style="color:var(--gold); font-size:28px; margin-bottom:4px; letter-spacing:4px;">招募完成</h2>
-                    <p id="gacha-reveal-hint" style="color:#666; font-size:13px; margin-bottom:14px;">英雄正在登場...</p>
-                    <div class="gacha-reveal-container" style="margin-bottom:16px;"></div>
-                    <div style="display:flex; justify-content:center; gap:20px;">
-                        <button id="btn-reveal-all" class="lobby-btn" style="width:150px; background:#333; color:#aaa; border-color:#555;">⚡ 跳過動畫</button>
-                        <button id="btn-confirm-gacha" class="lobby-btn" style="width:160px; display:none;">✅ 確認收編</button>
+        // ══════════════════════════════════════════
+        //  電影式抽卡演出
+        // ══════════════════════════════════════════
+        const _runCinematicReveal = (resData, times) => {
+            const _CE  = { '君王':'👑','大將軍':'⚔️','將軍':'🐎','軍師':'📜',
+                           '後勤':'🌾','內政':'🏛️','監察':'👁️','計策':'✨','突發事件':'🌩️' };
+            const _rc  = c => c.type==='君王'?'ssr':c.type==='大將軍'?'sr':'r';
+            const _col = c => c.type==='君王'?'#f1c40f':c.type==='大將軍'?'#e74c3c':'#bdc3c7';
+
+            // 建立全螢幕遮罩
+            const ov = document.createElement('div');
+            ov.id = 'gacha-cinematic';
+            ov.innerHTML = `
+                <button id="gc-skip">⚡ 跳過動畫</button>
+                <div id="gc-stage">
+                    <div id="gc-card">
+                        <div class="gc-back"></div>
+                        <div class="gc-front"></div>
                     </div>
+                    <div id="gc-name"></div>
+                    <div id="gc-sub"></div>
                 </div>
+                <div id="gc-thumb-strip"></div>
+                <button id="gc-confirm" style="display:none;">✅ 確認收編（共 ${times} 位）</button>
             `;
+            document.body.appendChild(ov);
 
-            const container = resDiv.querySelector('.gacha-reveal-container');
-            const hintEl    = document.getElementById('gacha-reveal-hint');
-            const CARD_EMOJI = { '君王':'👑','大將軍':'⚔️','將軍':'🐎','軍師':'📜','後勤':'🌾','內政':'🏛️','監察':'👁️','計策':'✨','突發事件':'🌩️' };
+            const gcCard  = ov.querySelector('#gc-card');
+            const gcFront = ov.querySelector('.gc-front');
+            const gcName  = ov.querySelector('#gc-name');
+            const gcSub   = ov.querySelector('#gc-sub');
+            const strip   = ov.querySelector('#gc-thumb-strip');
+            const skipBtn = ov.querySelector('#gc-skip');
+            const confBtn = ov.querySelector('#gc-confirm');
+            let skipped = false;
 
-            // ── 建立所有牌面 DOM ──
-            const cardEls = resData.map((c) => {
-                const rarityColor = c.type === '君王' ? '#f1c40f' : (c.type === '大將軍' ? '#e74c3c' : '#bdc3c7');
-                const glowClass   = c.type === '君王' ? 'glow-ssr' : (c.type === '大將軍' ? 'glow-sr' : '');
-                const artBg       = c.img ? `background-image:url('${c.img}')` : '';
-                const artEmoji    = !c.img ? (CARD_EMOJI[c.type] || '⚔️') : '';
+            // 新增縮圖
+            const _thumb = (c, animate) => {
+                const t = document.createElement('div');
+                t.className = `gc-thumb gc-thumb-${_rc(c)}`;
+                if (c.img) t.style.backgroundImage = `url('${c.img}')`;
+                else       t.textContent = _CE[c.type] || '⚔️';
+                t.style.borderColor = _col(c);
+                if (animate) { t.style.opacity='0'; t.style.transform='scale(0.5)'; }
+                strip.appendChild(t);
+                if (animate) requestAnimationFrame(() => requestAnimationFrame(() => {
+                    t.style.opacity='1'; t.style.transform='scale(1)';
+                }));
+            };
 
-                const el = document.createElement('div');
-                el.className = 'reveal-card';
-                el.innerHTML = `
-                    <div class="reveal-card-back">華<br>夏</div>
-                    <div class="reveal-card-front ${glowClass}" style="border-color:${rarityColor};">
-                        <div class="rcard-art" style="${artBg}">${artEmoji}</div>
-                        <div class="rcard-top">
-                            <span class="rcard-type" style="color:${rarityColor};">${c.type}</span>
-                            <span class="rcard-dynasty">${c.dynasty}</span>
-                        </div>
-                        <div class="rcard-bottom">
-                            <div class="rcard-name">${c.name}</div>
-                            ${c.skillName ? `<div class="rcard-skill">【${c.skillName}】</div>` : ''}
-                        </div>
-                        ${c.isDuplicate ? `<div class="rcard-dup">已轉化銀兩</div>` : ''}
+            // 最終確認畫面
+            const _final = () => {
+                gcCard.style.display = gcName.style.display = gcSub.style.display = 'none';
+                skipBtn.style.display = 'none';
+                strip.classList.add('gc-final');
+                confBtn.style.display = 'block';
+            };
+
+            // 逐張顯示
+            const _show = (i) => {
+                if (skipped || i >= resData.length) { _final(); return; }
+                const c = resData[i];
+                const r = _rc(c), color = _col(c);
+                ov.dataset.rarity = r;
+
+                // 卡面內容
+                gcFront.innerHTML = `
+                    <div class="gc-art"${c.img?` style="background-image:url('${c.img}')"`:''}>
+                        ${!c.img ? (_CE[c.type]||'⚔️') : ''}
+                    </div>
+                    <div class="gc-top">
+                        <span class="gc-ctype" style="color:${color}">${c.type}</span>
+                        <span class="gc-dyn">${c.dynasty||''}</span>
+                    </div>
+                    <div class="gc-bot">
+                        <div class="gc-cname">${c.name}</div>
+                        ${c.skillName?`<div class="gc-skill">【${c.skillName}】</div>`:''}
+                        ${c.isDuplicate?`<div class="gc-dup">已轉化銀兩</div>`:''}
                     </div>
                 `;
-                container.appendChild(el);
-                return { el, card: c };
-            });
+                gcFront.style.borderColor = color;
+                gcName.textContent = c.name;
+                gcName.style.color = color;
+                gcSub.textContent  = c.type + (c.dynasty ? ' · ' + c.dynasty : '');
+                gcSub.style.color  = color;
 
-            // ── 自動逐張翻牌 ──
-            const FLIP_INTERVAL = times <= 1 ? 300 : times <= 10 ? 220 : 140;
-            let autoFlipDone = false;
+                // 重置動畫
+                gcCard.className = '';
+                gcName.style.opacity = '0';
+                void gcCard.offsetWidth; // reflow
 
-            const _flashScreen = (type) => {
-                const old = document.getElementById('gacha-ssr-flash') || document.getElementById('gacha-sr-flash');
-                if (old) old.remove();
-                const div = document.createElement('div');
-                div.id = type === '君王' ? 'gacha-ssr-flash' : 'gacha-sr-flash';
-                document.body.appendChild(div);
-                setTimeout(() => div.remove(), 900);
-            };
+                // 入場
+                setTimeout(() => gcCard.classList.add('gc-enter'), 30);
 
-            const _flipAll = () => {
-                cardEls.forEach(({ el }) => { if (!el.classList.contains('flipped')) el.classList.add('flipped'); });
-                autoFlipDone = true;
-                if (hintEl) hintEl.textContent = '招募完成！';
-                document.getElementById('btn-confirm-gacha').style.display = 'block';
-                document.getElementById('btn-reveal-all').style.display  = 'none';
-            };
-
-            cardEls.forEach(({ el, card }, idx) => {
+                // 翻面
+                const flipAt = r==='ssr' ? 880 : r==='sr' ? 750 : 650;
                 setTimeout(() => {
-                    if (autoFlipDone) return;
-                    el.classList.add('flipped');
-                    // 特效音與爆閃
-                    if (card.type === '君王')    { _flashScreen('君王');    if (typeof _SFX !== 'undefined') _SFX.win();   }
-                    else if (card.type === '大將軍') { _flashScreen('大將軍'); if (typeof _SFX !== 'undefined') _SFX.skill(); }
-                    else                         { if (typeof _SFX !== 'undefined') _SFX.place(); }
+                    gcCard.classList.add('gc-flip');
+                    const fl = document.createElement('div');
+                    fl.className = `gc-flash gc-flash-${r}`;
+                    ov.appendChild(fl);
+                    setTimeout(() => fl.remove(), 1200);
+                }, flipAt);
 
-                    if (idx === cardEls.length - 1) {
-                        autoFlipDone = true;
-                        setTimeout(() => {
-                            if (hintEl) hintEl.textContent = `本次共招募 ${times} 位英雄！`;
-                            document.getElementById('btn-confirm-gacha').style.display = 'block';
-                            document.getElementById('btn-reveal-all').style.display  = 'none';
-                        }, 500);
-                    }
-                }, 350 + idx * FLIP_INTERVAL);
-            });
+                // 卡名浮現
+                setTimeout(() => { gcName.style.opacity = '1'; }, flipAt + 380);
 
-            document.getElementById('btn-reveal-all').onclick = _flipAll;
-            document.getElementById('btn-confirm-gacha').onclick = () => {
-                resDiv.style.display = 'none';
-                _saveCollection();
-                _updateHUD();
+                // 縮圖
+                setTimeout(() => _thumb(c, true), flipAt + 200);
+
+                // 下一張
+                const nextAt = r==='ssr' ? 2800 : r==='sr' ? 2200 : 1750;
+                setTimeout(() => {
+                    if (skipped) return;
+                    gcCard.className = '';
+                    void gcCard.offsetWidth;
+                    _show(i + 1);
+                }, flipAt + nextAt);
             };
+
+            skipBtn.onclick = () => {
+                skipped = true;
+                strip.innerHTML = '';
+                resData.forEach(c => _thumb(c, false));
+                _final();
+            };
+
+            confBtn.onclick = () => {
+                ov.style.opacity = '0';
+                ov.style.transition = 'opacity 0.5s';
+                setTimeout(() => { ov.remove(); _saveCollection(); _updateHUD(); }, 500);
+            };
+
+            setTimeout(() => _show(0), 350);
         };
 
         window._triggerStartingGift = () => {
