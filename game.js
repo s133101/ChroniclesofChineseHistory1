@@ -277,9 +277,11 @@ function updateHUDs() {
     safe('my-hand-count',   myHand.length);
     safe('opp-hand-count',  oppHandData.length);
 
-    // 君主血條
-    const _myM = myBoard.active[2];
-    const _oppM = oppBoard.active[2];
+    // 君主血條：在前排 + 後排全場搜尋君王類型卡片
+    const _myM  = myBoard.active.find(c => c && c.type === '君王')
+               || myBoard.bench.find(c => c && c.type === '君王');
+    const _oppM = oppBoard.active.find(c => c && c.type === '君王')
+               || oppBoard.bench.find(c => c && c.type === '君王');
     const myMhp  = document.getElementById('my-monarch-hp');
     const oppMhp = document.getElementById('opp-monarch-hp');
     const myMbar  = document.getElementById('my-monarch-hp-fill');
