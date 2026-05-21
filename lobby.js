@@ -1163,6 +1163,11 @@
                 if (sidebar) sidebar.style.display = 'flex';
                 if (controls) controls.style.display = 'none';
                 if (titleEl) titleEl.textContent = '天下豪傑';
+                // 重置篩選按鈕：回到「全部卡牌」並清除其他按鈕的 active
+                const allFilterBtns = modal.querySelectorAll('.filter-btn');
+                allFilterBtns.forEach(b => b.classList.remove('active'));
+                const allBtn = modal.querySelector('.filter-btn[data-type="all"]');
+                if (allBtn) allBtn.classList.add('active');
                 _refreshGachaPool('天下豪傑');
             }
         };
@@ -1187,26 +1192,53 @@
             const card = window.cardDatabase.find(c => c.id === cardId);
             if (!card) return;
             
-            const ART_MAP = { '君王':'👑', '大將軍':'⚔️', '將軍':'🐎', '軍師':'📜', '計策':'✨', '後勤':'🏛️', '內政':'🏮', '監察':'⚖️' };
+            const ART_MAP = { '君王':'👑', '大將軍':'⚔️', '將軍':'🐎', '軍師':'📜', '計策':'✨', '突發事件':'⚡', '後勤':'🏛️', '內政':'🏮', '監察':'⚖️' };
+            // 特定卡牌圖示
+            const nameArtMap = { '火殺 (火)':'🔥', '雷殺 (雷)':'⚡', '水殺 (水)':'💧', '酒':'🍷', '南蠻入侵':'🛡', '萬箭齊發':'🏹', '桃園結義':'🍑', '五穀豐登':'🌾', '無中生有':'✨', '過河拆橋':'🌉', '順手牽羊':'🐑', '無懈可擊':'⚡' };
             
             document.getElementById('detail-card-name').textContent = card.name;
             const artEl = document.getElementById('detail-card-art');
             if (card.img) {
                 artEl.innerHTML = `<img src="${card.img}" style="max-height:200px; max-width:100%; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.8); border:2px solid var(--gold);" />`;
             } else {
-                artEl.innerHTML = `<div style="font-size:100px;">${ART_MAP[card.type] || '👑'}</div>`;
+                const artIcon = nameArtMap[card.name] || ART_MAP[card.type] || '👑';
+                artEl.innerHTML = `<div style="font-size:100px;">${artIcon}</div>`;
             }
             document.getElementById('detail-card-dynasty').textContent = `—— ${card.dynasty} ——`;
             
             const typeEl = document.getElementById('detail-card-type');
-            typeEl.textContent = card.type;
-            typeEl.style.backgroundColor = card.type === '君王' ? '#f1c40f' : (card.type === '大將軍' ? '#e74c3c' : '#34495e');
-            typeEl.style.color = card.type === '君王' || card.type === '大將軍' ? '#000' : '#fff';
+            typeEl.textContent = card.isBasic ? `基本卡 · ${card.type}` : card.type;
+            const typeBg = {
+                '君王':'#f1c40f', '大將軍':'#e74c3c', '將軍':'#c0392b',
+                '軍師':'#2980b9', '計策':'#8e44ad', '突發事件':'#d35400',
+                '後勤':'#27ae60', '內政':'#16a085', '監察':'#7f8c8d'
+            };
+            typeEl.style.backgroundColor = typeBg[card.type] || '#34495e';
+            typeEl.style.color = card.type === '君王' ? '#000' : '#fff';
             
             document.getElementById('detail-card-desc').textContent = card.desc || '暫無簡介。';
             document.getElementById('detail-skill-name').textContent = card.skillName || '普通攻擊';
             document.getElementById('detail-skill-desc').textContent = card.skillDesc || '發起基礎進攻。';
-            
+
+            // 生平故事 / 歷史典故
+            const storyContent = card.story || card.battleNote || '';
+            const descBlock = document.getElementById('detail-card-desc').parentElement;
+            // 移除舊有的故事區塊（避免重複）
+            const oldStory = document.getElementById('detail-card-story-section');
+            if (oldStory) oldStory.remove();
+            // 有內容才注入
+            if (storyContent) {
+                const label = card.battleNote ? '⚔️ 歷史典故' : '📖 生平故事';
+                const sec = document.createElement('div');
+                sec.id = 'detail-card-story-section';
+                sec.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);';
+                sec.innerHTML = `
+                    <h4 style="color:#b8a060;margin-bottom:8px;font-size:13px;letter-spacing:1px;">${label}</h4>
+                    <p style="color:#999;font-size:13px;line-height:1.9;white-space:pre-wrap;">${storyContent}</p>
+                `;
+                descBlock.appendChild(sec);
+            }
+
             document.getElementById('card-detail-modal').classList.remove('hidden');
         };
 
@@ -1243,51 +1275,8 @@
                 return;
             }
 
-            // ── 斬神之風：金色虛擬轉盤動畫 (史詩加強版) ──
-            const wheelOverlay = document.createElement('div');
-            wheelOverlay.id = 'gacha-wheel-overlay';
-            
-            // 隨機抽選一些英雄名，分三層環繞
-            const layer1 = [], layer2 = [], layer3 = [];
-            // 優化：優先選取名將與君主
-            const epicNames = window.cardDatabase ? window.cardDatabase.filter(c => c.type === '君王' || c.type === '大將軍').map(c => c.name) : [];
-            const allNames = window.cardDatabase ? window.cardDatabase.map(c => c.name) : ['秦始皇','韓信','岳飛','諸葛亮','關羽','曹操','劉邦','朱元璋'];
-            
-            for(let i=0; i<12; i++) layer1.push(allNames[Math.floor(Math.random() * allNames.length)]);
-            for(let i=0; i<8; i++)  layer2.push(epicNames.length > 0 ? epicNames[Math.floor(Math.random() * epicNames.length)] : allNames[Math.floor(Math.random() * allNames.length)]);
-            for(let i=0; i<6; i++)  layer3.push(epicNames.length > 0 ? epicNames[Math.floor(Math.random() * epicNames.length)] : allNames[Math.floor(Math.random() * allNames.length)]);
-
-            const createLabels = (names, radius, offset) => {
-                return names.map((name, i) => {
-                    const angle = i * (360 / names.length) + offset;
-                    return `<div class="wheel-label" style="transform: rotate(${angle}deg) translateY(-${radius}px)">${name}</div>`;
-                }).join('');
-            };
-
-            wheelOverlay.innerHTML = `
-                <div class="mystic-shards"></div>
-                <div class="golden-wheel-perspective">
-                    <div class="golden-wheel-wrap">
-                        <div class="wheel-core"></div>
-                        <div class="wheel-ring ring-ext"></div>
-                        <div class="wheel-ring ring-mid"></div>
-                        <div class="wheel-ring ring-int"></div>
-                        <div class="wheel-ring ring-dot"></div>
-                        <div class="wheel-labels-layer layer-1">${createLabels(layer1, 260, 0)}</div>
-                        <div class="wheel-labels-layer layer-2">${createLabels(layer2, 180, 45)}</div>
-                        <div class="wheel-labels-layer layer-3">${createLabels(layer3, 100, 90)}</div>
-                        <div class="wheel-light"></div>
-                    </div>
-                </div>
-                <div class="wheel-text">招募天下英雄</div>
-            `;
-            document.body.appendChild(wheelOverlay);
-
-            // 動畫結束後展示結果
-            setTimeout(() => {
-                if (wheelOverlay) wheelOverlay.remove();
-                _showGachaResults(times);
-            }, 3000);
+            // 直接進入時鐘式抽卡演出
+            _showGachaResults(times);
         };
 
         const _showGachaResults = (times) => {
@@ -1365,144 +1354,119 @@
             _saveCollection();
             _refreshGachaPool();
 
-            // 電影式逐張揭示
-            _runCinematicReveal(resData, times);
+            // 翻牌格式逐張揭示
+            _runGridReveal(resData, times);
         };
 
         // ══════════════════════════════════════════
-        //  電影式抽卡演出
+        //  5×2 翻牌式抽卡演出
         // ══════════════════════════════════════════
-        const _runCinematicReveal = (resData, times) => {
+        const _runGridReveal = (resData, times) => {
             const _CE  = { '君王':'👑','大將軍':'⚔️','將軍':'🐎','軍師':'📜',
                            '後勤':'🌾','內政':'🏛️','監察':'👁️','計策':'✨','突發事件':'🌩️' };
             const _rc  = c => c.type==='君王'?'ssr':c.type==='大將軍'?'sr':'r';
             const _col = c => c.type==='君王'?'#f1c40f':c.type==='大將軍'?'#e74c3c':'#bdc3c7';
 
-            // 建立全螢幕遮罩
+            // ── 建立每張卡的 HTML ──────────────────────────────────
+            const cardsHtml = resData.map((c, i) => {
+                const rc  = _rc(c);
+                const col = _col(c);
+
+                // 正面內容：有圖片就顯示圖片，否則顯示類型樣式
+                let frontInner;
+                if (c.img) {
+                    frontInner = `<img class="ggc-art" src="${c.img}" alt="${c.name}">`;
+                } else {
+                    const bg = c.type==='君王'   ? 'linear-gradient(160deg,#4a3200,#b8860b,#4a3200)'
+                             : c.type==='大將軍' ? 'linear-gradient(160deg,#4a0000,#c0392b,#4a0000)'
+                             :                     'linear-gradient(160deg,#111a30,#2c3e60,#111a30)';
+                    frontInner = `
+                        <div class="ggc-no-art" style="background:${bg};">
+                            <div class="ggc-no-art-icon">${_CE[c.type]||'✦'}</div>
+                            <div class="ggc-no-art-name">${c.name}</div>
+                            <div class="ggc-no-art-type">${c.dynasty}</div>
+                        </div>`;
+                }
+
+                return `
+                    <div class="ggc-card ggc-${rc}" data-idx="${i}">
+                        <div class="ggc-inner">
+                            <div class="ggc-back">
+                                <div class="ggc-back-body">
+                                    <div class="ggc-back-char">華</div>
+                                    <div class="ggc-back-sub">夏風雲錄</div>
+                                </div>
+                            </div>
+                            <div class="ggc-front">
+                                ${frontInner}
+                                <div class="ggc-label">
+                                    <span class="ggc-lname" style="color:${col};">${c.name}</span>
+                                    <span class="ggc-ltype">${_CE[c.type]||''} ${c.type}</span>
+                                </div>
+                                ${c.isDuplicate ? '<div class="ggc-dup">重複+銀兩</div>' : ''}
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            // ── 建立覆蓋層 ────────────────────────────────────────
             const ov = document.createElement('div');
-            ov.id = 'gacha-cinematic';
+            ov.id = 'gacha-grid';
             ov.innerHTML = `
-                <button id="gc-skip">⚡ 跳過動畫</button>
-                <div id="gc-stage">
-                    <div id="gc-card">
-                        <div class="gc-back"></div>
-                        <div class="gc-front"></div>
-                    </div>
-                    <div id="gc-name"></div>
-                    <div id="gc-sub"></div>
-                </div>
-                <div id="gc-thumb-strip"></div>
-                <button id="gc-confirm" style="display:none;">✅ 確認收編（共 ${times} 位）</button>
+                <button id="ggc-skip">⚡ 跳過</button>
+                <div id="ggc-title">抽卡結果</div>
+                <div id="ggc-grid">${cardsHtml}</div>
+                <button id="ggc-confirm" style="display:none;">✅ 確認收編（共 ${times} 位）</button>
             `;
             document.body.appendChild(ov);
 
-            const gcCard  = ov.querySelector('#gc-card');
-            const gcFront = ov.querySelector('.gc-front');
-            const gcName  = ov.querySelector('#gc-name');
-            const gcSub   = ov.querySelector('#gc-sub');
-            const strip   = ov.querySelector('#gc-thumb-strip');
-            const skipBtn = ov.querySelector('#gc-skip');
-            const confBtn = ov.querySelector('#gc-confirm');
-            let skipped = false;
+            const cards   = [...ov.querySelectorAll('.ggc-card')];
+            const skipBtn = ov.querySelector('#ggc-skip');
+            const confBtn = ov.querySelector('#ggc-confirm');
 
-            // 新增縮圖
-            const _thumb = (c, animate) => {
-                const t = document.createElement('div');
-                t.className = `gc-thumb gc-thumb-${_rc(c)}`;
-                if (c.img) t.style.backgroundImage = `url('${c.img}')`;
-                else       t.textContent = _CE[c.type] || '⚔️';
-                t.style.borderColor = _col(c);
-                if (animate) { t.style.opacity='0'; t.style.transform='scale(0.5)'; }
-                strip.appendChild(t);
-                if (animate) requestAnimationFrame(() => requestAnimationFrame(() => {
-                    t.style.opacity='1'; t.style.transform='scale(1)';
-                }));
+            // ── 翻開單張牌 ────────────────────────────────────────
+            const _flip = (idx, cb) => {
+                if (idx >= cards.length) { cb && cb(); return; }
+                const card = cards[idx];
+                card.classList.add('ggc-flipped');
+
+                // 高稀有度閃光
+                const c = resData[idx];
+                if (c.type === '君王' || c.type === '大將軍') {
+                    const fl = document.createElement('div');
+                    fl.className = `gc-flash gc-flash-${_rc(c)}`;
+                    ov.appendChild(fl);
+                    setTimeout(() => fl.remove(), 900);
+                }
+                cb && setTimeout(cb, c.type==='君王' ? 800 : 480);
             };
 
-            // 最終確認畫面
-            const _final = () => {
-                gcCard.style.display = gcName.style.display = gcSub.style.display = 'none';
+            // ── 連續逐張翻開 ─────────────────────────────────────
+            const _flipSeq = (i) => {
+                if (i >= cards.length) {
+                    skipBtn.style.display = 'none';
+                    confBtn.style.display = 'block';
+                    return;
+                }
+                _flip(i, () => _flipSeq(i + 1));
+            };
+
+            // ── 跳過：全部瞬間翻開 ───────────────────────────────
+            skipBtn.onclick = () => {
+                cards.forEach(c => c.classList.add('ggc-flipped'));
                 skipBtn.style.display = 'none';
-                strip.classList.add('gc-final');
                 confBtn.style.display = 'block';
             };
 
-            // 逐張顯示
-            const _show = (i) => {
-                if (skipped || i >= resData.length) { _final(); return; }
-                const c = resData[i];
-                const r = _rc(c), color = _col(c);
-                ov.dataset.rarity = r;
-
-                // 卡面內容
-                gcFront.innerHTML = `
-                    <div class="gc-art"${c.img?` style="background-image:url('${c.img}')"`:''}>
-                        ${!c.img ? (_CE[c.type]||'⚔️') : ''}
-                    </div>
-                    <div class="gc-top">
-                        <span class="gc-ctype" style="color:${color}">${c.type}</span>
-                        <span class="gc-dyn">${c.dynasty||''}</span>
-                    </div>
-                    <div class="gc-bot">
-                        <div class="gc-cname">${c.name}</div>
-                        ${c.skillName?`<div class="gc-skill">【${c.skillName}】</div>`:''}
-                        ${c.isDuplicate?`<div class="gc-dup">已轉化銀兩</div>`:''}
-                    </div>
-                `;
-                gcFront.style.borderColor = color;
-                gcName.textContent = c.name;
-                gcName.style.color = color;
-                gcSub.textContent  = c.type + (c.dynasty ? ' · ' + c.dynasty : '');
-                gcSub.style.color  = color;
-
-                // 重置動畫
-                gcCard.className = '';
-                gcName.style.opacity = '0';
-                void gcCard.offsetWidth; // reflow
-
-                // 入場
-                setTimeout(() => gcCard.classList.add('gc-enter'), 30);
-
-                // 翻面
-                const flipAt = r==='ssr' ? 880 : r==='sr' ? 750 : 650;
-                setTimeout(() => {
-                    gcCard.classList.add('gc-flip');
-                    const fl = document.createElement('div');
-                    fl.className = `gc-flash gc-flash-${r}`;
-                    ov.appendChild(fl);
-                    setTimeout(() => fl.remove(), 1200);
-                }, flipAt);
-
-                // 卡名浮現
-                setTimeout(() => { gcName.style.opacity = '1'; }, flipAt + 380);
-
-                // 縮圖
-                setTimeout(() => _thumb(c, true), flipAt + 200);
-
-                // 下一張
-                const nextAt = r==='ssr' ? 2800 : r==='sr' ? 2200 : 1750;
-                setTimeout(() => {
-                    if (skipped) return;
-                    gcCard.className = '';
-                    void gcCard.offsetWidth;
-                    _show(i + 1);
-                }, flipAt + nextAt);
-            };
-
-            skipBtn.onclick = () => {
-                skipped = true;
-                strip.innerHTML = '';
-                resData.forEach(c => _thumb(c, false));
-                _final();
-            };
-
+            // ── 確認關閉 ─────────────────────────────────────────
             confBtn.onclick = () => {
                 ov.style.opacity = '0';
                 ov.style.transition = 'opacity 0.5s';
                 setTimeout(() => { ov.remove(); _saveCollection(); _updateHUD(); }, 500);
             };
 
-            setTimeout(() => _show(0), 350);
+            // 短暫停頓後開始翻牌
+            setTimeout(() => _flipSeq(0), 500);
         };
 
         window._triggerStartingGift = () => {
@@ -1701,12 +1665,20 @@
         });
 
         Network.on('peer_disconnected', () => {
-            if (window.gameActive && typeof toast === 'function') {
-                toast('⚠ 對手斷線！已切換為 AI 托管', 'warn', 4000);
+            if (window.gameActive) {
+                // 遊戲進行中斷線 → 切換 AI 托管
+                if (typeof toast === 'function') toast('⚠ 對手斷線！已切換為 AI 托管', 'warn', 4000);
                 window.GAME_MODE = 'ai';
-                // 如果有掛起的防禦等待，自動取消
-                if (window._pendingHostAttack) {
-                    window._pendingHostAttack = null;
+                if (window._pendingHostAttack) window._pendingHostAttack = null;
+            } else {
+                // 遊戲已結束，對方在結束畫面離開 → 踢回大廳
+                const gs = document.getElementById('game-over-screen');
+                if (gs && !gs.classList.contains('hidden')) {
+                    if (typeof toast === 'function') toast('🚪 對手已離開房間，即將返回大廳…', 'warn', 3000);
+                    setTimeout(() => {
+                        if (gs) gs.classList.add('hidden');
+                        _showLobbyScreen();
+                    }, 2500);
                 }
             }
         });
@@ -1722,20 +1694,56 @@
     // ══════════════════════════════════════════
     //  計時器
     // ══════════════════════════════════════════
-    function _startCountdown() {
+    let _rematchMode = false; // 再配對模式：超時時詢問而非自動切 AI
+
+    function _startCountdown(rematch = false) {
+        _rematchMode = rematch;
         _seconds = 30;
+        // 更新標題文字
+        const labelEl = document.getElementById('wait-countdown-label');
+        if (labelEl) labelEl.textContent = rematch ? '等待對手加入：' : '超時切換 AI：';
+        // 確保超時對話框隱藏
+        const dlg = document.getElementById('wait-timeout-dialog');
+        if (dlg) dlg.classList.add('hidden');
         _renderCountdown();
         _timer = setInterval(() => {
             _seconds--;
             _renderCountdown();
             if (_seconds <= 0) {
                 _clearTimer();
-                Network.destroy();
-                window.GAME_MODE = 'ai';
-                _setWaitStatus('⏱ 等待超時，切換為 AI 對戰！');
-                setTimeout(_launchGame, 1200);
+                if (_rematchMode) {
+                    // 詢問玩家：繼續等 or 換 AI
+                    _showTimeoutDialog();
+                } else {
+                    Network.destroy();
+                    window.GAME_MODE = 'ai';
+                    _setWaitStatus('⏱ 等待超時，切換為 AI 對戰！');
+                    setTimeout(_launchGame, 1200);
+                }
             }
         }, 1000);
+    }
+
+    function _showTimeoutDialog() {
+        const dlg = document.getElementById('wait-timeout-dialog');
+        if (dlg) dlg.classList.remove('hidden');
+        _setWaitStatus('⌛ 尚未配對到對手...');
+
+        const btnContinue = document.getElementById('btn-continue-wait');
+        const btnSwitch   = document.getElementById('btn-switch-ai');
+
+        if (btnContinue) btnContinue.onclick = () => {
+            dlg.classList.add('hidden');
+            _startCountdown(true); // 重新倒數 30 秒
+        };
+        if (btnSwitch) btnSwitch.onclick = () => {
+            dlg.classList.add('hidden');
+            _clearTimer();
+            Network.destroy();
+            window.GAME_MODE = 'ai';
+            _setWaitStatus('⚔ 切換為 AI 對戰，即將開始...');
+            setTimeout(_launchGame, 1000);
+        };
     }
 
     function _clearTimer() {
@@ -1855,6 +1863,7 @@
         let idx  = oppHandData.findIndex(c => c.uid === cardUid);
         let card = (idx !== -1) ? oppHandData.splice(idx, 1)[0] : cardData;
         if (!card) { _sync(); return; }
+        if (typeof initCharCard === 'function') initCharCard(card); // HP×100 + ATK/DEF
 
         let placed = false;
         if (target === 'active') {
@@ -2134,6 +2143,46 @@
             isGuestTurn,
             gameActive:    !!window.gameActive
         });
+    };
+
+    // ══════════════════════════════════════════
+    //  遊戲結束後的行動（由 game.js 呼叫）
+    // ══════════════════════════════════════════
+
+    /** 回到大廳（先斷線通知對方，再切換畫面）*/
+    window._goToLobby = function() {
+        const gs = document.getElementById('game-over-screen');
+        if (gs) gs.classList.add('hidden');
+        // 若仍有連線，先斷開 → 對方會收到 peer_disconnected 被踢回大廳
+        if (typeof Network !== 'undefined' && Network.connected) {
+            Network.destroy();
+        }
+        _showLobbyScreen();
+    };
+
+    /** AI 模式再玩一場 */
+    window._rematchAi = function() {
+        const gs = document.getElementById('game-over-screen');
+        if (gs) gs.classList.add('hidden');
+        window.GAME_MODE = 'ai';
+        _launchGame();
+    };
+
+    /** 連線模式再玩一場：斷開舊連線 → 建立新房間 → 等待 30 秒（超時詢問）*/
+    window._rematchOnline = function() {
+        const gs = document.getElementById('game-over-screen');
+        if (gs) gs.classList.add('hidden');
+        // 先斷開舊連線（對方若未點再玩，會被踢到大廳）
+        if (typeof Network !== 'undefined' && Network.connected) {
+            Network.destroy();
+        }
+        // 短暫延遲讓 destroy 完成後再建新房
+        setTimeout(() => {
+            const code = Network.randomCode ? Network.randomCode() : Math.random().toString(36).slice(2,7).toUpperCase();
+            Network.createRoom(code);
+            _showWaitScreen(code, true);
+            _startCountdown(true); // rematch 模式：超時詢問
+        }, 400);
     };
 
 })(); // end IIFE
