@@ -103,6 +103,26 @@
         document.addEventListener('keydown', e => e.preventDefault(), true);
     }
 
+    // ── BroadcastChannel：跨分頁通訊 ────────────────────────
+    const _bc = (typeof BroadcastChannel !== 'undefined')
+        ? new BroadcastChannel('_hua_dev_auth')
+        : null;
+
+    // 原本分頁監聽來自新分頁的通知
+    if (_bc) {
+        _bc.onmessage = function(e) {
+            if (e.data === 'granted') {
+                // 開通：移除驗證牆，顯示成功提示
+                const aw = document.getElementById('_ask_wall');
+                if (aw) aw.remove();
+                _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
+            } else if (e.data === 'revoked') {
+                // 鎖定：直接硬鎖
+                _hardLock();
+            }
+        };
+    }
+
     // ── 檢查信件連結回調（頁面載入時）───────────────────────
     function _checkUrlCallback() {
         const params      = new URLSearchParams(window.location.search);
@@ -119,28 +139,62 @@
 
         if (grantToken) {
             if (stored && stored.token === grantToken && stored.expires > Date.now()) {
-                // ✅ 信件確認：開通權限
+                // ✅ 開通權限
                 localStorage.removeItem(PENDING_KEY);
                 localStorage.setItem(DEV_KEY, 'true');
-                // 等 DOM 就緒再顯示 toast
-                const _show = () => _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
+                // 通知原本的分頁
+                if (_bc) _bc.postMessage('granted');
+                // 顯示確認頁面後自動關閉此分頁
+                const _done = () => {
+                    document.body.innerHTML = `
+                        <div style="
+                            position:fixed;inset:0;background:#0a0a0a;
+                            display:flex;flex-direction:column;
+                            align-items:center;justify-content:center;
+                            font-family:'Noto Serif TC',serif;color:#7fff7f;
+                            text-align:center;
+                        ">
+                            <div style="font-size:60px;margin-bottom:16px;">✅</div>
+                            <div style="font-size:20px;font-weight:900;">開發者身份已確認</div>
+                            <div style="font-size:13px;color:#666;margin-top:10px;">此視窗將自動關閉…</div>
+                        </div>`;
+                    setTimeout(() => window.close(), 1500);
+                };
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', _show);
+                    document.addEventListener('DOMContentLoaded', _done);
                 } else {
-                    _show();
+                    _done();
                 }
             }
             return;
         }
 
         if (revokeToken) {
-            // ❌ 信件拒絕：撤銷所有權限並鎖定
+            // ❌ 撤銷所有權限
             _revokeAll();
             localStorage.removeItem(PENDING_KEY);
+            // 通知原本的分頁鎖定
+            if (_bc) _bc.postMessage('revoked');
+            // 顯示確認頁面後自動關閉此分頁
+            const _done = () => {
+                document.body.innerHTML = `
+                    <div style="
+                        position:fixed;inset:0;background:#0a0a0a;
+                        display:flex;flex-direction:column;
+                        align-items:center;justify-content:center;
+                        font-family:'Noto Serif TC',serif;color:#ff8888;
+                        text-align:center;
+                    ">
+                        <div style="font-size:60px;margin-bottom:16px;">🔒</div>
+                        <div style="font-size:20px;font-weight:900;">已拒絕並撤銷所有權限</div>
+                        <div style="font-size:13px;color:#666;margin-top:10px;">此視窗將自動關閉…</div>
+                    </div>`;
+                setTimeout(() => window.close(), 1500);
+            };
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', _hardLock);
+                document.addEventListener('DOMContentLoaded', _done);
             } else {
-                setTimeout(_hardLock, 100);
+                _done();
             }
             return;
         }
