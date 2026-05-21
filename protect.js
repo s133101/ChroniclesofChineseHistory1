@@ -103,25 +103,37 @@
         document.addEventListener('keydown', e => e.preventDefault(), true);
     }
 
-    // ── BroadcastChannel：跨分頁通訊 ────────────────────────
+    // ── BroadcastChannel：跨分頁通訊（主要）────────────────
     const _bc = (typeof BroadcastChannel !== 'undefined')
         ? new BroadcastChannel('_hua_dev_auth')
         : null;
 
-    // 原本分頁監聽來自新分頁的通知
     if (_bc) {
         _bc.onmessage = function(e) {
             if (e.data === 'granted') {
-                // 開通：移除驗證牆，顯示成功提示
                 const aw = document.getElementById('_ask_wall');
                 if (aw) aw.remove();
                 _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
             } else if (e.data === 'revoked') {
-                // 鎖定：直接硬鎖
                 _hardLock();
             }
         };
     }
+
+    // ── StorageEvent：跨分頁備援（localStorage 變動通知）──
+    window.addEventListener('storage', function(e) {
+        if (_isVerified()) return; // 已驗證不處理
+        // 授權：DEV_KEY 被另一個分頁設為 true
+        if (e.key === DEV_KEY && e.newValue === 'true') {
+            const aw = document.getElementById('_ask_wall');
+            if (aw) aw.remove();
+            _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
+        }
+        // 撤銷：PENDING_KEY 被另一個分頁刪除（代表否決）
+        if (e.key === PENDING_KEY && e.newValue === null && e.oldValue !== null) {
+            if (!_isVerified()) _hardLock();
+        }
+    });
 
     // ── 檢查信件連結回調（頁面載入時）───────────────────────
     function _checkUrlCallback() {
