@@ -6,20 +6,22 @@
 (function _protect() {
     'use strict';
 
-    const OWNER         = 'linus622wang@gmail.com';
-    const DEV_KEY       = 'hua_dev_verified';      // localStorage 驗證旗標
-    const PENDING_KEY   = 'hua_dev_auth_pending';  // 待確認 token（暫存）
+    const OWNER       = 'linus622wang@gmail.com';
+    const DEV_KEY     = 'hua_dev_verified';
+    const SESSION_KEY = 'hua_dev_session';   // 目前等待中的 session ID
 
     const EMAILJS_SERVICE_ID  = 'service_ATW5856LINUS';
     const EMAILJS_TEMPLATE_ID = 'template_ATW5856LINUS';
     const EMAILJS_PUBLIC_KEY  = '6pXEpXo8kr54GfzH0';
 
-    // ── 開發者已驗證？直接放行 ────────────────────────────────
+    // Firebase Realtime Database（REST API，不需 SDK）
+    const FIREBASE_URL = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app/auth_requests';
+
+    // ── 工具函式 ──────────────────────────────────────────────
     function _isVerified() {
         return localStorage.getItem(DEV_KEY) === 'true';
     }
 
-    // ── 撤銷所有 hua_dev_* 權限 ──────────────────────────────
     function _revokeAll() {
         const toRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -27,9 +29,9 @@
             if (k && k.startsWith('hua_dev')) toRemove.push(k);
         }
         toRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.removeItem(SESSION_KEY);
     }
 
-    // ── 成功 Toast ────────────────────────────────────────────
     function _showSuccessToast(msg) {
         const ok = document.createElement('div');
         ok.style.cssText =
@@ -41,6 +43,55 @@
         ok.textContent = msg;
         document.body.appendChild(ok);
         setTimeout(() => ok.remove(), 4000);
+    }
+
+    // ── Firebase REST 操作 ────────────────────────────────────
+    function _fbWrite(sessionId, data) {
+        return fetch(FIREBASE_URL + '/' + sessionId + '.json', {
+            method:  'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body:    JSON.stringify(data)
+        }).catch(() => {});
+    }
+
+    function _fbDelete(sessionId) {
+        fetch(FIREBASE_URL + '/' + sessionId + '.json', {method: 'DELETE'}).catch(() => {});
+    }
+
+    // ── Firebase SSE 監聽（即時推播）────────────────────────
+    let _sse = null;
+    function _startListening(sessionId) {
+        if (_sse) { _sse.close(); _sse = null; }
+
+        _sse = new EventSource(FIREBASE_URL + '/' + sessionId + '.json');
+
+        _sse.addEventListener('put', function(e) {
+            try {
+                const d = JSON.parse(e.data);
+                if (!d || !d.data) return;
+                const status = d.data.status;
+
+                if (status === 'granted') {
+                    _sse.close(); _sse = null;
+                    localStorage.setItem(DEV_KEY, 'true');
+                    localStorage.removeItem(SESSION_KEY);
+                    _fbDelete(sessionId);
+                    const aw = document.getElementById('_ask_wall');
+                    if (aw) aw.remove();
+                    _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
+
+                } else if (status === 'revoked') {
+                    _sse.close(); _sse = null;
+                    _revokeAll();
+                    _fbDelete(sessionId);
+                    _hardLock();
+                }
+            } catch(err) {}
+        });
+
+        _sse.onerror = function() {
+            // SSE 中斷時靜默重連（瀏覽器會自動重試）
+        };
     }
 
     // ── 完全鎖定模式 ──────────────────────────────────────────
@@ -103,116 +154,52 @@
         document.addEventListener('keydown', e => e.preventDefault(), true);
     }
 
-    // ── BroadcastChannel：跨分頁通訊（主要）────────────────
-    const _bc = (typeof BroadcastChannel !== 'undefined')
-        ? new BroadcastChannel('_hua_dev_auth')
-        : null;
-
-    if (_bc) {
-        _bc.onmessage = function(e) {
-            if (e.data === 'granted') {
-                const aw = document.getElementById('_ask_wall');
-                if (aw) aw.remove();
-                _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
-            } else if (e.data === 'revoked') {
-                _hardLock();
-            }
-        };
-    }
-
-    // ── StorageEvent：跨分頁備援（localStorage 變動通知）──
-    window.addEventListener('storage', function(e) {
-        if (_isVerified()) return; // 已驗證不處理
-        // 授權：DEV_KEY 被另一個分頁設為 true
-        if (e.key === DEV_KEY && e.newValue === 'true') {
-            const aw = document.getElementById('_ask_wall');
-            if (aw) aw.remove();
-            _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
-        }
-        // 撤銷：PENDING_KEY 被另一個分頁刪除（代表否決）
-        if (e.key === PENDING_KEY && e.newValue === null && e.oldValue !== null) {
-            if (!_isVerified()) _hardLock();
-        }
-    });
-
-    // ── 檢查信件連結回調（頁面載入時）───────────────────────
+    // ── 處理信件連結（?dev_grant / ?dev_revoke）──────────────
     function _checkUrlCallback() {
         const params      = new URLSearchParams(window.location.search);
-        const grantToken  = params.get('dev_grant');
-        const revokeToken = params.get('dev_revoke');
-        if (!grantToken && !revokeToken) return;
+        const grantId     = params.get('dev_grant');
+        const revokeId    = params.get('dev_revoke');
+        if (!grantId && !revokeId) return;
 
-        // 立即清除網址列上的參數
         history.replaceState({}, '', window.location.pathname);
 
-        // 讀取暫存的 token
-        let stored = null;
-        try { stored = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch(e) {}
-
-        if (grantToken) {
-            if (stored && stored.token === grantToken && stored.expires > Date.now()) {
-                // ✅ 開通權限
-                localStorage.removeItem(PENDING_KEY);
-                localStorage.setItem(DEV_KEY, 'true');
-                // 通知原本的分頁
-                if (_bc) _bc.postMessage('granted');
-                // 顯示確認頁面後自動關閉此分頁
-                const _done = () => {
-                    document.body.innerHTML = `
-                        <div style="
-                            position:fixed;inset:0;background:#0a0a0a;
-                            display:flex;flex-direction:column;
-                            align-items:center;justify-content:center;
-                            font-family:'Noto Serif TC',serif;color:#7fff7f;
-                            text-align:center;
-                        ">
-                            <div style="font-size:60px;margin-bottom:16px;">✅</div>
-                            <div style="font-size:20px;font-weight:900;">開發者身份已確認</div>
-                            <div style="font-size:13px;color:#666;margin-top:10px;">此視窗將自動關閉…</div>
-                        </div>`;
-                    setTimeout(() => window.close(), 1500);
-                };
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', _done);
-                } else {
-                    _done();
-                }
-            }
-            return;
-        }
-
-        if (revokeToken) {
-            // ❌ 撤銷所有權限
-            _revokeAll();
-            localStorage.removeItem(PENDING_KEY);
-            // 通知原本的分頁鎖定
-            if (_bc) _bc.postMessage('revoked');
-            // 顯示確認頁面後自動關閉此分頁
-            const _done = () => {
+        const _showPage = (icon, color, title) => {
+            const run = () => {
                 document.body.innerHTML = `
                     <div style="
                         position:fixed;inset:0;background:#0a0a0a;
                         display:flex;flex-direction:column;
                         align-items:center;justify-content:center;
-                        font-family:'Noto Serif TC',serif;color:#ff8888;
-                        text-align:center;
+                        font-family:'Noto Serif TC',serif;
+                        color:${color};text-align:center;
                     ">
-                        <div style="font-size:60px;margin-bottom:16px;">🔒</div>
-                        <div style="font-size:20px;font-weight:900;">已拒絕並撤銷所有權限</div>
-                        <div style="font-size:13px;color:#666;margin-top:10px;">此視窗將自動關閉…</div>
+                        <div style="font-size:64px;margin-bottom:16px;">${icon}</div>
+                        <div style="font-size:20px;font-weight:900;">${title}</div>
+                        <div style="font-size:13px;color:#555;margin-top:10px;">此視窗將自動關閉…</div>
                     </div>`;
-                setTimeout(() => window.close(), 1500);
+                setTimeout(() => window.close(), 1800);
             };
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', _done);
-            } else {
-                _done();
-            }
+            document.readyState === 'loading'
+                ? document.addEventListener('DOMContentLoaded', run)
+                : run();
+        };
+
+        if (grantId) {
+            // ✅ 開通：更新 Firebase 狀態
+            _fbWrite(grantId, {status: 'granted', time: Date.now()});
+            _showPage('✅', '#7fff7f', '開發者身份已確認，權限已開通');
+            return;
+        }
+
+        if (revokeId) {
+            // ❌ 拒絕：更新 Firebase 狀態
+            _fbWrite(revokeId, {status: 'revoked', time: Date.now()});
+            _showPage('🔒', '#ff8888', '已拒絕並撤銷所有權限');
             return;
         }
     }
 
-    // ── 詢問是否為開發者 ──────────────────────────────────────
+    // ── 身份確認視窗 ──────────────────────────────────────────
     function _askIdentity(reason) {
         if (_isVerified()) return;
         if (document.getElementById('_ask_wall')) return;
@@ -284,29 +271,37 @@
         `;
         document.body.appendChild(wall);
 
-        // ── 按「是」→ 寄信給開發者，等信箱確認 ───────────────
+        // ── 按「是」→ 寄信 + Firebase 監聽 ───────────────────
         document.getElementById('_btn_yes').onclick = function() {
-            const btnYes  = this;
-            const btnNo   = document.getElementById('_btn_no');
-            const hint    = document.getElementById('_ask_hint');
+            const btnYes = this;
+            const btnNo  = document.getElementById('_btn_no');
+            const hint   = document.getElementById('_ask_hint');
             btnYes.disabled = true;
             btnNo.disabled  = true;
             btnYes.style.opacity = '0.6';
             btnNo.style.opacity  = '0.4';
             btnYes.textContent = '⏳ 傳送中...';
 
-            // 產生隨機 token，有效期 15 分鐘
-            const token = Math.random().toString(36).slice(2,10) +
-                          Math.random().toString(36).slice(2,10);
-            localStorage.setItem(PENDING_KEY, JSON.stringify({
-                token:   token,
-                expires: Date.now() + 15 * 60 * 1000
-            }));
+            // 產生 session ID
+            const sessionId = Math.random().toString(36).slice(2,10) +
+                               Math.random().toString(36).slice(2,10);
+            localStorage.setItem(SESSION_KEY, sessionId);
 
             const baseUrl    = window.location.origin + window.location.pathname;
-            const grantUrl   = baseUrl + '?dev_grant='  + token;
-            const revokeUrl  = baseUrl + '?dev_revoke=' + token;
+            const grantUrl   = baseUrl + '?dev_grant='  + sessionId;
+            const revokeUrl  = baseUrl + '?dev_revoke=' + sessionId;
 
+            // 寫入 Firebase（pending 狀態）
+            _fbWrite(sessionId, {
+                status:     'pending',
+                time:       Date.now(),
+                user_agent: navigator.userAgent
+            }).then(() => {
+                // 開始監聽 Firebase 狀態變化
+                _startListening(sessionId);
+            });
+
+            // 傳送驗證信
             if (typeof emailjs === 'undefined') {
                 btnYes.textContent = '❌ EmailJS 未載入';
                 hint.textContent   = '請確認網路連線後重試';
@@ -325,10 +320,10 @@
                 },
                 EMAILJS_PUBLIC_KEY
             ).then(() => {
-                btnYes.textContent   = '📧 驗證信已傳送';
-                hint.innerHTML       =
+                btnYes.textContent = '📧 驗證信已傳送';
+                hint.innerHTML =
                     '請至 <span style="color:#d4af37;">' + OWNER + '</span> 信箱點選確認連結<br>' +
-                    '<span style="color:#555;font-size:11px;">連結 15 分鐘內有效</span>';
+                    '<span style="color:#555;font-size:11px;">等待開發者確認中…</span>';
                 hint.style.color = '#aaa';
             }).catch(() => {
                 btnYes.textContent = '❌ 傳送失敗，請重試';
@@ -336,18 +331,30 @@
                 btnNo.disabled     = false;
                 btnYes.style.opacity = '1';
                 btnNo.style.opacity  = '1';
+                if (_sse) { _sse.close(); _sse = null; }
+                localStorage.removeItem(SESSION_KEY);
+                _fbDelete(sessionId);
             });
         };
 
-        // ── 按「否」→ 撤銷全部權限並鎖定 ────────────────────
+        // ── 按「否」→ 直接鎖定 ────────────────────────────────
         document.getElementById('_btn_no').onclick = function() {
             _revokeAll();
             _hardLock();
         };
     }
 
-    // ── 頁面載入：先檢查信件回調 ─────────────────────────────
+    // ── 頁面載入：先處理信件回調 ─────────────────────────────
     _checkUrlCallback();
+
+    // ── 頁面載入：若有未完成的 session，繼續監聽 ────────────
+    (function _resumeSession() {
+        const sessionId = localStorage.getItem(SESSION_KEY);
+        if (sessionId && !_isVerified()) {
+            // 短暫延遲等 DOM 就緒
+            setTimeout(() => _startListening(sessionId), 500);
+        }
+    })();
 
     // ── 禁用右鍵選單 ─────────────────────────────────────────
     document.addEventListener('contextmenu', function(e) {
