@@ -6,21 +6,47 @@
 (function _protect() {
     'use strict';
 
-    const OWNER     = 'linus622wang@gmail.com';
-    const DEV_KEY   = 'hua_dev_verified';   // localStorage 驗證旗標
-    const TOKEN_KEY = 'hua_dev_token';      // 開發者存取 token
+    const OWNER         = 'linus622wang@gmail.com';
+    const DEV_KEY       = 'hua_dev_verified';      // localStorage 驗證旗標
+    const PENDING_KEY   = 'hua_dev_auth_pending';  // 待確認 token（暫存）
+
+    const EMAILJS_SERVICE_ID  = 'service_ATW5856LINUS';
+    const EMAILJS_TEMPLATE_ID = 'template_ATW5856LINUS';
+    const EMAILJS_PUBLIC_KEY  = '6pXEpXo8kr54GfzH0';
 
     // ── 開發者已驗證？直接放行 ────────────────────────────────
     function _isVerified() {
         return localStorage.getItem(DEV_KEY) === 'true';
     }
 
-    // ── 完全鎖定模式（非開發者）──────────────────────────────
+    // ── 撤銷所有 hua_dev_* 權限 ──────────────────────────────
+    function _revokeAll() {
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('hua_dev')) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+    }
+
+    // ── 成功 Toast ────────────────────────────────────────────
+    function _showSuccessToast(msg) {
+        const ok = document.createElement('div');
+        ok.style.cssText =
+            'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
+            'background:#1a4a1a;border:1px solid #2d7a2d;color:#7fff7f;' +
+            'padding:12px 28px;border-radius:8px;z-index:2147483647;' +
+            'font-family:"Noto Serif TC",serif;font-size:14px;font-weight:700;' +
+            'white-space:nowrap;pointer-events:none;';
+        ok.textContent = msg;
+        document.body.appendChild(ok);
+        setTimeout(() => ok.remove(), 4000);
+    }
+
+    // ── 完全鎖定模式 ──────────────────────────────────────────
     function _hardLock() {
-        // 移除詢問牆
         const aw = document.getElementById('_ask_wall');
         if (aw) aw.remove();
-
         if (document.getElementById('_pwall')) return;
 
         const wall = document.createElement('div');
@@ -74,16 +100,57 @@
             </div>
         `;
         document.body.appendChild(wall);
-
-        // 鎖定後禁用所有鍵盤輸入（Escape 也無效）
         document.addEventListener('keydown', e => e.preventDefault(), true);
+    }
+
+    // ── 檢查信件連結回調（頁面載入時）───────────────────────
+    function _checkUrlCallback() {
+        const params      = new URLSearchParams(window.location.search);
+        const grantToken  = params.get('dev_grant');
+        const revokeToken = params.get('dev_revoke');
+        if (!grantToken && !revokeToken) return;
+
+        // 立即清除網址列上的參數
+        history.replaceState({}, '', window.location.pathname);
+
+        // 讀取暫存的 token
+        let stored = null;
+        try { stored = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null'); } catch(e) {}
+
+        if (grantToken) {
+            if (stored && stored.token === grantToken && stored.expires > Date.now()) {
+                // ✅ 信件確認：開通權限
+                localStorage.removeItem(PENDING_KEY);
+                localStorage.setItem(DEV_KEY, 'true');
+                // 等 DOM 就緒再顯示 toast
+                const _show = () => _showSuccessToast('✅ 開發者身份已由信箱確認，已授予完整存取權限');
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', _show);
+                } else {
+                    _show();
+                }
+            }
+            return;
+        }
+
+        if (revokeToken) {
+            // ❌ 信件拒絕：撤銷所有權限並鎖定
+            _revokeAll();
+            localStorage.removeItem(PENDING_KEY);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', _hardLock);
+            } else {
+                setTimeout(_hardLock, 100);
+            }
+            return;
+        }
     }
 
     // ── 詢問是否為開發者 ──────────────────────────────────────
     function _askIdentity(reason) {
-        if (_isVerified()) return;                          // 已驗證，放行
-        if (document.getElementById('_ask_wall')) return;  // 已顯示
-        if (document.getElementById('_pwall'))    return;  // 已鎖定
+        if (_isVerified()) return;
+        if (document.getElementById('_ask_wall')) return;
+        if (document.getElementById('_pwall'))    return;
 
         const wall = document.createElement('div');
         wall.id = '_ask_wall';
@@ -109,22 +176,25 @@
                 background:rgba(212,175,55,0.07);
                 border:1px solid rgba(212,175,55,0.2);
                 border-radius:14px;padding:28px 36px;
-                max-width:460px;line-height:1.8;
+                max-width:480px;line-height:1.8;
             ">
                 <div style="font-size:15px;color:#eee;margin-bottom:6px;">
                     您是本程式的開發者嗎？
                 </div>
-                <div style="font-size:12px;color:#666;margin-bottom:24px;">
+                <div style="font-size:12px;color:#666;margin-bottom:20px;">
                     Are you the developer of this application?
                 </div>
                 <div style="
                     background:rgba(255,255,255,0.04);
                     border:1px solid #222;border-radius:8px;
-                    padding:12px 16px;margin-bottom:24px;
+                    padding:10px 16px;margin-bottom:20px;
                     font-size:13px;color:#888;
                 ">
                     開發者：<span style="color:#d4af37;">${OWNER}</span>
                 </div>
+                <div id="_ask_hint" style="
+                    font-size:12px;color:#666;margin-bottom:20px;min-height:18px;
+                ">點「是」後將傳送驗證信，請至信箱確認</div>
 
                 <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
                     <button id="_btn_yes" style="
@@ -133,7 +203,7 @@
                         padding:12px 28px;border-radius:8px;
                         font-size:14px;font-weight:900;cursor:pointer;
                         font-family:'Noto Serif TC',serif;letter-spacing:1px;
-                        min-width:160px;
+                        min-width:160px;transition:opacity .2s;
                     ">✅ 是，我是開發者</button>
                     <button id="_btn_no" style="
                         background:rgba(120,0,0,0.4);
@@ -141,115 +211,77 @@
                         padding:12px 28px;border-radius:8px;
                         font-size:14px;font-weight:900;cursor:pointer;
                         font-family:'Noto Serif TC',serif;letter-spacing:1px;
-                        min-width:160px;
+                        min-width:160px;transition:opacity .2s;
                     ">❌ 否，我不是</button>
-                </div>
-
-                <div id="_verify_area" style="display:none;margin-top:20px;">
-                    <div style="font-size:12px;color:#888;margin-bottom:10px;">
-                        已傳送驗證信至 ${OWNER}<br>
-                        請輸入信中提供的存取金鑰：
-                    </div>
-                    <div style="display:flex;gap:8px;justify-content:center;">
-                        <input id="_dev_token_input" type="password"
-                            placeholder="輸入存取金鑰..."
-                            style="
-                                background:#111;border:1px solid #333;
-                                color:#d4af37;padding:10px 14px;
-                                border-radius:6px;font-size:14px;
-                                width:200px;text-align:center;
-                                font-family:'Noto Serif TC',serif;
-                                outline:none;
-                            "
-                        />
-                        <button id="_btn_token" style="
-                            background:linear-gradient(135deg,#b8860b,#d4af37);
-                            color:#000;border:none;padding:10px 18px;
-                            border-radius:6px;font-weight:900;
-                            cursor:pointer;font-size:14px;
-                        ">確認</button>
-                    </div>
-                    <div id="_token_err" style="color:#ff6666;font-size:12px;margin-top:8px;display:none;">
-                        金鑰錯誤，請重試或聯繫開發者。
-                    </div>
                 </div>
             </div>
         `;
         document.body.appendChild(wall);
 
-        // ── 按「是」→ 寄驗證信 + 顯示金鑰輸入框 ──────────────
+        // ── 按「是」→ 寄信給開發者，等信箱確認 ───────────────
         document.getElementById('_btn_yes').onclick = function() {
-            this.disabled = true;
-            this.textContent = '📧 驗證信已傳送...';
+            const btnYes  = this;
+            const btnNo   = document.getElementById('_btn_no');
+            const hint    = document.getElementById('_ask_hint');
+            btnYes.disabled = true;
+            btnNo.disabled  = true;
+            btnYes.style.opacity = '0.6';
+            btnNo.style.opacity  = '0.4';
+            btnYes.textContent = '⏳ 傳送中...';
 
-            // 傳送驗證信通知開發者有人聲稱是本人
-            const subject = encodeURIComponent('【華夏風雲錄】有人聲稱是開發者，請確認');
-            const body    = encodeURIComponent(
-                '系統通知：有人在 ' + new Date().toLocaleString('zh-TW') +
-                ' 嘗試以開發者身份存取程式碼。\n\n' +
-                '瀏覽器：' + navigator.userAgent + '\n\n' +
-                '如果是您本人操作，請忽略此信。\n' +
-                '如果不是，請立即聯繫相關平台。'
-            );
-            window.open('mailto:' + OWNER + '?subject=' + subject + '&body=' + body);
+            // 產生隨機 token，有效期 15 分鐘
+            const token = Math.random().toString(36).slice(2,10) +
+                          Math.random().toString(36).slice(2,10);
+            localStorage.setItem(PENDING_KEY, JSON.stringify({
+                token:   token,
+                expires: Date.now() + 15 * 60 * 1000
+            }));
 
-            // 顯示金鑰輸入框
-            document.getElementById('_verify_area').style.display = 'block';
-            document.getElementById('_btn_no').style.display = 'none';
+            const baseUrl    = window.location.origin + window.location.pathname;
+            const grantUrl   = baseUrl + '?dev_grant='  + token;
+            const revokeUrl  = baseUrl + '?dev_revoke=' + token;
+
+            if (typeof emailjs === 'undefined') {
+                btnYes.textContent = '❌ EmailJS 未載入';
+                hint.textContent   = '請確認網路連線後重試';
+                hint.style.color   = '#ff8888';
+                return;
+            }
+
+            emailjs.send(
+                EMAILJS_SERVICE_ID,
+                EMAILJS_TEMPLATE_ID,
+                {
+                    event_time: new Date().toLocaleString('zh-TW'),
+                    user_agent: navigator.userAgent,
+                    grant_url:  grantUrl,
+                    revoke_url: revokeUrl
+                },
+                EMAILJS_PUBLIC_KEY
+            ).then(() => {
+                btnYes.textContent   = '📧 驗證信已傳送';
+                hint.innerHTML       =
+                    '請至 <span style="color:#d4af37;">' + OWNER + '</span> 信箱點選確認連結<br>' +
+                    '<span style="color:#555;font-size:11px;">連結 15 分鐘內有效</span>';
+                hint.style.color = '#aaa';
+            }).catch(() => {
+                btnYes.textContent = '❌ 傳送失敗，請重試';
+                btnYes.disabled    = false;
+                btnNo.disabled     = false;
+                btnYes.style.opacity = '1';
+                btnNo.style.opacity  = '1';
+            });
         };
 
-        // ── 按「否」→ 直接鎖定 ────────────────────────────────
+        // ── 按「否」→ 撤銷全部權限並鎖定 ────────────────────
         document.getElementById('_btn_no').onclick = function() {
+            _revokeAll();
             _hardLock();
         };
-
-        // ── 輸入金鑰驗證 ──────────────────────────────────────
-        document.getElementById('_btn_token').onclick = _checkToken;
-        document.getElementById('_dev_token_input').addEventListener('keydown', e => {
-            if (e.key === 'Enter') _checkToken();
-        });
     }
 
-    // ── 驗證開發者金鑰 ────────────────────────────────────────
-    // 金鑰 = OWNER 信箱的 SHA-like 簡易雜湊（開發者自己知道）
-    // 實際值：取 "linus622wang" 的字元碼總和 → 1561，再加年份 2026 → "linus2026"
-    const _SECRET = (function() {
-        const s = 'linus622wang';
-        let h = 0;
-        for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
-        return s.slice(0, 5) + String(h % 100) + '2026';
-    })();
-
-    function _checkToken() {
-        const input = document.getElementById('_dev_token_input');
-        const err   = document.getElementById('_token_err');
-        if (!input) return;
-
-        if (input.value.trim() === _SECRET) {
-            // ✅ 驗證成功
-            localStorage.setItem(DEV_KEY, 'true');
-            const aw = document.getElementById('_ask_wall');
-            if (aw) aw.remove();
-            // 顯示成功提示
-            const ok = document.createElement('div');
-            ok.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
-                'background:#1a4a1a;border:1px solid #2d7a2d;color:#7fff7f;' +
-                'padding:12px 28px;border-radius:8px;z-index:2147483647;' +
-                'font-family:"Noto Serif TC",serif;font-size:14px;font-weight:700;';
-            ok.textContent = '✅ 開發者身份確認，已授予完整存取權限';
-            document.body.appendChild(ok);
-            setTimeout(() => ok.remove(), 3000);
-        } else {
-            // ❌ 金鑰錯誤
-            err.style.display = 'block';
-            input.style.borderColor = '#ff4444';
-            setTimeout(() => {
-                err.style.display = 'none';
-                input.style.borderColor = '#333';
-                input.value = '';
-            }, 2000);
-        }
-    }
+    // ── 頁面載入：先檢查信件回調 ─────────────────────────────
+    _checkUrlCallback();
 
     // ── 禁用右鍵選單 ─────────────────────────────────────────
     document.addEventListener('contextmenu', function(e) {
@@ -259,10 +291,10 @@
 
     // ── 攔截鍵盤快捷鍵 ───────────────────────────────────────
     document.addEventListener('keydown', function(e) {
-        if (_isVerified()) return;   // 開發者已驗證，不攔截
+        if (_isVerified()) return;
 
-        const key  = e.key;
-        const ctrl = e.ctrlKey || e.metaKey;
+        const key   = e.key;
+        const ctrl  = e.ctrlKey || e.metaKey;
         const shift = e.shiftKey;
 
         if (key === 'F12') {
@@ -283,21 +315,23 @@
     let _devOpen = false;
     setInterval(() => {
         if (_isVerified()) return;
-        const open = (window.outerWidth - window.innerWidth > 160) ||
+        const open = (window.outerWidth  - window.innerWidth  > 160) ||
                      (window.outerHeight - window.innerHeight > 160);
         if (open && !_devOpen) { _devOpen = true; _askIdentity('devtools-size'); }
         if (!open)              { _devOpen = false; }
     }, 1000);
 
-    // ── Console 水印（開發者驗證後不重複顯示）────────────────
-    const _origCE = console.error.bind(console);
-    let _warned = false;
+    // ── Console 水印 ─────────────────────────────────────────
+    const _origCE  = console.error.bind(console);
     const _origLog = console.log.bind(console);
+    let _warned = false;
     console.log = function(...args) {
         const first = typeof args[0] === 'string' ? args[0] : '';
-        if (!_warned && !_isVerified() && !first.includes('%c ╔') && !first.includes('[Network]')) {
+        if (!_warned && !_isVerified() &&
+            !first.includes('%c ╔') && !first.includes('[Network]')) {
             _warned = true;
-            _origCE('%c⛔ 未授權 — 請先取得 ' + OWNER + ' 的授權', 'color:#ff4444;font-size:14px;font-weight:900;');
+            _origCE('%c⛔ 未授權 — 請先取得 ' + OWNER + ' 的授權',
+                    'color:#ff4444;font-size:14px;font-weight:900;');
         }
         _origLog(...args);
     };
