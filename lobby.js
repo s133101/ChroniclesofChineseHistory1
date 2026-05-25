@@ -130,7 +130,14 @@
         await new Promise(r => setTimeout(r, 1400));
         _splashEl.style.display = 'none';
     }
-    // ── 開場畫面結束，進入君王登場動畫 ────────────────────────
+    // ── 開場畫面結束，先驗證身份再進入君王登場動畫 ──────────────
+
+    // 嘗試還原 Session，否則顯示登入畫面
+    const _restoredUser = await Auth.restoreSession();
+    let _loggedUser = _restoredUser;
+    if (!_loggedUser) {
+        _loggedUser = await _showLoginScreen();
+    }
 
         const historyData = [
             { t: '商朝 · 鳴條之戰', d: '成湯伐桀，終結夏朝統治，開創六百年大商國祚。', img: 'assets/history/h01.jpg' },
@@ -245,14 +252,7 @@
             introEl.style.opacity = '0';
             await new Promise(r => setTimeout(r, 1000));
             introEl.style.display = 'none';
-
-            // 嘗試還原 Session（已登入則跳過登入畫面）
-            const restored = await Auth.restoreSession();
-            if (restored) {
-                _enterLobbyAsUser(restored);
-            } else {
-                _showLoginScreen();
-            }
+            _enterLobbyAsUser(_loggedUser || Auth.current());
         });
     }
 
@@ -260,6 +260,7 @@
     //  登入畫面邏輯
     // ══════════════════════════════════════════
     function _showLoginScreen() {
+        return new Promise(resolveLogin => {
         const scr = document.getElementById('login-screen');
         if (scr) scr.classList.remove('hidden');
 
@@ -335,12 +336,12 @@
                 return;
             }
 
-            // 登入成功
+            // 登入成功 — 淡出登入畫面後解析 Promise，讓君王登場動畫繼續
             const scr2 = document.getElementById('login-screen');
             if (scr2) { scr2.style.opacity = '0'; scr2.style.transition = 'opacity .6s'; }
             setTimeout(() => {
                 if (scr2) scr2.classList.add('hidden');
-                _enterLobbyAsUser(res.user);
+                resolveLogin(res.user);
             }, 600);
         }
 
@@ -356,6 +357,7 @@
             passwordEl.value = '';
             setTimeout(() => usernameEl.focus(), 100);
         };
+        }); // end Promise
     }
 
     // ── 登入後進入大廳 ────────────────────────────────────────
