@@ -164,6 +164,76 @@ const Auth = (() => {
         return {ok: true, avatar: dataUrl};
     }
 
+    // ── 隨機暱稱池 ───────────────────────────────────────────
+    const _nicknamePool = [
+        '無名大將','草莽英雄','天涯俠客','亂世豪傑','江湖遊俠','蕭何再世',
+        '廟堂謀士','邊關猛將','江東霸主','北疆守護','鐵騎先鋒','謀定後動',
+        '縱橫四海','定鼎天下','金戈鐵馬','運籌帷幄','橫刀立馬','揮斥方遒',
+        '滄海一粟','龍騰虎躍','羽扇綸巾','臥龍鳳雛','沙場老將','青衫仗劍'
+    ];
+    function _randomNickname() {
+        return _nicknamePool[Math.floor(Math.random() * _nicknamePool.length)];
+    }
+
+    // ── 自行註冊 ──────────────────────────────────────────────
+    async function register(username, email, password, confirmPassword) {
+        const uname = username.toLowerCase().trim();
+        if (!uname || !email || !password) return {ok: false, err: '請填寫所有欄位'};
+        if (!/^[a-z0-9_]{3,20}$/.test(uname))
+            return {ok: false, err: '帳號只能用英文小寫、數字、底線（3–20字元）'};
+        if (!email.includes('@')) return {ok: false, err: '請輸入有效的信箱'};
+        if (password.length < 6) return {ok: false, err: '密碼至少 6 個字元'};
+        if (password !== confirmPassword) return {ok: false, err: '兩次密碼不一致'};
+
+        const exist = await _fbGet('/users/' + uname);
+        if (exist) return {ok: false, err: '此帳號已被使用，請換一個'};
+
+        const hash = await _hash(password);
+        const nickname = _randomNickname();
+
+        await _fbSet('/users/' + uname, {
+            password_hash: hash,
+            email,
+            role: 'player',
+            nickname,
+            avatar: null,
+            createdAt: Date.now()
+        });
+
+        // 發送驗證碼
+        const code    = String(Math.floor(100000 + Math.random() * 900000));
+        const expires = Date.now() + 5 * 60 * 1000;
+        await _fbSet('/auth_codes/' + uname, {code, expires});
+
+        _sendEmail(EJ_AUTHCODE, {
+            to_email:  email,
+            username:  nickname,
+            auth_code: code
+        });
+
+        return {ok: true, needCode: true, username: uname, nickname,
+                emailHint: email.replace(/(.{2}).+(@.+)/, '$1***$2')};
+    }
+
+    // ── 更新信箱 ──────────────────────────────────────────────
+    async function updateEmail(newEmail) {
+        if (!_cur) return {ok: false, err: '尚未登入'};
+        if (!newEmail || !newEmail.includes('@')) return {ok: false, err: '請輸入有效的信箱'};
+
+        const updated = {..._cur};
+        delete updated.username;
+        updated.email = newEmail;
+
+        await _fbSet('/users/' + _cur.username, updated);
+        _cur.email = newEmail;
+
+        const s = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+        s.email = newEmail;
+        sessionStorage.setItem('hua_session', JSON.stringify(s));
+
+        return {ok: true};
+    }
+
     // ── 管理員建立帳號 ────────────────────────────────────────
     async function adminCreateUser(username, password, email, nickname, role = 'player') {
         if (!_cur || _cur.role !== 'admin') return {ok: false, err: '需要管理員權限'};
@@ -175,9 +245,9 @@ const Auth = (() => {
         const hash = await _hash(password);
         await _fbSet('/users/' + uname, {
             password_hash: hash,
-            email,
+            email: email || '',
             role,
-            nickname: nickname || uname,
+            nickname: nickname || _randomNickname(),
             avatar: null,
             createdAt: Date.now()
         });
@@ -211,9 +281,11 @@ const Auth = (() => {
     return {
         initAdmin,
         login,
+        register,
         verifyCode,
         changePassword,
         updateAvatar,
+        updateEmail,
         adminCreateUser,
         getSession,
         restoreSession,

@@ -348,15 +348,83 @@
         codeBtn.onclick = doVerify;
         codeInput.onkeydown = e => { if (e.key === 'Enter') doVerify(); };
 
-        // 返回重新登入
+        // 返回（登入或註冊面板）
+        let _codeBackTarget = 'login'; // 'login' or 'register'
         codeBackBtn.onclick = () => {
             hideErr(codeErrEl);
             codeInput.value = '';
             codePanel.classList.add('hidden');
+            const toggleRow = document.getElementById('login-toggle-row');
+            if (_codeBackTarget === 'register') {
+                regPanel.classList.remove('hidden');
+                if (toggleRow) toggleRow.classList.add('hidden');
+            } else {
+                formPanel.classList.remove('hidden');
+                if (toggleRow) toggleRow.classList.remove('hidden');
+                passwordEl.value = '';
+                setTimeout(() => usernameEl.focus(), 100);
+            }
+        };
+
+        // ── 登入 ↔ 註冊 切換 ────────────────────────────────────
+        const regPanel       = document.getElementById('login-register-panel');
+        const toRegBtn       = document.getElementById('login-to-register-btn');
+        const regBackBtn     = document.getElementById('reg-back-btn');
+        const regSubmitBtn   = document.getElementById('reg-submit-btn');
+        const regUsernameEl  = document.getElementById('reg-username');
+        const regEmailEl     = document.getElementById('reg-email');
+        const regPasswordEl  = document.getElementById('reg-password');
+        const regConfirmEl   = document.getElementById('reg-confirm');
+        const regErrEl       = document.getElementById('reg-error');
+        const toggleRow      = document.getElementById('login-toggle-row');
+
+        toRegBtn.onclick = () => {
+            formPanel.classList.add('hidden');
+            toggleRow.classList.add('hidden');
+            regPanel.classList.remove('hidden');
+            setTimeout(() => regUsernameEl.focus(), 100);
+        };
+        regBackBtn.onclick = () => {
+            hideErr(regErrEl);
+            regPanel.classList.add('hidden');
+            toggleRow.classList.remove('hidden');
             formPanel.classList.remove('hidden');
-            passwordEl.value = '';
             setTimeout(() => usernameEl.focus(), 100);
         };
+
+        // 註冊提交
+        async function doRegister() {
+            hideErr(regErrEl);
+            const u = (regUsernameEl.value || '').trim();
+            const e = (regEmailEl.value || '').trim();
+            const p = regPasswordEl.value || '';
+            const c = regConfirmEl.value || '';
+
+            regSubmitBtn.disabled = true;
+            regSubmitBtn.textContent = '⏳ 建立中...';
+
+            const res = await Auth.register(u, e, p, c);
+
+            regSubmitBtn.disabled = false;
+            regSubmitBtn.textContent = '建 立 帳 號';
+
+            if (!res.ok) { showErr(regErrEl, res.err); return; }
+
+            // 切換到驗證碼畫面
+            _pendingUsername = res.username;
+            _codeBackTarget = 'register';
+            codeHint.innerHTML =
+                `帳號 <span style="color:var(--gold)">${res.username}</span> 已建立！<br>` +
+                `暱稱：<span style="color:var(--gold)">${res.nickname}</span><br>` +
+                `驗證碼已傳送至 <span style="color:var(--gold)">${res.emailHint}</span><br>` +
+                `<small style="color:#555;">5分鐘內有效</small>`;
+            regPanel.classList.add('hidden');
+            codePanel.classList.remove('hidden');
+            setTimeout(() => codeInput.focus(), 100);
+        }
+
+        regSubmitBtn.onclick = doRegister;
+        regConfirmEl.onkeydown = e => { if (e.key === 'Enter') doRegister(); };
         }); // end Promise
     }
 
@@ -470,6 +538,29 @@
             };
         }
 
+        // 驗證碼信箱
+        const emailHintEl = document.getElementById('profile-email-current');
+        const emailInput  = document.getElementById('profile-email-input');
+        const emailMsg    = document.getElementById('profile-email-msg');
+        const emailSave   = document.getElementById('profile-email-save-btn');
+        if (emailHintEl && user) {
+            emailHintEl.textContent = user.email
+                ? '目前：' + user.email.replace(/(.{2}).+(@.+)/, '$1***$2')
+                : '尚未設定信箱';
+        }
+        if (emailSave) {
+            emailSave.onclick = async function() {
+                emailMsg.classList.add('hidden');
+                const val = (emailInput.value || '').trim();
+                emailSave.disabled = true;
+                const res = await Auth.updateEmail(val);
+                emailSave.disabled = false;
+                _showProfileMsg(emailMsg, res.ok, res.ok ? '信箱已更新' : res.err);
+                if (res.ok && emailHintEl)
+                    emailHintEl.textContent = '目前：' + val.replace(/(.{2}).+(@.+)/, '$1***$2');
+            };
+        }
+
         // 更改密碼
         const pwdMsg  = document.getElementById('profile-pwd-msg');
         const pwdSave = document.getElementById('profile-pwd-save-btn');
@@ -498,8 +589,8 @@
     window._closeProfileModal = function() {
         const modal = document.getElementById('profile-modal');
         if (modal) modal.classList.add('hidden');
-        // 清除密碼欄位
-        ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd'].forEach(id => {
+        // 清除密碼與信箱欄位
+        ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd','profile-email-input'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });

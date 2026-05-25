@@ -3142,6 +3142,20 @@ body {
 }
 .login-back-btn:hover { color: #aaa; border-color: #555; }
 
+/* 登入 ↔ 註冊 切換列 */
+.login-toggle-row {
+    text-align: center; font-size: 13px; color: #666;
+}
+.login-toggle-row.hidden { display: none; }
+.login-link-btn {
+    background: none; border: none; padding: 0 4px;
+    color: var(--gold); font-size: 13px;
+    cursor: pointer; text-decoration: underline;
+    font-family: 'Noto Serif TC', serif;
+    transition: color .2s;
+}
+.login-link-btn:hover { color: #fff; }
+
 .login-code-hint {
     text-align: center; font-size: 13px; color: #888;
     margin-bottom: 18px; line-height: 1.6;
@@ -3298,6 +3312,10 @@ body {
 .profile-msg.hidden { display: none; }
 .profile-msg.ok  { background:rgba(45,122,45,0.2); border:1px solid #2d7a2d; color:#7fff7f; }
 .profile-msg.err { background:rgba(192,57,43,0.2); border:1px solid rgba(192,57,43,0.5); color:#ff8888; }
+
+.profile-email-hint {
+    font-size: 12px; color: #666; margin-bottom: 10px;
+}
 
 .profile-save-btn {
     width: 100%;

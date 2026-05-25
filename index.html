@@ -126,7 +126,7 @@
             <button id="login-submit-btn" class="login-action-btn">登 入</button>
         </div>
 
-        <!-- 驗證碼輸入（登入後顯示）-->
+        <!-- 驗證碼輸入（登入 / 註冊後顯示）-->
         <div class="login-box hidden" id="login-code-panel">
             <div class="login-code-hint" id="login-code-hint">驗證碼已傳送至您的信箱</div>
             <div class="login-field-group">
@@ -136,7 +136,40 @@
             </div>
             <div id="login-code-error" class="login-msg-err hidden"></div>
             <button id="login-code-btn" class="login-action-btn">確 認</button>
-            <button id="login-code-back-btn" class="login-back-btn">← 重新登入</button>
+            <button id="login-code-back-btn" class="login-back-btn">← 返回</button>
+        </div>
+
+        <!-- 註冊表單 -->
+        <div class="login-box hidden" id="login-register-panel">
+            <div class="login-field-group">
+                <label class="login-label">帳號（英文小寫 / 數字 / 底線，3–20字）</label>
+                <input id="reg-username" type="text" class="login-input"
+                       placeholder="例：hero123" autocomplete="username">
+            </div>
+            <div class="login-field-group">
+                <label class="login-label">信箱（用於接收驗證碼）</label>
+                <input id="reg-email" type="email" class="login-input"
+                       placeholder="example@gmail.com" autocomplete="email">
+            </div>
+            <div class="login-field-group">
+                <label class="login-label">密碼（至少 6 字元）</label>
+                <input id="reg-password" type="password" class="login-input"
+                       placeholder="請輸入密碼" autocomplete="new-password">
+            </div>
+            <div class="login-field-group">
+                <label class="login-label">確認密碼</label>
+                <input id="reg-confirm" type="password" class="login-input"
+                       placeholder="再輸入一次密碼" autocomplete="new-password">
+            </div>
+            <div id="reg-error" class="login-msg-err hidden"></div>
+            <button id="reg-submit-btn" class="login-action-btn">建 立 帳 號</button>
+            <button id="reg-back-btn" class="login-back-btn">← 返回登入</button>
+        </div>
+
+        <!-- 登入 ↔ 註冊 切換 -->
+        <div id="login-toggle-row" class="login-toggle-row">
+            <span>還沒有帳號？</span>
+            <button id="login-to-register-btn" class="login-link-btn">立即註冊</button>
         </div>
     </div>
 </div>
@@ -181,7 +214,17 @@
             <button class="profile-save-btn" id="profile-pwd-save-btn">更改密碼</button>
         </div>
 
-        <!-- ③ 畫面縮放 -->
+        <!-- ③ 驗證碼信箱 -->
+        <div class="profile-section">
+            <div class="profile-section-title">📧 驗證碼寄送信箱</div>
+            <p class="profile-email-hint" id="profile-email-current"></p>
+            <input type="email" id="profile-email-input" class="profile-input"
+                   placeholder="請輸入新的信箱">
+            <div id="profile-email-msg" class="profile-msg hidden"></div>
+            <button class="profile-save-btn" id="profile-email-save-btn">更新信箱</button>
+        </div>
+
+        <!-- ④ 畫面縮放 -->
         <div class="profile-section">
             <div class="profile-section-title">🔍 畫面縮放</div>
             <div class="profile-zoom-wrap">
