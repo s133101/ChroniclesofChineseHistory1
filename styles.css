@@ -3038,9 +3038,10 @@ body {
 
 .login-bg {
     position: absolute; inset: 0;
-    background: url('intro_bg.png') center/cover no-repeat,
+    background: url('assets/帝王觀星長城背影圖.png') center/cover no-repeat,
                 linear-gradient(160deg, #060a12 0%, #0d1520 50%, #06090f 100%);
-    filter: brightness(0.45);
+    filter: brightness(0.6);
+    pointer-events: none;
 }
 
 .login-container {
@@ -3066,7 +3067,7 @@ body {
 
 .login-box {
     width: 100%;
-    background: rgba(10,14,22,0.88);
+    background: rgba(10,14,22,0.50);
     border: 1px solid rgba(212,175,55,0.25);
     border-radius: 16px;
     padding: 28px 32px;

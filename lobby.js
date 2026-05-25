@@ -240,9 +240,11 @@
         }
 
         document.getElementById('btn-enter-lobby').addEventListener('click', async () => {
-            document.getElementById('intro-screen').style.opacity = '0';
-            document.getElementById('intro-screen').style.transition = 'opacity 1s';
+            const introEl = document.getElementById('intro-screen');
+            introEl.style.transition = 'opacity 1s';
+            introEl.style.opacity = '0';
             await new Promise(r => setTimeout(r, 1000));
+            introEl.style.display = 'none';
 
             // 嘗試還原 Session（已登入則跳過登入畫面）
             const restored = await Auth.restoreSession();
