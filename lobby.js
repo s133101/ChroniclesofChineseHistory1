@@ -82,15 +82,19 @@
     }
 
     if (!container || !river || typeof cardDatabase === 'undefined') {
-        // 缺少必要元素也要關閉開場畫面
-        if (_splashEl) { _splashEl.classList.add('fade-out'); setTimeout(() => { _splashEl.style.display = 'none'; }, 1400); }
-        const startBtn = document.getElementById('btn-enter-lobby');
-        if (startBtn) {
-            startBtn.addEventListener('click', () => {
-                _switchScreen('lobby-screen');
-                setTimeout(() => openSidebar(), 1000);
-            });
+        // 缺少必要元素：等 splash 點擊後直接走登入流程
+        await new Promise(resolve => {
+            const _auto = setTimeout(resolve, 5000);
+            if (_splashEl) _splashEl.addEventListener('click', () => { clearTimeout(_auto); resolve(); }, { once: true });
+        });
+        if (_splashEl) {
+            _splashEl.classList.add('fade-out');
+            await new Promise(r => setTimeout(r, 1400));
+            _splashEl.style.display = 'none';
         }
+        const _r = await Auth.restoreSession();
+        const _u = _r || await _showLoginScreen();
+        _enterLobbyAsUser(_u);
         return;
     }
 
@@ -348,25 +352,7 @@
         codeBtn.onclick = doVerify;
         codeInput.onkeydown = e => { if (e.key === 'Enter') doVerify(); };
 
-        // 返回（登入或註冊面板）
-        let _codeBackTarget = 'login'; // 'login' or 'register'
-        codeBackBtn.onclick = () => {
-            hideErr(codeErrEl);
-            codeInput.value = '';
-            codePanel.classList.add('hidden');
-            const toggleRow = document.getElementById('login-toggle-row');
-            if (_codeBackTarget === 'register') {
-                regPanel.classList.remove('hidden');
-                if (toggleRow) toggleRow.classList.add('hidden');
-            } else {
-                formPanel.classList.remove('hidden');
-                if (toggleRow) toggleRow.classList.remove('hidden');
-                passwordEl.value = '';
-                setTimeout(() => usernameEl.focus(), 100);
-            }
-        };
-
-        // ── 登入 ↔ 註冊 切換 ────────────────────────────────────
+        // ── 登入 ↔ 註冊 切換（先宣告，避免 closure 參照問題）───────
         const regPanel       = document.getElementById('login-register-panel');
         const toRegBtn       = document.getElementById('login-to-register-btn');
         const regBackBtn     = document.getElementById('reg-back-btn');
@@ -378,35 +364,57 @@
         const regErrEl       = document.getElementById('reg-error');
         const toggleRow      = document.getElementById('login-toggle-row');
 
-        toRegBtn.onclick = () => {
-            formPanel.classList.add('hidden');
-            toggleRow.classList.add('hidden');
-            regPanel.classList.remove('hidden');
-            setTimeout(() => regUsernameEl.focus(), 100);
-        };
-        regBackBtn.onclick = () => {
-            hideErr(regErrEl);
-            regPanel.classList.add('hidden');
-            toggleRow.classList.remove('hidden');
-            formPanel.classList.remove('hidden');
-            setTimeout(() => usernameEl.focus(), 100);
-        };
+        // 返回（登入或註冊面板）
+        let _codeBackTarget = 'login'; // 'login' or 'register'
+        if (codeBackBtn) {
+            codeBackBtn.onclick = () => {
+                hideErr(codeErrEl);
+                codeInput.value = '';
+                codePanel.classList.add('hidden');
+                if (_codeBackTarget === 'register' && regPanel) {
+                    regPanel.classList.remove('hidden');
+                    if (toggleRow) toggleRow.classList.add('hidden');
+                } else {
+                    formPanel.classList.remove('hidden');
+                    if (toggleRow) toggleRow.classList.remove('hidden');
+                    passwordEl.value = '';
+                    setTimeout(() => usernameEl.focus(), 100);
+                }
+            };
+        }
+
+        if (toRegBtn) {
+            toRegBtn.onclick = () => {
+                formPanel.classList.add('hidden');
+                if (toggleRow) toggleRow.classList.add('hidden');
+                if (regPanel) regPanel.classList.remove('hidden');
+                if (regUsernameEl) setTimeout(() => regUsernameEl.focus(), 100);
+            };
+        }
+        if (regBackBtn) {
+            regBackBtn.onclick = () => {
+                if (regErrEl) hideErr(regErrEl);
+                if (regPanel) regPanel.classList.add('hidden');
+                if (toggleRow) toggleRow.classList.remove('hidden');
+                formPanel.classList.remove('hidden');
+                setTimeout(() => usernameEl.focus(), 100);
+            };
+        }
 
         // 註冊提交
         async function doRegister() {
+            if (!regErrEl || !regUsernameEl || !regEmailEl || !regPasswordEl || !regConfirmEl) return;
             hideErr(regErrEl);
             const u = (regUsernameEl.value || '').trim();
             const e = (regEmailEl.value || '').trim();
             const p = regPasswordEl.value || '';
             const c = regConfirmEl.value || '';
 
-            regSubmitBtn.disabled = true;
-            regSubmitBtn.textContent = '⏳ 建立中...';
+            if (regSubmitBtn) { regSubmitBtn.disabled = true; regSubmitBtn.textContent = '⏳ 建立中...'; }
 
             const res = await Auth.register(u, e, p, c);
 
-            regSubmitBtn.disabled = false;
-            regSubmitBtn.textContent = '建 立 帳 號';
+            if (regSubmitBtn) { regSubmitBtn.disabled = false; regSubmitBtn.textContent = '建 立 帳 號'; }
 
             if (!res.ok) { showErr(regErrEl, res.err); return; }
 
@@ -418,13 +426,13 @@
                 `暱稱：<span style="color:var(--gold)">${res.nickname}</span><br>` +
                 `驗證碼已傳送至 <span style="color:var(--gold)">${res.emailHint}</span><br>` +
                 `<small style="color:#555;">5分鐘內有效</small>`;
-            regPanel.classList.add('hidden');
+            if (regPanel) regPanel.classList.add('hidden');
             codePanel.classList.remove('hidden');
             setTimeout(() => codeInput.focus(), 100);
         }
 
-        regSubmitBtn.onclick = doRegister;
-        regConfirmEl.onkeydown = e => { if (e.key === 'Enter') doRegister(); };
+        if (regSubmitBtn) regSubmitBtn.onclick = doRegister;
+        if (regConfirmEl) regConfirmEl.onkeydown = e => { if (e.key === 'Enter') doRegister(); };
         }); // end Promise
     }
 
