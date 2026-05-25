@@ -16,6 +16,7 @@
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="protect.js"></script>
+    <script src="auth.js"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
@@ -96,6 +97,99 @@
         </div>
 
         <button id="btn-enter-lobby" class="intro-start-btn">開 啟 征 途</button>
+    </div>
+</div>
+
+<!-- ══ 登入畫面 ══ -->
+<div id="login-screen" class="hidden">
+    <div class="login-bg"></div>
+    <div class="login-container">
+        <div class="login-logo-area">
+            <span style="font-size:56px;">🐉</span>
+            <h1 class="login-game-title">華夏風雲錄</h1>
+            <p class="login-game-sub">千古英雄 · 全球對決</p>
+        </div>
+
+        <!-- 帳密登入表單 -->
+        <div class="login-box" id="login-form-panel">
+            <div class="login-field-group">
+                <label class="login-label">帳號</label>
+                <input id="login-username" type="text" class="login-input"
+                       placeholder="請輸入帳號" autocomplete="username">
+            </div>
+            <div class="login-field-group">
+                <label class="login-label">密碼</label>
+                <input id="login-password" type="password" class="login-input"
+                       placeholder="請輸入密碼" autocomplete="current-password">
+            </div>
+            <div id="login-error" class="login-msg-err hidden"></div>
+            <button id="login-submit-btn" class="login-action-btn">登 入</button>
+        </div>
+
+        <!-- 驗證碼輸入（登入後顯示）-->
+        <div class="login-box hidden" id="login-code-panel">
+            <div class="login-code-hint" id="login-code-hint">驗證碼已傳送至您的信箱</div>
+            <div class="login-field-group">
+                <label class="login-label">驗證碼</label>
+                <input id="login-code-input" type="text" class="login-input login-code-input"
+                       placeholder="6 位數字" maxlength="6" inputmode="numeric">
+            </div>
+            <div id="login-code-error" class="login-msg-err hidden"></div>
+            <button id="login-code-btn" class="login-action-btn">確 認</button>
+            <button id="login-code-back-btn" class="login-back-btn">← 重新登入</button>
+        </div>
+    </div>
+</div>
+
+<!-- 玩家頭像按鈕（大廳左上角）-->
+<div id="player-avatar-btn" class="player-avatar-btn hidden" onclick="window._openProfileModal()">
+    <img id="player-avatar-img" src="" alt="" class="player-avatar-img hidden">
+    <span id="player-avatar-icon" class="player-avatar-icon">👤</span>
+    <span id="player-avatar-name" class="player-avatar-name">玩家</span>
+</div>
+
+<!-- 玩家設定 Modal -->
+<div id="profile-modal" class="profile-modal hidden">
+    <div class="profile-modal-box">
+        <div class="profile-modal-header">
+            <span>玩家設定</span>
+            <button class="profile-close-btn" onclick="window._closeProfileModal()">✕</button>
+        </div>
+
+        <!-- ① 修改頭像 -->
+        <div class="profile-section">
+            <div class="profile-section-title">🖼 修改頭像</div>
+            <div class="profile-avatar-preview-wrap">
+                <div class="profile-avatar-preview" id="profile-avatar-preview">
+                    <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    <span id="profile-avatar-preview-icon" style="font-size:40px;">👤</span>
+                </div>
+                <label class="profile-upload-btn" for="profile-avatar-upload">📁 選擇圖片</label>
+                <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
+            </div>
+            <div id="profile-avatar-msg" class="profile-msg hidden"></div>
+            <button class="profile-save-btn" id="profile-avatar-save-btn">儲存頭像</button>
+        </div>
+
+        <!-- ② 更改密碼 -->
+        <div class="profile-section">
+            <div class="profile-section-title">🔐 更改密碼</div>
+            <input type="password" id="profile-old-pwd" class="profile-input" placeholder="舊密碼">
+            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="新密碼">
+            <input type="password" id="profile-confirm-pwd" class="profile-input" placeholder="再次輸入新密碼">
+            <div id="profile-pwd-msg" class="profile-msg hidden"></div>
+            <button class="profile-save-btn" id="profile-pwd-save-btn">更改密碼</button>
+        </div>
+
+        <!-- ③ 畫面縮放 -->
+        <div class="profile-section">
+            <div class="profile-section-title">🔍 畫面縮放</div>
+            <div class="profile-zoom-wrap">
+                <input type="range" id="profile-zoom-slider" min="50" max="150" step="5" value="100" class="profile-zoom-slider">
+                <span id="profile-zoom-label" class="profile-zoom-label">100%</span>
+            </div>
+            <button class="profile-save-btn" id="profile-zoom-save-btn">套用縮放</button>
+        </div>
     </div>
 </div>
 

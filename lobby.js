@@ -40,6 +40,9 @@
     //  DOMContentLoaded
     // ══════════════════════════════════════════
     document.addEventListener('DOMContentLoaded', () => {
+        // 初始化管理員帳號（僅首次執行）
+        if (typeof Auth !== 'undefined') Auth.initAdmin();
+
         _initIntro();
         _setupLobbyButtons();
         _setupNetworkEvents();
@@ -236,15 +239,274 @@
             if(startBtn) startBtn.classList.add('visible');
         }
 
-        document.getElementById('btn-enter-lobby').addEventListener('click', () => {
+        document.getElementById('btn-enter-lobby').addEventListener('click', async () => {
             document.getElementById('intro-screen').style.opacity = '0';
             document.getElementById('intro-screen').style.transition = 'opacity 1s';
-            setTimeout(() => {
-                _switchScreen('lobby-screen');
-                // 進入大廳後自動開啟側邊欄
-                setTimeout(() => openSidebar(), 1500);
-            }, 1000);
+            await new Promise(r => setTimeout(r, 1000));
+
+            // 嘗試還原 Session（已登入則跳過登入畫面）
+            const restored = await Auth.restoreSession();
+            if (restored) {
+                _enterLobbyAsUser(restored);
+            } else {
+                _showLoginScreen();
+            }
         });
+    }
+
+    // ══════════════════════════════════════════
+    //  登入畫面邏輯
+    // ══════════════════════════════════════════
+    function _showLoginScreen() {
+        const scr = document.getElementById('login-screen');
+        if (scr) scr.classList.remove('hidden');
+
+        const usernameEl = document.getElementById('login-username');
+        const passwordEl = document.getElementById('login-password');
+        const submitBtn  = document.getElementById('login-submit-btn');
+        const errEl      = document.getElementById('login-error');
+        const formPanel  = document.getElementById('login-form-panel');
+        const codePanel  = document.getElementById('login-code-panel');
+        const codeInput  = document.getElementById('login-code-input');
+        const codeBtn    = document.getElementById('login-code-btn');
+        const codeBackBtn= document.getElementById('login-code-back-btn');
+        const codeErrEl  = document.getElementById('login-code-error');
+        const codeHint   = document.getElementById('login-code-hint');
+
+        let _pendingUsername = '';
+
+        function showErr(el, msg) {
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function hideErr(el) { el.classList.add('hidden'); }
+
+        // 登入按鈕
+        async function doLogin() {
+            hideErr(errEl);
+            const u = (usernameEl.value || '').trim();
+            const p = passwordEl.value || '';
+            if (!u || !p) { showErr(errEl, '請填寫帳號與密碼'); return; }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ 驗證中...';
+
+            const res = await Auth.login(u, p);
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = '登 入';
+
+            if (!res.ok) {
+                showErr(errEl, res.err);
+                return;
+            }
+
+            // 切換到驗證碼畫面
+            _pendingUsername = res.username;
+            codeHint.innerHTML = `驗證碼已傳送至<br><span style="color:var(--gold)">${res.emailHint}</span><br><small style="color:#555;">5分鐘內有效</small>`;
+            formPanel.classList.add('hidden');
+            codePanel.classList.remove('hidden');
+            setTimeout(() => codeInput.focus(), 100);
+        }
+
+        submitBtn.onclick = doLogin;
+        passwordEl.onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+        usernameEl.onkeydown = e => { if (e.key === 'Enter') passwordEl.focus(); };
+
+        // 驗證碼確認
+        async function doVerify() {
+            hideErr(codeErrEl);
+            const code = (codeInput.value || '').trim();
+            if (code.length !== 6) { showErr(codeErrEl, '請輸入 6 位驗證碼'); return; }
+
+            codeBtn.disabled = true;
+            codeBtn.textContent = '⏳ 驗證中...';
+
+            const res = await Auth.verifyCode(_pendingUsername, code);
+
+            codeBtn.disabled = false;
+            codeBtn.textContent = '確 認';
+
+            if (!res.ok) {
+                showErr(codeErrEl, res.err);
+                codeInput.value = '';
+                return;
+            }
+
+            // 登入成功
+            const scr2 = document.getElementById('login-screen');
+            if (scr2) { scr2.style.opacity = '0'; scr2.style.transition = 'opacity .6s'; }
+            setTimeout(() => {
+                if (scr2) scr2.classList.add('hidden');
+                _enterLobbyAsUser(res.user);
+            }, 600);
+        }
+
+        codeBtn.onclick = doVerify;
+        codeInput.onkeydown = e => { if (e.key === 'Enter') doVerify(); };
+
+        // 返回重新登入
+        codeBackBtn.onclick = () => {
+            hideErr(codeErrEl);
+            codeInput.value = '';
+            codePanel.classList.add('hidden');
+            formPanel.classList.remove('hidden');
+            passwordEl.value = '';
+            setTimeout(() => usernameEl.focus(), 100);
+        };
+    }
+
+    // ── 登入後進入大廳 ────────────────────────────────────────
+    function _enterLobbyAsUser(user) {
+        // 更新玩家暱稱
+        window.playerNickname = user.nickname || user.username;
+        localStorage.setItem('hua_nickname', window.playerNickname);
+
+        // 顯示頭像按鈕
+        _updateAvatarBtn(user);
+        document.getElementById('player-avatar-btn').classList.remove('hidden');
+
+        // 套用已儲存的縮放
+        const savedZoom = parseInt(localStorage.getItem('hua_zoom') || '100');
+        _applyZoom(savedZoom);
+
+        _switchScreen('lobby-screen');
+        setTimeout(() => openSidebar(), 1500);
+    }
+
+    // ── 更新頭像按鈕顯示 ──────────────────────────────────────
+    function _updateAvatarBtn(user) {
+        const nameEl  = document.getElementById('player-avatar-name');
+        const imgEl   = document.getElementById('player-avatar-img');
+        const iconEl  = document.getElementById('player-avatar-icon');
+        if (nameEl) nameEl.textContent = user.nickname || user.username;
+        if (user.avatar) {
+            imgEl.src = user.avatar;
+            imgEl.classList.remove('hidden');
+            if (iconEl) iconEl.style.display = 'none';
+        } else {
+            imgEl.classList.add('hidden');
+            if (iconEl) iconEl.style.display = '';
+        }
+    }
+
+    // ── 縮放功能 ──────────────────────────────────────────────
+    function _applyZoom(level) {
+        document.body.style.zoom = (level / 100).toString();
+        localStorage.setItem('hua_zoom', level.toString());
+    }
+
+    // ══════════════════════════════════════════
+    //  玩家設定 Modal
+    // ══════════════════════════════════════════
+    window._openProfileModal = function() {
+        const modal = document.getElementById('profile-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+
+        // 還原目前縮放值
+        const currentZoom = parseInt(localStorage.getItem('hua_zoom') || '100');
+        const slider = document.getElementById('profile-zoom-slider');
+        const label  = document.getElementById('profile-zoom-label');
+        if (slider) slider.value = currentZoom;
+        if (label)  label.textContent = currentZoom + '%';
+
+        // 還原頭像預覽
+        const user = Auth.current();
+        const previewImg  = document.getElementById('profile-avatar-preview-img');
+        const previewIcon = document.getElementById('profile-avatar-preview-icon');
+        if (user && user.avatar) {
+            previewImg.src = user.avatar;
+            previewImg.style.display = 'block';
+            if (previewIcon) previewIcon.style.display = 'none';
+        } else {
+            previewImg.style.display = 'none';
+            if (previewIcon) previewIcon.style.display = '';
+        }
+
+        // 頭像上傳預覽
+        const uploadInput = document.getElementById('profile-avatar-upload');
+        uploadInput.onchange = function() {
+            const file = this.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                if (previewIcon) previewIcon.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // 儲存頭像
+        const avatarMsg  = document.getElementById('profile-avatar-msg');
+        const avatarSave = document.getElementById('profile-avatar-save-btn');
+        avatarSave.onclick = async function() {
+            if (!previewImg.src || previewImg.src === window.location.href) return;
+            avatarSave.disabled = true;
+            const res = await Auth.updateAvatar(previewImg.src);
+            avatarSave.disabled = false;
+            _showProfileMsg(avatarMsg, res.ok, res.ok ? '頭像已更新' : res.err);
+            if (res.ok) _updateAvatarBtn(Auth.current());
+        };
+
+        // 縮放滑桿
+        if (slider) {
+            slider.oninput = function() {
+                if (label) label.textContent = this.value + '%';
+            };
+        }
+        const zoomSave = document.getElementById('profile-zoom-save-btn');
+        if (zoomSave) {
+            zoomSave.onclick = function() {
+                const v = parseInt(slider.value);
+                _applyZoom(v);
+                _showProfileMsg(null, true, ''); // no msg needed, just close
+                toast('✅ 縮放已套用：' + v + '%', 'ok', 2000);
+            };
+        }
+
+        // 更改密碼
+        const pwdMsg  = document.getElementById('profile-pwd-msg');
+        const pwdSave = document.getElementById('profile-pwd-save-btn');
+        const oldPwd  = document.getElementById('profile-old-pwd');
+        const newPwd  = document.getElementById('profile-new-pwd');
+        const cfmPwd  = document.getElementById('profile-confirm-pwd');
+        pwdSave.onclick = async function() {
+            pwdMsg.classList.add('hidden');
+            const o = oldPwd.value, n = newPwd.value, c = cfmPwd.value;
+            if (!o || !n || !c) { _showProfileMsg(pwdMsg, false, '請填寫所有欄位'); return; }
+            if (n.length < 6)  { _showProfileMsg(pwdMsg, false, '新密碼至少 6 個字元'); return; }
+            if (n !== c)       { _showProfileMsg(pwdMsg, false, '兩次輸入的密碼不一致'); return; }
+            pwdSave.disabled = true;
+            const res = await Auth.changePassword(o, n);
+            pwdSave.disabled = false;
+            _showProfileMsg(pwdMsg, res.ok, res.ok ? '密碼已更改' : res.err);
+            if (res.ok) { oldPwd.value = ''; newPwd.value = ''; cfmPwd.value = ''; }
+        };
+
+        // 點背景關閉
+        modal.onclick = function(e) {
+            if (e.target === modal) window._closeProfileModal();
+        };
+    };
+
+    window._closeProfileModal = function() {
+        const modal = document.getElementById('profile-modal');
+        if (modal) modal.classList.add('hidden');
+        // 清除密碼欄位
+        ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+    };
+
+    function _showProfileMsg(el, ok, msg) {
+        if (!el) return;
+        if (!msg) { el.classList.add('hidden'); return; }
+        el.textContent = msg;
+        el.className = 'profile-msg ' + (ok ? 'ok' : 'err');
+        setTimeout(() => el.classList.add('hidden'), 3000);
     }
 
     // Sidebar mechanics

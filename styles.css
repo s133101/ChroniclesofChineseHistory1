@@ -3026,3 +3026,298 @@ body {
     transform-origin: top center !important;
     opacity: 0.85 !important;
 }
+
+/* ============================================================
+   登入畫面
+   ============================================================ */
+#login-screen {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+}
+#login-screen.hidden { display: none; }
+
+.login-bg {
+    position: absolute; inset: 0;
+    background: url('intro_bg.png') center/cover no-repeat,
+                linear-gradient(160deg, #060a12 0%, #0d1520 50%, #06090f 100%);
+    filter: brightness(0.45);
+}
+
+.login-container {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 24px; width: 100%; max-width: 420px; padding: 20px;
+}
+
+.login-logo-area {
+    text-align: center;
+    animation: loginFadeDown .8s ease both;
+}
+.login-game-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 36px; font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(212,175,55,0.6);
+    letter-spacing: 6px; margin: 8px 0 4px;
+}
+.login-game-sub {
+    font-size: 13px; color: #888; letter-spacing: 3px;
+}
+
+.login-box {
+    width: 100%;
+    background: rgba(10,14,22,0.88);
+    border: 1px solid rgba(212,175,55,0.25);
+    border-radius: 16px;
+    padding: 28px 32px;
+    backdrop-filter: blur(12px);
+    animation: loginFadeUp .6s ease both;
+}
+.login-box.hidden { display: none; }
+
+.login-field-group {
+    margin-bottom: 18px;
+}
+.login-label {
+    display: block;
+    font-size: 12px; color: #888;
+    letter-spacing: 2px; margin-bottom: 8px;
+}
+.login-input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #fff; font-size: 15px;
+    font-family: 'Noto Serif TC', serif;
+    outline: none;
+    transition: border-color .2s;
+}
+.login-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(212,175,55,0.15);
+}
+.login-code-input {
+    font-size: 22px; text-align: center;
+    letter-spacing: 6px;
+}
+
+.login-msg-err {
+    background: rgba(192,57,43,0.15);
+    border: 1px solid rgba(192,57,43,0.4);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #ff8888; font-size: 13px;
+    margin-bottom: 14px;
+}
+.login-msg-err.hidden { display: none; }
+
+.login-action-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #8b0000, #b22222);
+    color: #ffd700; border: 1px solid var(--gold);
+    border-radius: 8px; padding: 14px;
+    font-size: 16px; font-weight: 900;
+    letter-spacing: 4px; cursor: pointer;
+    font-family: 'Noto Serif TC', serif;
+    transition: all .2s;
+}
+.login-action-btn:hover {
+    background: linear-gradient(135deg, #a00000, #cc2222);
+    box-shadow: 0 0 20px rgba(212,175,55,0.3);
+}
+.login-action-btn:disabled {
+    opacity: .6; cursor: not-allowed;
+}
+
+.login-back-btn {
+    width: 100%; background: transparent;
+    color: #666; border: 1px solid #333;
+    border-radius: 8px; padding: 10px;
+    font-size: 13px; cursor: pointer;
+    font-family: 'Noto Serif TC', serif;
+    margin-top: 10px; transition: color .2s, border-color .2s;
+}
+.login-back-btn:hover { color: #aaa; border-color: #555; }
+
+.login-code-hint {
+    text-align: center; font-size: 13px; color: #888;
+    margin-bottom: 18px; line-height: 1.6;
+}
+
+@keyframes loginFadeDown {
+    from { opacity:0; transform:translateY(-20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+@keyframes loginFadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+
+/* ============================================================
+   玩家頭像按鈕（大廳左上角）
+   ============================================================ */
+.player-avatar-btn {
+    position: fixed; top: 16px; left: 16px; z-index: 8000;
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(10,14,22,0.85);
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 40px;
+    padding: 8px 16px 8px 8px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: border-color .2s, box-shadow .2s;
+    user-select: none;
+}
+.player-avatar-btn:hover {
+    border-color: var(--gold);
+    box-shadow: 0 0 16px rgba(212,175,55,0.2);
+}
+.player-avatar-btn.hidden { display: none; }
+
+.player-avatar-img {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+}
+.player-avatar-img.hidden { display: none; }
+
+.player-avatar-icon {
+    font-size: 28px; line-height: 1;
+    width: 36px; text-align: center;
+}
+.player-avatar-name {
+    font-size: 13px; color: var(--gold);
+    font-weight: 700; max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ============================================================
+   玩家設定 Modal
+   ============================================================ */
+.profile-modal {
+    position: fixed; inset: 0; z-index: 8500;
+    background: rgba(0,0,0,0.7);
+    display: flex; justify-content: flex-start; align-items: flex-start;
+    padding: 72px 0 0 16px;
+    backdrop-filter: blur(4px);
+    animation: profileFadeIn .2s ease both;
+}
+.profile-modal.hidden { display: none; }
+
+@keyframes profileFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.profile-modal-box {
+    width: 340px;
+    background: rgba(10,14,22,0.97);
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 16px;
+    overflow: hidden;
+    animation: profileSlideDown .25s ease both;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+}
+@keyframes profileSlideDown {
+    from { opacity:0; transform:translateY(-16px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+
+.profile-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    background: rgba(212,175,55,0.08);
+    border-bottom: 1px solid rgba(212,175,55,0.15);
+    font-size: 15px; font-weight: 900; color: var(--gold);
+    letter-spacing: 2px;
+}
+.profile-close-btn {
+    background: none; border: none;
+    color: #666; font-size: 18px; cursor: pointer;
+    padding: 0 4px;
+    transition: color .2s;
+}
+.profile-close-btn:hover { color: #fff; }
+
+.profile-section {
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.profile-section:last-child { border-bottom: none; }
+
+.profile-section-title {
+    font-size: 13px; font-weight: 900;
+    color: #aaa; letter-spacing: 1px;
+    margin-bottom: 14px;
+}
+
+.profile-avatar-preview-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+}
+.profile-avatar-preview {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 2px solid rgba(212,175,55,0.4);
+    background: #1a1a2e;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+}
+.profile-upload-btn {
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.3);
+    color: var(--gold); border-radius: 6px;
+    padding: 7px 16px; font-size: 13px; cursor: pointer;
+    font-family: 'Noto Serif TC', serif;
+    transition: background .2s;
+}
+.profile-upload-btn:hover { background: rgba(212,175,55,0.2); }
+
+.profile-input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #fff; font-size: 14px;
+    font-family: 'Noto Serif TC', serif;
+    outline: none; margin-bottom: 10px;
+    transition: border-color .2s;
+}
+.profile-input:focus { border-color: var(--gold); }
+
+.profile-msg {
+    font-size: 12px; padding: 8px 12px;
+    border-radius: 6px; margin-bottom: 10px;
+}
+.profile-msg.hidden { display: none; }
+.profile-msg.ok  { background:rgba(45,122,45,0.2); border:1px solid #2d7a2d; color:#7fff7f; }
+.profile-msg.err { background:rgba(192,57,43,0.2); border:1px solid rgba(192,57,43,0.5); color:#ff8888; }
+
+.profile-save-btn {
+    width: 100%;
+    background: linear-gradient(135deg,#1a3a1a,#2d5a2d);
+    color: #7fff7f; border: 1px solid #2d7a2d;
+    border-radius: 6px; padding: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Serif TC', serif;
+    transition: background .2s;
+}
+.profile-save-btn:hover { background: linear-gradient(135deg,#204a20,#3a7a3a); }
+
+.profile-zoom-wrap {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 14px;
+}
+.profile-zoom-slider {
+    flex: 1; accent-color: var(--gold);
+    height: 4px; cursor: pointer;
+}
+.profile-zoom-label {
+    font-size: 15px; font-weight: 900;
+    color: var(--gold); min-width: 44px; text-align: right;
+}
