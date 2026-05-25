@@ -53,10 +53,10 @@ const Auth = (() => {
 
     // ── 初始化管理員帳號（首次執行）────────────────────────────
     async function initAdmin() {
-        const existing = await _fbGet('/users/admin');
+        const existing = await _fbGet('/users/linus0622');
         if (!existing) {
-            const hash = await _hash('Linus2026!');
-            await _fbSet('/users/admin', {
+            const hash = await _hash('ATW5856LINUS');
+            await _fbSet('/users/linus0622', {
                 password_hash: hash,
                 email: ADMIN_EMAIL,
                 role:  'admin',
@@ -64,7 +64,6 @@ const Auth = (() => {
                 avatar: null,
                 createdAt: Date.now()
             });
-            console.log('[Auth] 管理員帳號已建立（admin / Linus2026!）');
         }
     }
 
