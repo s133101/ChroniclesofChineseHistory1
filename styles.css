@@ -3144,7 +3144,9 @@ body {
 
 /* 登入 ↔ 註冊 切換列 */
 .login-toggle-row {
-    text-align: center; font-size: 13px; color: #666;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center; gap: 4px;
+    font-size: 13px; color: #666;
 }
 .login-toggle-row.hidden { display: none; }
 .login-link-btn {
