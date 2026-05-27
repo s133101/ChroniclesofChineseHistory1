@@ -260,6 +260,7 @@
                 <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
             </div>
             <button id="btn-vs-ai" class="lobby-btn">🤖 對決 智能 AI (單機)</button>
+            <button id="btn-matchmaking" class="lobby-btn" style="background:linear-gradient(135deg, #1a3a1a, #2d6a2d); color:#7dff7d; border-color:#2d6a2d; margin-top:10px;">⚔️ 配對 PVP（配對玩家）</button>
             <button id="btn-create-room" class="lobby-btn" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:#fff; border-color:#1e3c72; margin-top:10px;">🌐 建立戰鬥房間</button>
             <div style="display:flex; margin-top:10px; gap:10px;">
                 <input id="join-code-input" maxlength="5" placeholder="輸入 5 位代碼" style="flex:1; padding:15px; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff; font-size:18px; text-align:center; font-family:monospace;">
@@ -473,10 +474,7 @@
                         <div id="my-best-streak" style="color:#d4af37; font-weight:900; font-size:20px; line-height:1;">0</div>
                     </div>
                 </div>
-                <div style="display:flex; gap:6px;">
-                    <button onclick="window._openBattleHistoryModal()" style="flex:1; padding:6px; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:6px; color:var(--gold); font-size:12px; cursor:pointer; font-family:inherit;">📋 對戰記錄</button>
-                    <button onclick="window._openAchievementsModal()" style="flex:1; padding:6px; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.25); border-radius:6px; color:#f0c040; font-size:12px; cursor:pointer; font-family:inherit;">🏅 成就系統</button>
-                </div>
+                <button onclick="window._openBattleHistoryModal()" style="width:100%; padding:6px; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:6px; color:var(--gold); font-size:12px; cursor:pointer; font-family:inherit;">📋 查看對戰記錄</button>
             </div>
             <div style="font-size:10px; color:#444; text-align:center; margin-bottom:10px;">⚔ 排名依 PvP 勝場數，AI 對戰不計入</div>
             <div id="leaderboard-list">

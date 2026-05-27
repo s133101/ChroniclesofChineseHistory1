@@ -1487,6 +1487,18 @@
             } else if (pendingAction === 'join') {
                 Network.joinRoom(pendingJoinCode);
                 _showWaitScreen(pendingJoinCode, false);
+            } else if (pendingAction === 'mm_host') {
+                // 配對：自己當主機，等對方加入
+                Network.createRoom(pendingJoinCode);
+                _showWaitScreen(pendingJoinCode, true);
+                _startCountdown();
+                // 等待畫面加上配對標示
+                const codeEl = document.getElementById('wait-room-code');
+                if (codeEl) codeEl.textContent = pendingJoinCode + '  🔍 配對中…';
+            } else if (pendingAction === 'mm_guest') {
+                // 配對：加入對方房間
+                Network.joinRoom(pendingJoinCode);
+                _showWaitScreen(pendingJoinCode, false);
             }
         };
     }
@@ -2013,6 +2025,15 @@
             _openMonarchSelect('ai');
         });
 
+        // 配對 PVP
+        const btnMatchmaking = document.getElementById('btn-matchmaking');
+        if (btnMatchmaking) {
+            btnMatchmaking.addEventListener('click', () => {
+                if (typeof Peer === 'undefined') { _showError('網路不可用（請確認已連上網際網路）'); return; }
+                _startMatchmaking();
+            });
+        }
+
         // 建立房間
         document.getElementById('btn-create-room').addEventListener('click', () => {
             if (typeof Peer === 'undefined') {
@@ -2025,10 +2046,11 @@
         // 加入房間
         document.getElementById('btn-join-room').addEventListener('click', _doJoin);
 
-        // 取消等待
+        // 取消等待（含配對清隊）
         document.getElementById('btn-cancel-wait').addEventListener('click', () => {
             _clearTimer();
             Network.destroy();
+            _mmCleanup(); // 若正在配對佇列中，移除紀錄
             _showLobbyScreen();
         });
 
@@ -2111,6 +2133,7 @@
 
         Network.on('peer_connected', ({ isHost }) => {
             _clearTimer();
+            _mmCleanup(); // 對手連線後，確保從配對佇列中移除
             window.GAME_MODE = isHost ? 'host' : 'guest';
             window.opponentNickname = null; // 等待對手傳來暱稱
             _setWaitStatus(isHost ? '🎉 對手已連線！準備開戰...' : '🎉 成功加入房間！準備開戰...');
@@ -2933,6 +2956,82 @@
         const el = document.getElementById('season-info-display');
         if (!el) return;
         el.textContent = `🗓️ 當前賽季：${_seasonIdToName(seasonId)}`;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  ⚔️ 自動配對系統（Firebase Matchmaking Queue）
+    // ══════════════════════════════════════════════════════════════
+
+    const _MM_URL = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app/matchmaking';
+
+    /** 清除自己在 Firebase 配對佇列中的紀錄 */
+    async function _mmCleanup() {
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (!me) return;
+        try {
+            await fetch(`${_MM_URL}/${me.username}.json`, { method: 'DELETE' });
+        } catch(e) { /* ignore */ }
+    }
+
+    /** 配對 PVP 入口 */
+    async function _startMatchmaking() {
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (!me) { _showError('請先登入後才能配對！'); return; }
+
+        // 顯示「配對中」狀態
+        const btn = document.getElementById('btn-matchmaking');
+        const origText = btn ? btn.textContent : '';
+        if (btn) { btn.disabled = true; btn.textContent = '🔍 搜尋對手中…'; }
+
+        try {
+            // 讀取 Firebase 配對佇列
+            const res  = await fetch(`${_MM_URL}.json`);
+            const data = res.ok ? await res.json() : null;
+
+            // 過濾掉自己 & 超過 60 秒的殭屍紀錄
+            const now = Date.now();
+            const candidates = data
+                ? Object.entries(data).filter(([k, v]) =>
+                    k !== me.username && (now - (v.timestamp || 0)) < 60000)
+                : [];
+
+            if (candidates.length > 0) {
+                // 找到對手！— 取最早進佇列的
+                candidates.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+                const [hostUser, hostData] = candidates[0];
+
+                // 從佇列移除那筆（搶先刪掉，防止雙重配對）
+                await fetch(`${_MM_URL}/${hostUser}.json`, { method: 'DELETE' });
+
+                // 記錄對手暱稱
+                window.opponentNickname = hostData.nickname || hostUser;
+
+                if (btn) { btn.disabled = false; btn.textContent = origText; }
+                _openMonarchSelect('mm_guest', hostData.code);
+
+            } else {
+                // 佇列空 — 自己建房等人
+                const code = Network.randomCode ? Network.randomCode()
+                    : Math.random().toString(36).slice(2, 7).toUpperCase();
+
+                // 寫入佇列
+                await fetch(`${_MM_URL}/${me.username}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code,
+                        nickname: me.nickname || me.username,
+                        timestamp: Date.now()
+                    })
+                });
+
+                if (btn) { btn.disabled = false; btn.textContent = origText; }
+                _openMonarchSelect('mm_host', code);
+            }
+        } catch(e) {
+            if (btn) { btn.disabled = false; btn.textContent = origText; }
+            _showError('配對服務暫時無法連線，請稍後再試。');
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
