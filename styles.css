@@ -3215,7 +3215,7 @@ body {
    玩家設定 Modal
    ============================================================ */
 .profile-modal {
-    position: fixed; inset: 0; z-index: 8500;
+    position: fixed; inset: 0; z-index: 200001;
     background: rgba(0,0,0,0.7);
     display: flex; justify-content: flex-start; align-items: flex-start;
     padding: 72px 0 0 16px;

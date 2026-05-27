@@ -487,44 +487,50 @@
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
+        modal.style.display = 'flex'; // 強制顯示
 
         const user = Auth.current();
 
         // ── ① 頭像 ────────────────────────────────────────────
         const previewImg  = document.getElementById('profile-avatar-preview-img');
         const previewIcon = document.getElementById('profile-avatar-preview-icon');
-        if (user && user.avatar) {
-            previewImg.src = user.avatar;
-            previewImg.style.display = 'block';
-            if (previewIcon) previewIcon.style.display = 'none';
-        } else {
-            previewImg.style.display = 'none';
-            if (previewIcon) previewIcon.style.display = '';
+        if (previewImg) {
+            if (user && user.avatar) {
+                previewImg.src = user.avatar;
+                previewImg.style.display = 'block';
+                if (previewIcon) previewIcon.style.display = 'none';
+            } else {
+                previewImg.style.display = 'none';
+                if (previewIcon) previewIcon.style.display = '';
+            }
         }
 
         const uploadInput = document.getElementById('profile-avatar-upload');
-        uploadInput.onchange = function() {
-            const file = this.files[0];
-            if (!file || !file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                previewImg.src = e.target.result;
-                previewImg.style.display = 'block';
-                if (previewIcon) previewIcon.style.display = 'none';
+        if (uploadInput) {
+            uploadInput.onchange = function() {
+                const file = this.files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    if (previewImg) { previewImg.src = e.target.result; previewImg.style.display = 'block'; }
+                    if (previewIcon) previewIcon.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
             };
-            reader.readAsDataURL(file);
-        };
+        }
 
         const avatarMsg  = document.getElementById('profile-avatar-msg');
         const avatarSave = document.getElementById('profile-avatar-save-btn');
-        avatarSave.onclick = async function() {
-            if (!previewImg.src || previewImg.src === window.location.href) return;
-            avatarSave.disabled = true;
-            const res = await Auth.updateAvatar(previewImg.src);
-            avatarSave.disabled = false;
-            _showProfileMsg(avatarMsg, res.ok, res.ok ? '頭像已更新' : res.err);
-            if (res.ok) _updateAvatarBtn(Auth.current());
-        };
+        if (avatarSave) {
+            avatarSave.onclick = async function() {
+                if (!previewImg || !previewImg.src || previewImg.src === window.location.href) return;
+                avatarSave.disabled = true;
+                const res = await Auth.updateAvatar(previewImg.src);
+                avatarSave.disabled = false;
+                _showProfileMsg(avatarMsg, res.ok, res.ok ? '頭像已更新' : res.err);
+                if (res.ok) _updateAvatarBtn(Auth.current());
+            };
+        }
 
         // ── ② 更改密碼 ────────────────────────────────────────
         const pwdMsg  = document.getElementById('profile-pwd-msg');
@@ -532,26 +538,26 @@
         const oldPwd  = document.getElementById('profile-old-pwd');
         const newPwd  = document.getElementById('profile-new-pwd');
         const cfmPwd  = document.getElementById('profile-confirm-pwd');
-        pwdSave.onclick = async function() {
-            pwdMsg.classList.add('hidden');
-            const o = oldPwd.value, n = newPwd.value, c = cfmPwd.value;
-            if (!o || !n || !c) { _showProfileMsg(pwdMsg, false, '請填寫所有欄位'); return; }
-            if (n.length < 6)  { _showProfileMsg(pwdMsg, false, '新密碼至少 6 個字元'); return; }
-            if (n !== c)       { _showProfileMsg(pwdMsg, false, '兩次輸入的密碼不一致'); return; }
-            pwdSave.disabled = true;
-            const res = await Auth.changePassword(o, n);
-            pwdSave.disabled = false;
-            _showProfileMsg(pwdMsg, res.ok, res.ok ? '密碼已更改' : res.err);
-            if (res.ok) { oldPwd.value = ''; newPwd.value = ''; cfmPwd.value = ''; }
-        };
+        if (pwdSave && oldPwd && newPwd && cfmPwd) {
+            pwdSave.onclick = async function() {
+                if (pwdMsg) pwdMsg.classList.add('hidden');
+                const o = oldPwd.value, n = newPwd.value, c = cfmPwd.value;
+                if (!o || !n || !c) { _showProfileMsg(pwdMsg, false, '請填寫所有欄位'); return; }
+                if (n.length < 6)  { _showProfileMsg(pwdMsg, false, '新密碼至少 6 個字元'); return; }
+                if (n !== c)       { _showProfileMsg(pwdMsg, false, '兩次輸入的密碼不一致'); return; }
+                pwdSave.disabled = true;
+                const res = await Auth.changePassword(o, n);
+                pwdSave.disabled = false;
+                _showProfileMsg(pwdMsg, res.ok, res.ok ? '密碼已更改' : res.err);
+                if (res.ok) { oldPwd.value = ''; newPwd.value = ''; cfmPwd.value = ''; }
+            };
+        }
 
         // ── ③ 個人留言 ────────────────────────────────────────
         const msgTextarea = document.getElementById('profile-message');
         const msgMsg      = document.getElementById('profile-message-msg');
         const msgSave     = document.getElementById('profile-msg-save-btn');
-        if (msgTextarea && user) {
-            msgTextarea.value = user.message || '';
-        }
+        if (msgTextarea && user) msgTextarea.value = user.message || '';
         if (msgSave) {
             msgSave.onclick = async function() {
                 const text = (msgTextarea ? msgTextarea.value : '').trim();
