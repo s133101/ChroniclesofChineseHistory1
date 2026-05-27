@@ -1130,13 +1130,6 @@
         const btnPublish = document.getElementById('btn-publish-board');
         if (btnPublish && annModal) {
             btnPublish.addEventListener('click', () => {
-                // 僅開發者帳號（wang）可發布皇榜
-                const me = Auth.current();
-                if (!me || me.username !== 'wang') {
-                    toast('🚫 此功能僅限開發者使用', 'danger');
-                    return;
-                }
-
                 // 重設狀態
                 annInput.value = '';
                 titleClickCount = 0;
