@@ -448,13 +448,15 @@
         window.playerNickname = user.nickname || user.username;
         localStorage.setItem('hua_nickname', window.playerNickname);
 
-        // 顯示頭像按鈕
+        // 顯示頭像按鈕 & 成就按鈕
         _updateAvatarBtn(user);
         const _avatarBtn = document.getElementById('player-avatar-btn');
         if (_avatarBtn) {
             _avatarBtn.classList.remove('hidden');
             _avatarBtn.style.display = 'flex'; // 強制顯示，防止 hidden 殘留
         }
+        const _achBtn = document.getElementById('btn-achievements');
+        if (_achBtn) _achBtn.classList.remove('hidden');
 
         // 套用已儲存的縮放
         const savedZoom = parseInt(localStorage.getItem('hua_zoom') || '100');

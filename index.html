@@ -180,6 +180,16 @@
     <span id="player-avatar-icon" class="player-avatar-icon">👤</span>
     <span id="player-avatar-name" class="player-avatar-name">玩家</span>
 </div>
+<!-- 成就按鈕（頭像下方）-->
+<button id="btn-achievements" onclick="window._openAchievementsModal()" class="hidden" style="
+    position:fixed; top:68px; left:12px; z-index:199999;
+    background:linear-gradient(135deg,#2a1a00,#4a3000);
+    color:#f0c040; border:1px solid #7a5c00; border-radius:8px;
+    padding:5px 12px; font-size:12px; font-family:inherit;
+    cursor:pointer; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    transition:filter .2s;
+">🏅 成就</button>
 
 <!-- 玩家設定 Modal -->
 <div id="profile-modal" class="profile-modal hidden">
@@ -249,7 +259,6 @@
                 <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
                 <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
             </div>
-            <button class="lobby-btn" style="background:linear-gradient(135deg,#2a1a00,#4a3000); color:#f0c040; border-color:#8a6800; margin-bottom:5px; font-size:14px;" onclick="window._openAchievementsModal()">🏅 成就系統</button>
             <button id="btn-vs-ai" class="lobby-btn">🤖 對決 智能 AI (單機)</button>
             <div style="margin:20px 0; color:#555; display:flex; align-items:center; gap:10px;">
                 <hr style="flex:1; border:0; border-top:1px solid #333"> 聯網對戰 <hr style="flex:1; border:0; border-top:1px solid #333">
