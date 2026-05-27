@@ -3105,9 +3105,7 @@
                 })
             });
             _safeToast('邀請已發送！等待對方接受…', 'success', 3000);
-            // 建立房間等待對方加入
-            if (typeof Network !== 'undefined') Network.createRoom(code);
-            window._roomCode = code;
+            // 建立房間等待對方加入（由 _openMonarchSelect mm_host 回呼處理 createRoom，不在這裡重複呼叫）
             _openMonarchSelect('mm_host', code);
         } catch(e) {
             _safeToast('邀請發送失敗，請稍後再試', 'danger');
@@ -3197,7 +3195,7 @@
                         </div>
                         <div style="display:flex;gap:8px;align-items:center;">
                             <button onclick="window._refreshSpectateList()" style="background:none;border:1px solid #333;color:#666;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">🔄 刷新</button>
-                            <button onclick="document.getElementById('spectate-modal').remove()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">×</button>
+                            <button onclick="clearInterval(window._currentWatchInterval);window._currentWatchInterval=null;document.getElementById('spectate-modal').remove()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">×</button>
                         </div>
                     </div>
                     <div id="spectate-list" style="overflow-y:auto;padding:16px;flex:1;">
@@ -3275,7 +3273,11 @@
 
     /** 觀看特定對局（自動刷新） */
     window._watchGame = function(code) {
-        let watchInterval = null;
+        // 清除上一個觀戰計時器（避免多局疊加 / 第一次渲染 interval 為 null 的問題）
+        if (window._currentWatchInterval) {
+            clearInterval(window._currentWatchInterval);
+            window._currentWatchInterval = null;
+        }
         const container = document.getElementById('spectate-list');
         if (!container) return;
 
@@ -3285,16 +3287,16 @@
                 const g = res.ok ? await res.json() : null;
                 if (!g) {
                     container.innerHTML = '<div style="color:#888;text-align:center;padding:30px;">對戰已結束</div>';
-                    clearInterval(watchInterval);
+                    clearInterval(window._currentWatchInterval);
+                    window._currentWatchInterval = null;
                     return;
                 }
-                const now = Date.now();
                 const hPct = Math.round(Math.max(0, g.hostHp || 0) / (g.hostMaxHp || 1) * 100);
                 const gPct = Math.round(Math.max(0, g.guestHp || 0) / (g.guestMaxHp || 1) * 100);
                 container.innerHTML = `
-                    <button onclick="clearInterval(${watchInterval});window._refreshSpectateList()" style="background:none;border:1px solid #333;color:#888;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:12px;">← 返回列表</button>
+                    <button onclick="clearInterval(window._currentWatchInterval);window._currentWatchInterval=null;window._refreshSpectateList()" style="background:none;border:1px solid #333;color:#888;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:12px;">← 返回列表</button>
                     <div style="text-align:center;padding:20px 10px;">
-                        <div style="color:#7dff7d;font-size:12px;margin-bottom:16px;">🔴 LIVE · 第 ${g.turn || 1} 回合 · ${g.isMyTurn ? g.hostNick : g.guestNick} 行動中</div>
+                        <div style="color:#7dff7d;font-size:12px;margin-bottom:16px;">🔴 LIVE · 第 ${g.turn || 1} 回合 · ${g.isMyTurn ? _escHtml(g.hostNick) : _escHtml(g.guestNick)} 行動中</div>
                         <div style="display:grid;grid-template-columns:1fr 60px 1fr;gap:16px;align-items:start;">
                             <div style="background:rgba(231,76,60,0.08);padding:16px;border-radius:10px;border:1px solid rgba(231,76,60,0.2);">
                                 <div style="color:#e74c3c;font-size:11px;font-weight:700;margin-bottom:8px;">⚡ 主機</div>
@@ -3321,7 +3323,7 @@
             } catch(e) {}
         };
         _render();
-        watchInterval = setInterval(_render, 5000);
+        window._currentWatchInterval = setInterval(_render, 5000);
     };
 
     // ══════════════════════════════════════════════════════════════
