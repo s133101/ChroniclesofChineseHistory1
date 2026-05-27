@@ -215,6 +215,17 @@ const Auth = (() => {
                 emailHint: email.replace(/(.{2}).+(@.+)/, '$1***$2')};
     }
 
+    // ── 更新留言 ──────────────────────────────────────────────
+    async function updateMessage(text) {
+        if (!_cur) return {ok: false, err: '尚未登入'};
+        const updated = {..._cur};
+        delete updated.username;
+        updated.message = text.trim();
+        await _fbSet('/users/' + _cur.username, updated);
+        _cur.message = text.trim();
+        return {ok: true};
+    }
+
     // ── 更新信箱 ──────────────────────────────────────────────
     async function updateEmail(newEmail) {
         if (!_cur) return {ok: false, err: '尚未登入'};
@@ -285,6 +296,7 @@ const Auth = (() => {
         verifyCode,
         changePassword,
         updateAvatar,
+        updateMessage,
         updateEmail,
         adminCreateUser,
         getSession,

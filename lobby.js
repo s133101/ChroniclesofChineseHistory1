@@ -484,15 +484,9 @@
         if (!modal) return;
         modal.classList.remove('hidden');
 
-        // 還原目前縮放值
-        const currentZoom = parseInt(localStorage.getItem('hua_zoom') || '100');
-        const slider = document.getElementById('profile-zoom-slider');
-        const label  = document.getElementById('profile-zoom-label');
-        if (slider) slider.value = currentZoom;
-        if (label)  label.textContent = currentZoom + '%';
-
-        // 還原頭像預覽
         const user = Auth.current();
+
+        // ── ① 頭像 ────────────────────────────────────────────
         const previewImg  = document.getElementById('profile-avatar-preview-img');
         const previewIcon = document.getElementById('profile-avatar-preview-icon');
         if (user && user.avatar) {
@@ -504,7 +498,6 @@
             if (previewIcon) previewIcon.style.display = '';
         }
 
-        // 頭像上傳預覽
         const uploadInput = document.getElementById('profile-avatar-upload');
         uploadInput.onchange = function() {
             const file = this.files[0];
@@ -518,7 +511,6 @@
             reader.readAsDataURL(file);
         };
 
-        // 儲存頭像
         const avatarMsg  = document.getElementById('profile-avatar-msg');
         const avatarSave = document.getElementById('profile-avatar-save-btn');
         avatarSave.onclick = async function() {
@@ -530,46 +522,7 @@
             if (res.ok) _updateAvatarBtn(Auth.current());
         };
 
-        // 縮放滑桿
-        if (slider) {
-            slider.oninput = function() {
-                if (label) label.textContent = this.value + '%';
-            };
-        }
-        const zoomSave = document.getElementById('profile-zoom-save-btn');
-        if (zoomSave) {
-            zoomSave.onclick = function() {
-                const v = parseInt(slider.value);
-                _applyZoom(v);
-                _showProfileMsg(null, true, ''); // no msg needed, just close
-                toast('✅ 縮放已套用：' + v + '%', 'ok', 2000);
-            };
-        }
-
-        // 驗證碼信箱
-        const emailHintEl = document.getElementById('profile-email-current');
-        const emailInput  = document.getElementById('profile-email-input');
-        const emailMsg    = document.getElementById('profile-email-msg');
-        const emailSave   = document.getElementById('profile-email-save-btn');
-        if (emailHintEl && user) {
-            emailHintEl.textContent = user.email
-                ? '目前：' + user.email.replace(/(.{2}).+(@.+)/, '$1***$2')
-                : '尚未設定信箱';
-        }
-        if (emailSave) {
-            emailSave.onclick = async function() {
-                emailMsg.classList.add('hidden');
-                const val = (emailInput.value || '').trim();
-                emailSave.disabled = true;
-                const res = await Auth.updateEmail(val);
-                emailSave.disabled = false;
-                _showProfileMsg(emailMsg, res.ok, res.ok ? '信箱已更新' : res.err);
-                if (res.ok && emailHintEl)
-                    emailHintEl.textContent = '目前：' + val.replace(/(.{2}).+(@.+)/, '$1***$2');
-            };
-        }
-
-        // 更改密碼
+        // ── ② 更改密碼 ────────────────────────────────────────
         const pwdMsg  = document.getElementById('profile-pwd-msg');
         const pwdSave = document.getElementById('profile-pwd-save-btn');
         const oldPwd  = document.getElementById('profile-old-pwd');
@@ -588,6 +541,23 @@
             if (res.ok) { oldPwd.value = ''; newPwd.value = ''; cfmPwd.value = ''; }
         };
 
+        // ── ③ 個人留言 ────────────────────────────────────────
+        const msgTextarea = document.getElementById('profile-message');
+        const msgMsg      = document.getElementById('profile-message-msg');
+        const msgSave     = document.getElementById('profile-msg-save-btn');
+        if (msgTextarea && user) {
+            msgTextarea.value = user.message || '';
+        }
+        if (msgSave) {
+            msgSave.onclick = async function() {
+                const text = (msgTextarea ? msgTextarea.value : '').trim();
+                msgSave.disabled = true;
+                const res = await Auth.updateMessage(text);
+                msgSave.disabled = false;
+                _showProfileMsg(msgMsg, res.ok, res.ok ? '留言已儲存' : res.err);
+            };
+        }
+
         // 點背景關閉
         modal.onclick = function(e) {
             if (e.target === modal) window._closeProfileModal();
@@ -597,8 +567,7 @@
     window._closeProfileModal = function() {
         const modal = document.getElementById('profile-modal');
         if (modal) modal.classList.add('hidden');
-        // 清除密碼與信箱欄位
-        ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd','profile-email-input'].forEach(id => {
+        ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });

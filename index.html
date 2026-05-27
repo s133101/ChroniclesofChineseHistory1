@@ -208,30 +208,20 @@
         <div class="profile-section">
             <div class="profile-section-title">🔐 更改密碼</div>
             <input type="password" id="profile-old-pwd" class="profile-input" placeholder="舊密碼">
-            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="新密碼">
+            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="新密碼（至少 6 字元）">
             <input type="password" id="profile-confirm-pwd" class="profile-input" placeholder="再次輸入新密碼">
             <div id="profile-pwd-msg" class="profile-msg hidden"></div>
             <button class="profile-save-btn" id="profile-pwd-save-btn">更改密碼</button>
         </div>
 
-        <!-- ③ 驗證碼信箱 -->
+        <!-- ③ 個人留言 -->
         <div class="profile-section">
-            <div class="profile-section-title">📧 驗證碼寄送信箱</div>
-            <p class="profile-email-hint" id="profile-email-current"></p>
-            <input type="email" id="profile-email-input" class="profile-input"
-                   placeholder="請輸入新的信箱">
-            <div id="profile-email-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-email-save-btn">更新信箱</button>
-        </div>
-
-        <!-- ④ 畫面縮放 -->
-        <div class="profile-section">
-            <div class="profile-section-title">🔍 畫面縮放</div>
-            <div class="profile-zoom-wrap">
-                <input type="range" id="profile-zoom-slider" min="50" max="150" step="5" value="100" class="profile-zoom-slider">
-                <span id="profile-zoom-label" class="profile-zoom-label">100%</span>
-            </div>
-            <button class="profile-save-btn" id="profile-zoom-save-btn">套用縮放</button>
+            <div class="profile-section-title">💬 個人留言</div>
+            <p class="profile-msg-note">其他玩家可以看到你的留言</p>
+            <textarea id="profile-message" class="profile-textarea"
+                      placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
+            <div id="profile-message-msg" class="profile-msg hidden"></div>
+            <button class="profile-save-btn" id="profile-msg-save-btn">儲存留言</button>
         </div>
     </div>
 </div>
