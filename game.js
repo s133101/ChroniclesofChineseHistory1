@@ -219,20 +219,33 @@ function initGame() {
         if (i !== -1) return myDeck.splice(i, 1)[0];
         return { ...cardDatabase.find(c => c.type === type), uid:'init_' + type };
     };
-    
+
     // 取得在點將臺選擇的君主，若無則隨機給一個
     let targetMonarch = cardDatabase.find(c => c.id === window.selectedMonarchId);
     if (!targetMonarch) targetMonarch = cardDatabase.find(c => c.type === '君王');
     const myMonarch = { ...targetMonarch, uid: 'init_M_' + Math.random().toString(36).substr(2,9) };
-    
+
     // 保底一張大將軍
     const myGeneral = extract('大將軍');
-    
-    myHand = [myMonarch, myGeneral];
-    for (let i = 0; i < 5; i++) {
-        myHand.push(myDeck.pop());
+
+    // ── 教學模式：給予固定手牌（確保教學步驟可正確引導）──
+    if (window.TUTORIAL_MODE) {
+        const tutKill = cardDatabase.find(c => c.name === '殺' && c.isBasic)
+                     || cardDatabase.find(c => c.name.includes('殺'));
+        myHand = [
+            myMonarch,
+            myGeneral,
+            tutKill ? { ...tutKill, uid: 'tut_k1_' + Date.now() }    : myDeck.pop(),
+            tutKill ? { ...tutKill, uid: 'tut_k2_' + Date.now() + 1 } : myDeck.pop(),
+            myDeck.pop(),
+        ].filter(Boolean);
+    } else {
+        myHand = [myMonarch, myGeneral];
+        for (let i = 0; i < 5; i++) {
+            myHand.push(myDeck.pop());
+        }
+        _shuffleArr(myHand);
     }
-    _shuffleArr(myHand);
 
     // 十全武功：開局額外攜帶兩張突擊卡
     if (myMonarch.skillName === '十全武功') {
@@ -2489,6 +2502,21 @@ function applyHostState(state) {
 // ==============================================================
 function startOpponentTurn() {
     if (!gameActive) return;
+
+    // ── 教學模式：AI 直接跳過，僅做象徵性動作 ──
+    if (window.TUTORIAL_MODE) {
+        isPlayerTurn = false;
+        updateHUDs();
+        toast('🤖 對手思考中…', 'info', 1200);
+        setTimeout(() => {
+            // 對手從牌堆抽一張（視覺）
+            if (oppDeck.length > 0) { oppHandData.push(oppDeck.pop()); renderOppHandUI(); }
+            turnCount++;
+            toast('🤖 對手結束回合。', 'info', 1200);
+            setTimeout(startMyTurn, 1400);
+        }, 1600);
+        return;
+    }
 
     // ── 主機模式：召喚客方回合，不跑 AI ──
     if (window.GAME_MODE === 'host') {

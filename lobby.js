@@ -459,6 +459,8 @@
         if (_achBtn) _achBtn.classList.remove('hidden');
         const _specBtn = document.getElementById('btn-spectate');
         if (_specBtn) _specBtn.classList.remove('hidden');
+        const _tutBtn = document.getElementById('btn-tutorial');
+        if (_tutBtn) _tutBtn.classList.remove('hidden');
 
         // 套用已儲存的縮放
         const savedZoom = parseInt(localStorage.getItem('hua_zoom') || '100');
@@ -2842,7 +2844,8 @@
         { id: 'all_monarchs', name: '帝王之選',  icon: '🏯',  desc: '收集所有君王' },
         { id: 'star_3',       name: '金星閃耀',  icon: '⭐',  desc: '將任意武將升至 3 星' },
         { id: 'star_5',       name: '滿星傳說',  icon: '🌟',  desc: '將任意武將升至 5 星' },
-        { id: 'post_board',   name: '名震天下',  icon: '📜',  desc: '首次發布皇榜' },
+        { id: 'post_board',    name: '名震天下',  icon: '📜',  desc: '首次發布皇榜' },
+        { id: 'tutorial_done', name: '初入江湖',  icon: '🎓',  desc: '完成新手教學關卡' },
     ];
 
     /** 收集當前狀態並檢查新成就，解鎖時彈出通知 */
@@ -3410,6 +3413,238 @@
         const n = parseInt(localStorage.getItem('hua_board_posts') || '0') + 1;
         localStorage.setItem('hua_board_posts', n.toString());
         _checkAchievements();
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    //  📖 Phase 4 — 新手教學系統 (Interactive Tutorial)
+    // ══════════════════════════════════════════════════════════════
+
+    window.TUTORIAL_MODE = false;
+
+    // 教學步驟定義
+    const _TUT_STEPS = [
+        {
+            title: '⚔️ 歡迎來到華夏風雲錄！',
+            body:  '在這場策略對決中，你將帶領中國歷史名將，擊敗對手的<b>君主</b>！<br><br>本教學將引導你完成一場入門對局，只需 5 個步驟即可上手。',
+            target: null,
+            waitFor: null,
+        },
+        {
+            title: '🗺️ 認識戰場',
+            body:  '你的戰場分為兩排：<br>• <b>前排（主將區）</b>：正面交鋒的主力位置<br>• <b>後排（後營）</b>：備援與輔助的支援區<br><br>前排<b>中央第 3 格</b>是<b>君主專屬位置</b>，君主是你的核心！',
+            target: '#my-active-zone',
+            waitFor: null,
+        },
+        {
+            title: '🃏 部署你的君主',
+            body:  '下方是你的<b>手牌</b>。你現在有一位<b>君主</b>（紫色卡牌）。<br><br>請<b>點擊君主卡</b>選中它（卡牌會發光），再<b>點擊前排中央空位</b>將他部署上場！',
+            target: '#my-hand-container',
+            waitFor: 'monarch_deployed',
+        },
+        {
+            title: '🛡️ 部署一位將軍',
+            body:  '君主已就位！現在選一位<b>將軍</b>（紅色卡牌）部署到前排。<br><br><b>點擊將軍卡</b>，再點擊<b>前排任意非中央空位</b>。將軍上場後可攻擊敵方！',
+            target: '#my-hand-container',
+            waitFor: 'general_deployed',
+        },
+        {
+            title: '⚔️ 發動攻擊！',
+            body:  '你的將軍已就位！現在讓他攻擊對手。<br><br><b>① 點擊你的將軍</b>（他會變成金色選中狀態）<br><b>② 點擊對方前排任意卡牌</b>發動攻擊！',
+            target: '#opp-active-zone',
+            waitFor: 'attack_made',
+        },
+        {
+            title: '✅ 結束回合',
+            body:  '攻擊完成！點擊右下角的<b>「結束回合」</b>按鈕，輪到對手行動。<br><br>💡 每回合開始時你會<b>自動抽一張牌</b>，好好利用手牌吧！',
+            target: '#end-turn-btn',
+            waitFor: 'turn_ended',
+        },
+        {
+            title: '🎉 教學完成！恭喜入門！',
+            body:  '你已掌握基本操作：<br>• 部署君主與將軍<br>• 攻擊敵方<br>• 結束回合<br><br>目標：把對手的<b>君主血量降至 0</b> 即可獲勝！<br>繼續這場對局，或返回大廳挑戰真實玩家！',
+            target: null,
+            waitFor: null,
+            isLast: true,
+        },
+    ];
+
+    let _tutStep      = 0;
+    let _tutWatcher   = null;
+    let _tutHlEl      = null;   // 目前高亮的 DOM 元素
+    let _tutOppHpSnap = 0;      // 記錄對手 HP 快照（攻擊偵測用）
+
+    /** 取對手場上所有 HP 總和 */
+    function _oppTotalHp() {
+        try {
+            return [...oppBoard.active, ...oppBoard.bench].reduce((s, c) => s + (c ? (c.hp || 0) : 0), 0);
+        } catch(e) { return 0; }
+    }
+
+    /** 移除高亮並清除遮罩 */
+    function _tutClearHighlight() {
+        if (_tutHlEl) { _tutHlEl.classList.remove('tut-highlight'); _tutHlEl = null; }
+        const ov = document.getElementById('tut-overlay');
+        if (ov) ov.remove();
+    }
+
+    /** 開始教學 */
+    window._startTutorial = function() {
+        if (!window.cardDatabase || window.cardDatabase.length === 0) {
+            _safeToast('遊戲資料尚未載入，請稍後再試', 'warn');
+            return;
+        }
+        // 自動選第一個君主（新手可能還沒有自己的君主）
+        const firstMonarch = window.cardDatabase.find(c => c.type === '君王');
+        if (firstMonarch) window.selectedMonarchId = firstMonarch.id;
+
+        window.TUTORIAL_MODE = true;
+        window.GAME_MODE     = 'ai';
+        _tutStep = 0;
+        _launchGame();
+        // 等遊戲載入完畢後顯示第一步
+        setTimeout(() => _showTutStep(0), 3200);
+    };
+
+    /** 顯示第 n 步的教學面板 */
+    function _showTutStep(n) {
+        _tutStep = n;
+        const data = _TUT_STEPS[n];
+        if (!data) { _endTutorial(false); return; }
+
+        // ── 更新高亮 ──────────────────────────────────────────
+        _tutClearHighlight();
+
+        // 建立遮罩
+        let ov = document.createElement('div');
+        ov.id = 'tut-overlay';
+        document.body.appendChild(ov);
+
+        if (data.target) {
+            const el = document.querySelector(data.target);
+            if (el) { el.classList.add('tut-highlight'); _tutHlEl = el; }
+        }
+
+        // ── 建立 / 更新面板 ───────────────────────────────────
+        let panel = document.getElementById('tut-panel');
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'tut-panel';
+            document.body.appendChild(panel);
+        }
+
+        // 進度條 HTML
+        const progressHtml = _TUT_STEPS.map((_, i) =>
+            `<span class="${i < n ? 'done' : (i === n ? 'active' : '')}"></span>`
+        ).join('');
+
+        const isInfo = !data.waitFor;  // 純說明步：顯示「下一步」按鈕
+        const waitingHtml = !isInfo
+            ? `<div class="tut-waiting">🔵 請依照說明操作…</div>`
+            : '';
+
+        const btnRow = data.isLast
+            ? `<div class="tut-btn-row">
+                   <button class="tut-btn-skip" onclick="window._endTutorial(true)">返回大廳</button>
+                   <button class="tut-btn-primary" onclick="window._endTutorial(false)">繼續對局 →</button>
+               </div>`
+            : isInfo
+            ? `<div class="tut-btn-row">
+                   <button class="tut-btn-skip" onclick="window._endTutorial(true)">跳過教學</button>
+                   <button class="tut-btn-primary" onclick="window._tutNext()">下一步 →</button>
+               </div>`
+            : `<div class="tut-btn-row">
+                   <button class="tut-btn-skip" onclick="window._endTutorial(true)">跳過教學</button>
+               </div>`;
+
+        panel.innerHTML = `
+            <div class="tut-step-badge">📖 教學 ${n + 1} / ${_TUT_STEPS.length}</div>
+            <div id="tut-progress">${progressHtml}</div>
+            <div class="tut-title">${data.title}</div>
+            ${waitingHtml}
+            <div class="tut-body">${data.body}</div>
+            ${btnRow}
+        `;
+
+        // ── 啟動偵測器 ────────────────────────────────────────
+        clearInterval(_tutWatcher);
+        if (data.waitFor) {
+            // 記錄快照（攻擊偵測）
+            if (data.waitFor === 'attack_made') _tutOppHpSnap = _oppTotalHp();
+
+            _tutWatcher = setInterval(() => {
+                if (_tutStep !== n) { clearInterval(_tutWatcher); return; }
+                if (_tutCheckCondition(data.waitFor)) {
+                    clearInterval(_tutWatcher);
+                    setTimeout(() => _advanceTutStep(), 900);
+                }
+            }, 400);
+        }
+    }
+
+    /** 偵測當前步驟行動是否已完成 */
+    function _tutCheckCondition(cond) {
+        try {
+            if (cond === 'monarch_deployed') {
+                return myBoard.active[2] !== null;
+            }
+            if (cond === 'general_deployed') {
+                return myBoard.active.some((c, i) => i !== 2 && c !== null);
+            }
+            if (cond === 'attack_made') {
+                // 對手總 HP 有下降 或 有卡牌陣亡（離場）
+                const curHp = _oppTotalHp();
+                const curCount = oppBoard.active.filter(Boolean).length;
+                return curHp < _tutOppHpSnap || curCount < 2;
+            }
+            if (cond === 'turn_ended') {
+                // 第 2 回合（玩家結束第 1 回合並等對手跑完）
+                return typeof turnCount !== 'undefined' && turnCount >= 2;
+            }
+        } catch(e) {}
+        return false;
+    }
+
+    /** 前往下一步 */
+    window._tutNext = function() {
+        clearInterval(_tutWatcher);
+        _advanceTutStep();
+    };
+
+    function _advanceTutStep() {
+        const next = _tutStep + 1;
+        if (next >= _TUT_STEPS.length) {
+            _showTutStep(_TUT_STEPS.length - 1); // 顯示完成步
+        } else {
+            _showTutStep(next);
+        }
+    }
+
+    /**
+     * 結束教學
+     * @param {boolean} goLobby - true: 返回大廳；false: 繼續對局
+     */
+    window._endTutorial = function(goLobby) {
+        clearInterval(_tutWatcher);
+        _tutClearHighlight();
+        const panel = document.getElementById('tut-panel');
+        if (panel) { panel.style.opacity = '0'; panel.style.transform = 'translateX(-50%) translateY(10px)'; setTimeout(() => panel.remove(), 300); }
+
+        window.TUTORIAL_MODE = false;
+
+        // 解鎖成就
+        if (!window.playerAchievements.includes('tutorial_done')) {
+            window.playerAchievements.push('tutorial_done');
+            _saveCollection();
+            setTimeout(() => {
+                const a = ACHIEVEMENTS.find(x => x.id === 'tutorial_done');
+                if (a) _achievementToast(a);
+            }, 600);
+        }
+
+        if (goLobby) {
+            if (typeof window._goToLobby === 'function') window._goToLobby();
+        }
+        // else: 玩家留在遊戲繼續 free play
     };
 
 })(); // end IIFE
