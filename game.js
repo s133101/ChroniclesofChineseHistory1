@@ -3053,8 +3053,8 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                         myBoard[zone][zoneIdx] = null;
                         myBoard.discard.push(targetCard);
                         renderBoard(); updateHUDs();
-                        checkWinCondition();
-                        if (!checkWinCondition()) setTimeout(startMyTurn, 1500);
+                        if (checkWinCondition()) return;
+                        setTimeout(startMyTurn, 1500);
                     }
                 );
                 return;
@@ -3071,7 +3071,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
             const oppBaiqiBA = oppBoard.active.find(c => c && c.skillName === '坑殺');
             if (oppBaiqiBA && myBoard.active[2]) {
                 myBoard.active[2].hp = Math.max(0, myBoard.active[2].hp - 30);
-                spawnDmgPopup(1, getSlotEl('my-active-zone', 2));
+                spawnDmgPopup(30, getSlotEl('my-active-zone', 2));
                 toast(`🩸 <b>${oppBaiqiBA.name} · 坑殺</b> — 波及我方主公！`, 'skill');
                 if (myBoard.active[2].hp <= 0) {
                     myBoard.active[2] = null;
