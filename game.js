@@ -2371,7 +2371,10 @@ function triggerGameOver(win) {
         // --- 寫入 Firebase 對戰記錄 ---
         if (typeof Auth !== 'undefined' && Auth.current()) {
             const opponent = window.opponentNickname || (isPvP ? '未知對手' : 'AI 對手');
-            Auth.recordBattle(window.GAME_MODE || 'ai', win, opponent, turnCount, totalReward);
+            Auth.recordBattle(window.GAME_MODE || 'ai', win, opponent, turnCount, totalReward).then(() => {
+                // 對戰記錄寫入後，立即檢查成就
+                if (typeof window._checkAchievements === 'function') window._checkAchievements();
+            });
         }
         // ----------------
 

@@ -3483,3 +3483,46 @@ body {
     }
     #leaderboard-stats-bar [style*="width:1px"] { display: none; }
 }
+
+/* ============================================================
+   Phase 2 — 升星 / 成就 / 賽季
+   ============================================================ */
+
+/* 武將詳情：升星按鈕 hover */
+#detail-card-star-section button:not(:disabled):hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(212,175,55,0.35);
+}
+
+/* 升星後星星動畫 */
+@keyframes starPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.5); color: #fff200; text-shadow: 0 0 12px #ffd700; }
+    70%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+.star-pop { animation: starPop .5s ease forwards; }
+
+/* 成就解鎖 Toast 進入動畫（已用 inline JS 控制） */
+
+/* 賽季資訊條 */
+#season-info-display {
+    transition: color .3s;
+}
+
+/* 成就面板 grid 滾動 */
+#achievement-list {
+    scrollbar-width: thin;
+    scrollbar-color: #333 transparent;
+}
+#achievement-list::-webkit-scrollbar       { width: 4px; }
+#achievement-list::-webkit-scrollbar-track { background: transparent; }
+#achievement-list::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+/* 成就已解鎖條目 hover */
+#achievement-list > div:hover {
+    filter: brightness(1.1);
+    cursor: default;
+}
+

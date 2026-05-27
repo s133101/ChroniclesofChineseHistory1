@@ -22,8 +22,11 @@
     let _isLaunching = false; 
 
     // ── 收集系統數據 ──
-    window.playerOwnedCards = JSON.parse(localStorage.getItem('hua_owned_cards') || '[]');
-    window.playerSilver = parseInt(localStorage.getItem('hua_player_silver') || '1000');
+    window.playerOwnedCards    = JSON.parse(localStorage.getItem('hua_owned_cards')      || '[]');
+    window.playerSilver        = parseInt(localStorage.getItem('hua_player_silver')       || '1000');
+    window.playerCardStars     = JSON.parse(localStorage.getItem('hua_card_stars')        || '{}');
+    window.playerCardFragments = JSON.parse(localStorage.getItem('hua_card_fragments')    || '{}');
+    window.playerAchievements  = JSON.parse(localStorage.getItem('hua_achievements')      || '[]');
 
     // ── 玩家身份 (暱稱) ──
     const _defaultNames = ['無名大將','草莽英雄','天涯俠客','亂世豪傑','江湖遊俠','蕭何再世'];
@@ -31,8 +34,11 @@
     localStorage.setItem('hua_nickname', window.playerNickname);
     
     function _saveCollection() {
-        localStorage.setItem('hua_owned_cards', JSON.stringify(window.playerOwnedCards));
-        localStorage.setItem('hua_player_silver', window.playerSilver.toString());
+        localStorage.setItem('hua_owned_cards',    JSON.stringify(window.playerOwnedCards));
+        localStorage.setItem('hua_player_silver',  window.playerSilver.toString());
+        localStorage.setItem('hua_card_stars',     JSON.stringify(window.playerCardStars));
+        localStorage.setItem('hua_card_fragments', JSON.stringify(window.playerCardFragments));
+        localStorage.setItem('hua_achievements',   JSON.stringify(window.playerAchievements));
     }
     window._saveCollection = _saveCollection;
 
@@ -456,6 +462,8 @@
 
         _switchScreen('lobby-screen');
         setTimeout(() => openSidebar(), 1500);
+        // 賽季檢查（登入後稍作延遲再執行，避免搶在 Auth 初始化前）
+        setTimeout(() => _checkSeason(), 2500);
     }
 
     // ── 更新頭像按鈕顯示 ──────────────────────────────────────
@@ -1197,6 +1205,8 @@
                 
                 annModal.classList.add('hidden');
                 toast(isDev ? '🚀 開發者最高旨意已下達！' : `🎉 皇榜發布成功！`, 'success');
+                // 成就追蹤：發布皇榜
+                if (typeof window._trackBoardPost === 'function') window._trackBoardPost();
             };
         }
 
@@ -1656,8 +1666,51 @@
                 descBlock.appendChild(sec);
             }
 
+            // ── 升星 / 碎片區塊（僅限武將卡）────────────────────────
+            const _starCharTypes = ['君王','大將軍','將軍','軍師','後勤','內政','監察'];
+            if (_starCharTypes.includes(card.type)) {
+                const _starCosts = [3, 5, 8, 12, 20]; // 升至1★~5★所需碎片
+                const _stars = window.playerCardStars[cardId] || 0;
+                const _frags = window.playerCardFragments[cardId] || 0;
+                const _nextCost = _stars < 5 ? _starCosts[_stars] : null;
+                const _canUp = _nextCost !== null && _frags >= _nextCost;
+                const _isOwned = window.playerOwnedCards.includes(cardId);
+                const _modalBody = document.querySelector('#card-detail-modal .modal-body');
+
+                const _oldStar = document.getElementById('detail-card-star-section');
+                if (_oldStar) _oldStar.remove();
+
+                const _starSec = document.createElement('div');
+                _starSec.id = 'detail-card-star-section';
+                _starSec.style.cssText = 'margin-top:16px;background:rgba(212,175,55,0.06);padding:16px;border-radius:12px;border:1px solid rgba(212,175,55,0.18);text-align:center;';
+                const _starFill = '★'.repeat(_stars);
+                const _starEmpty = '☆'.repeat(5 - _stars);
+                const _starColor = _stars === 5 ? '#f1c40f' : _stars >= 3 ? '#d4af37' : '#888';
+                _starSec.innerHTML = `
+                    <div style="font-size:22px;letter-spacing:5px;color:${_starColor};margin-bottom:8px;">${_starFill}<span style="color:#333;">${_starEmpty}</span></div>
+                    <div style="color:#666;font-size:12px;margin-bottom:${_isOwned && _nextCost ? '10px' : '0'};">
+                        碎片：<span style="color:#d4af37;font-weight:700;">${_frags}</span>
+                        ${_nextCost ? ` <span style="color:#555;">／ ${_nextCost} 可升 ${_stars+1}★</span>` : '<span style="color:#d4af37;"> · 滿星</span>'}
+                    </div>
+                    ${_isOwned && _nextCost ? `
+                        <button id="btn-upgrade-star-${cardId}"
+                            onclick="window._upgradeCardStar('${cardId}')"
+                            style="margin-top:4px;padding:8px 26px;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;transition:all .2s;
+                                   background:${_canUp ? 'linear-gradient(135deg,#9a6f00,#d4af37)' : '#222'};
+                                   color:${_canUp ? '#000' : '#444'};border:1px solid ${_canUp ? '#d4af37' : '#333'};font-weight:700;">
+                            ${_canUp ? `✨ 升至 ${_stars+1}★ (${_nextCost} 碎片)` : `碎片不足 (${_frags}／${_nextCost})`}
+                        </button>
+                    ` : (_isOwned && !_nextCost ? '<div style="color:#d4af37;font-size:13px;margin-top:4px;">🌟 滿星傳說武將</div>' : '')}
+                    <div style="color:#444;font-size:11px;margin-top:10px;">💡 抽到重複卡牌可獲得該武將碎片</div>
+                `;
+                if (_modalBody) _modalBody.appendChild(_starSec);
+            }
+
             document.getElementById('card-detail-modal').classList.remove('hidden');
         };
+
+        // 供 _upgradeCardStar 回調用
+        window._openCardDetail = _openCardDetail;
 
         const _updateCollectionProgress = () => {
             if (!window.cardDatabase) return;
@@ -1750,26 +1803,35 @@
                 localStorage.setItem('hua_pity', _pityCounter);
             }
 
-            // 更新收集庫與重複返還機制
+            // 更新收集庫與重複返還機制（重複卡給碎片 + 少量銀兩）
             let silverGained = 0;
+            let fragsGainedCount = 0;
             resData.forEach(c => {
                 if (!window.playerOwnedCards.includes(c.id)) {
                     window.playerOwnedCards.push(c.id);
                     c.isDuplicate = false;
                 } else {
                     c.isDuplicate = true;
-                    if (c.type === '君王') silverGained += 100;
-                    else if (c.type === '大將軍') silverGained += 50;
-                    else silverGained += 10;
+                    // 給碎片（用於升星）
+                    window.playerCardFragments[c.id] = (window.playerCardFragments[c.id] || 0) + 1;
+                    fragsGainedCount++;
+                    // 降低銀兩回饋，因為碎片更有價值
+                    if (c.type === '君王') silverGained += 30;
+                    else if (c.type === '大將軍') silverGained += 15;
+                    else silverGained += 5;
                 }
             });
-            
-            if (silverGained > 0) {
+
+            if (fragsGainedCount > 0 || silverGained > 0) {
                 window.playerSilver += silverGained;
-                setTimeout(() => toast(`抽到重複卡牌，自動轉化為 ${silverGained} 銀兩！`, 'success', 3000), 500);
+                const fragMsg = fragsGainedCount > 0 ? `，獲得 ${fragsGainedCount} 個武將碎片` : '';
+                const silMsg  = silverGained > 0      ? `+${silverGained} 銀兩` : '';
+                setTimeout(() => toast(`重複卡牌轉化！${silMsg}${fragMsg}`, 'success', 3000), 500);
             }
             _saveCollection();
             _refreshGachaPool();
+            // 抽卡後檢查成就
+            setTimeout(() => _checkAchievements(), 500);
 
             // 翻牌格式逐張揭示
             _runGridReveal(resData, times);
@@ -2609,6 +2671,262 @@
             _showWaitScreen(code, true);
             _startCountdown(true); // rematch 模式：超時詢問
         }, 400);
+    };
+
+
+    // ══════════════════════════════════════════════════════════════
+    //  ⭐ 卡片升星系統
+    // ══════════════════════════════════════════════════════════════
+
+    /** 升星確認並執行 */
+    window._upgradeCardStar = function(cardId) {
+        const starCosts = [3, 5, 8, 12, 20]; // 升至 1★ ~ 5★ 的碎片需求
+        const stars = window.playerCardStars[cardId] || 0;
+        if (stars >= 5) { toast('已是滿星武將！', 'info'); return; }
+        const cost = starCosts[stars];
+        const frags = window.playerCardFragments[cardId] || 0;
+        if (frags < cost) { toast(`碎片不足！需要 ${cost} 個碎片`, 'danger'); return; }
+
+        window.playerCardFragments[cardId] = frags - cost;
+        window.playerCardStars[cardId]     = stars + 1;
+        _saveCollection();
+        _updateHUD();
+
+        const card = window.cardDatabase ? window.cardDatabase.find(c => c.id === cardId) : null;
+        const lvlNames = ['一', '二', '三', '四', '五'];
+        toast(`✨ ${card ? card.name : ''} 升至 ${lvlNames[stars]}★！`, 'success', 3000);
+
+        // 刷新詳情彈窗
+        if (typeof window._openCardDetail === 'function') window._openCardDetail(cardId);
+
+        // 成就檢查
+        _checkAchievements();
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    //  🏅 成就系統
+    // ══════════════════════════════════════════════════════════════
+
+    const ACHIEVEMENTS = [
+        { id: 'first_win',    name: '初戰告捷',  icon: '🏆', desc: '贏得第一場對戰（AI 或 PvP）' },
+        { id: 'wins_10',      name: '百戰老將',  icon: '⚔️',  desc: '累計贏得 10 場對戰' },
+        { id: 'wins_50',      name: '常勝將軍',  icon: '🎖️',  desc: '累計贏得 50 場對戰' },
+        { id: 'pvp_win_5',    name: '江湖好手',  icon: '🗡️',  desc: '贏得 5 場 PvP 聯機對戰' },
+        { id: 'streak_5',     name: '五連連勝',  icon: '🔥',  desc: 'PvP 達成最高 5 連勝' },
+        { id: 'streak_10',    name: '十連連勝',  icon: '💥',  desc: 'PvP 達成最高 10 連勝' },
+        { id: 'collect_10',   name: '初露鋒芒',  icon: '📚',  desc: '收集 10 位武將' },
+        { id: 'collect_30',   name: '天下英傑',  icon: '👑',  desc: '收集 30 位武將' },
+        { id: 'all_monarchs', name: '帝王之選',  icon: '🏯',  desc: '收集所有君王' },
+        { id: 'star_3',       name: '金星閃耀',  icon: '⭐',  desc: '將任意武將升至 3 星' },
+        { id: 'star_5',       name: '滿星傳說',  icon: '🌟',  desc: '將任意武將升至 5 星' },
+        { id: 'post_board',   name: '名震天下',  icon: '📜',  desc: '首次發布皇榜' },
+    ];
+
+    /** 收集當前狀態並檢查新成就，解鎖時彈出通知 */
+    function _checkAchievements() {
+        const stats  = (typeof Auth !== 'undefined' && Auth.current()) ? (Auth.current().stats || {}) : {};
+        const totalWins   = (stats.wins || 0) + (stats.aiWins || 0);
+        const pvpWins     = stats.wins || 0;
+        const bestStreak  = stats.bestStreak || 0;
+        const ownedCount  = window.playerOwnedCards.length;
+        const allMonarchs = window.cardDatabase
+            ? window.cardDatabase.filter(c => c.type === '君王').every(c => window.playerOwnedCards.includes(c.id))
+            : false;
+        const maxStar     = Object.values(window.playerCardStars).reduce((m, v) => Math.max(m, v), 0);
+        const boardPosts  = parseInt(localStorage.getItem('hua_board_posts') || '0');
+
+        const checks = {
+            first_win:    totalWins  >= 1,
+            wins_10:      totalWins  >= 10,
+            wins_50:      totalWins  >= 50,
+            pvp_win_5:    pvpWins    >= 5,
+            streak_5:     bestStreak >= 5,
+            streak_10:    bestStreak >= 10,
+            collect_10:   ownedCount >= 10,
+            collect_30:   ownedCount >= 30,
+            all_monarchs: allMonarchs,
+            star_3:       maxStar    >= 3,
+            star_5:       maxStar    >= 5,
+            post_board:   boardPosts >= 1,
+        };
+
+        let newlyUnlocked = [];
+        ACHIEVEMENTS.forEach(a => {
+            if (!window.playerAchievements.includes(a.id) && checks[a.id]) {
+                window.playerAchievements.push(a.id);
+                newlyUnlocked.push(a);
+            }
+        });
+
+        if (newlyUnlocked.length > 0) {
+            _saveCollection();
+            // 逐條彈出通知（間隔 1.5 s）
+            newlyUnlocked.forEach((a, i) => {
+                setTimeout(() => {
+                    _achievementToast(a);
+                }, i * 1600);
+            });
+            // 刷新成就面板（若已開啟）
+            const panel = document.getElementById('achievement-modal');
+            if (panel && !panel.classList.contains('hidden')) _renderAchievementsModal();
+        }
+    }
+    window._checkAchievements = _checkAchievements;
+
+    /** 成就解鎖特效通知 */
+    function _achievementToast(a) {
+        const el = document.createElement('div');
+        el.style.cssText = `
+            position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px);
+            background:linear-gradient(135deg,#2d2000,#5a3e00,#2d2000);
+            border:2px solid #d4af37; border-radius:14px; padding:14px 24px;
+            display:flex; align-items:center; gap:14px; z-index:999999;
+            box-shadow:0 6px 30px rgba(212,175,55,0.4);
+            opacity:0; transition:all .4s ease; pointer-events:none; white-space:nowrap;
+        `;
+        el.innerHTML = `
+            <div style="font-size:32px;">${a.icon}</div>
+            <div>
+                <div style="color:#f0c040;font-size:11px;letter-spacing:2px;margin-bottom:3px;">🏅 成就解鎖</div>
+                <div style="color:#fff;font-weight:900;font-size:16px;">${a.name}</div>
+                <div style="color:#aaa;font-size:12px;">${a.desc}</div>
+            </div>
+        `;
+        document.body.appendChild(el);
+        requestAnimationFrame(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => el.remove(), 500);
+        }, 3500);
+    }
+
+    /** 開啟成就面板 */
+    window._openAchievementsModal = function() {
+        let modal = document.getElementById('achievement-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'achievement-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:210000;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="width:min(560px,95vw);max-height:86vh;background:#0d1117;border:1px solid #333;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 60px rgba(0,0,0,0.8);">
+                    <div style="padding:18px 24px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to right,#1a1400,#0d1117);">
+                        <div>
+                            <div style="color:var(--gold);font-size:18px;font-weight:900;letter-spacing:2px;">🏅 成就系統</div>
+                            <div id="ach-progress-text" style="color:#666;font-size:12px;margin-top:2px;">0 / ${ACHIEVEMENTS.length} 已解鎖</div>
+                        </div>
+                        <button onclick="document.getElementById('achievement-modal').remove()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">×</button>
+                    </div>
+                    <div id="achievement-list" style="overflow-y:auto;padding:16px;flex:1;display:grid;gap:10px;"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            modal.style.display = 'flex';
+        }
+        _renderAchievementsModal();
+    };
+
+    function _renderAchievementsModal() {
+        const list = document.getElementById('achievement-list');
+        const progText = document.getElementById('ach-progress-text');
+        if (!list) return;
+        const unlocked = window.playerAchievements;
+        if (progText) progText.textContent = `${unlocked.length} / ${ACHIEVEMENTS.length} 已解鎖`;
+        list.innerHTML = ACHIEVEMENTS.map(a => {
+            const done = unlocked.includes(a.id);
+            return `
+                <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;
+                            background:${done ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.02)'};
+                            border:1px solid ${done ? 'rgba(212,175,55,0.25)' : 'rgba(255,255,255,0.05)'};
+                            opacity:${done ? '1' : '0.45'};">
+                    <div style="font-size:30px;width:40px;text-align:center;flex-shrink:0;">${done ? a.icon : '🔒'}</div>
+                    <div style="flex:1;">
+                        <div style="color:${done ? '#fff' : '#666'};font-weight:700;font-size:14px;">${a.name}</div>
+                        <div style="color:${done ? '#999' : '#444'};font-size:12px;margin-top:2px;">${a.desc}</div>
+                    </div>
+                    ${done ? '<div style="color:#d4af37;font-size:18px;">✓</div>' : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  🗓️ 賽季制度
+    // ══════════════════════════════════════════════════════════════
+
+    async function _checkSeason() {
+        const now  = new Date();
+        const curId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const lastId = localStorage.getItem('hua_last_season');
+
+        if (!lastId) {
+            // 首次登入：記錄當前賽季，無需結算
+            localStorage.setItem('hua_last_season', curId);
+            _renderSeasonInfo(curId);
+            return;
+        }
+
+        if (lastId !== curId) {
+            // 新賽季開始！先結算上賽季
+            try {
+                const leaderboard = await Auth.getLeaderboardData();
+                const top3 = leaderboard.slice(0, 3);
+                if (typeof Auth !== 'undefined' && top3.length > 0) {
+                    // 儲存到 Firebase /seasons/{lastId}
+                    const dbUrl = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
+                    const token = typeof Auth._getToken === 'function' ? await Auth._getToken() : null;
+                    const url = `${dbUrl}/seasons/${lastId}.json${token ? '?auth=' + token : ''}`;
+                    await fetch(url, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            top3: top3.map((p, i) => ({
+                                rank: i + 1,
+                                nickname: p.nickname,
+                                wins: p.wins,
+                                winRate: p.winRate,
+                                title: ['天下霸主','一代英雄','沙場猛將'][i] || '英雄'
+                            })),
+                            endTime: Date.now()
+                        })
+                    });
+                }
+            } catch(e) { /* 網路失敗不影響遊戲 */ }
+
+            localStorage.setItem('hua_last_season', curId);
+
+            // 顯示新賽季開幕通知
+            setTimeout(() => {
+                const lastMonthName = _seasonIdToName(lastId);
+                toast(`🗓️ 新賽季 ${_seasonIdToName(curId)} 開始！上賽季 (${lastMonthName}) 排名已封存。`, 'success', 5000);
+            }, 3000);
+        }
+
+        _renderSeasonInfo(curId);
+    }
+
+    function _seasonIdToName(id) {
+        const [y, m] = id.split('-');
+        return `${y}年${parseInt(m)}月`;
+    }
+
+    function _renderSeasonInfo(seasonId) {
+        const el = document.getElementById('season-info-display');
+        if (!el) return;
+        el.textContent = `🗓️ 當前賽季：${_seasonIdToName(seasonId)}`;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  皇榜發布後追蹤成就
+    // ══════════════════════════════════════════════════════════════
+    window._trackBoardPost = function() {
+        const n = parseInt(localStorage.getItem('hua_board_posts') || '0') + 1;
+        localStorage.setItem('hua_board_posts', n.toString());
+        _checkAchievements();
     };
 
 })(); // end IIFE
