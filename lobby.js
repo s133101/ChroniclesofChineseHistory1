@@ -2680,14 +2680,28 @@
     //  ⭐ 卡片升星系統
     // ══════════════════════════════════════════════════════════════
 
+    /** toast 安全包裝：game.js 的 toast 只在遊戲介面載入後存在 */
+    function _safeToast(msg, type, dur) {
+        if (typeof toast === 'function') {
+            toast(msg, type, dur);
+        } else {
+            // fallback：用簡單浮動文字
+            const el = document.createElement('div');
+            el.textContent = msg;
+            el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;z-index:999999;font-size:14px;pointer-events:none;';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), dur || 3000);
+        }
+    }
+
     /** 升星確認並執行 */
     window._upgradeCardStar = function(cardId) {
         const starCosts = [3, 5, 8, 12, 20]; // 升至 1★ ~ 5★ 的碎片需求
         const stars = window.playerCardStars[cardId] || 0;
-        if (stars >= 5) { toast('已是滿星武將！', 'info'); return; }
+        if (stars >= 5) { _safeToast('已是滿星武將！', 'info'); return; }
         const cost = starCosts[stars];
         const frags = window.playerCardFragments[cardId] || 0;
-        if (frags < cost) { toast(`碎片不足！需要 ${cost} 個碎片`, 'danger'); return; }
+        if (frags < cost) { _safeToast(`碎片不足！需要 ${cost} 個碎片`, 'danger'); return; }
 
         window.playerCardFragments[cardId] = frags - cost;
         window.playerCardStars[cardId]     = stars + 1;
@@ -2696,7 +2710,7 @@
 
         const card = window.cardDatabase ? window.cardDatabase.find(c => c.id === cardId) : null;
         const lvlNames = ['一', '二', '三', '四', '五'];
-        toast(`✨ ${card ? card.name : ''} 升至 ${lvlNames[stars]}★！`, 'success', 3000);
+        _safeToast(`✨ ${card ? card.name : ''} 升至 ${lvlNames[stars]}★！`, 'success', 3000);
 
         // 刷新詳情彈窗
         if (typeof window._openCardDetail === 'function') window._openCardDetail(cardId);
@@ -2878,10 +2892,9 @@
                 const leaderboard = await Auth.getLeaderboardData();
                 const top3 = leaderboard.slice(0, 3);
                 if (typeof Auth !== 'undefined' && top3.length > 0) {
-                    // 儲存到 Firebase /seasons/{lastId}
+                    // 儲存到 Firebase /seasons/{lastId}（公開 DB，不需 token）
                     const dbUrl = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
-                    const token = typeof Auth._getToken === 'function' ? await Auth._getToken() : null;
-                    const url = `${dbUrl}/seasons/${lastId}.json${token ? '?auth=' + token : ''}`;
+                    const url = `${dbUrl}/seasons/${lastId}.json`;
                     await fetch(url, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
