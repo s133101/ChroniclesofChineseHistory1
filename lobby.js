@@ -645,13 +645,30 @@
         const nicknameInput = document.getElementById('nickname-input');
         if (nicknameInput) {
             nicknameInput.value = window.playerNickname;
-            nicknameInput.addEventListener('change', () => {
+            nicknameInput.addEventListener('change', async () => {
                 const v = nicknameInput.value.trim();
-                if (v) {
+                if (!v) { nicknameInput.value = window.playerNickname; return; }
+                if (v === window.playerNickname) return; // 無變化
+
+                // 查重
+                const available = await Auth.checkNickname(v);
+                if (!available) {
+                    toast('這名稱已被使用', 'error');
+                    nicknameInput.value = window.playerNickname; // 恢復舊名
+                    return;
+                }
+
+                // 存到 Firebase
+                const res = await Auth.updateNickname(v);
+                if (res.ok) {
                     window.playerNickname = v;
                     localStorage.setItem('hua_nickname', v);
                     toast('名號已更新為「' + v + '」', 'success');
+                    // 同步更新左上頭像的名稱
+                    const avatarNameEl = document.getElementById('player-avatar-name');
+                    if (avatarNameEl) avatarNameEl.textContent = v;
                 } else {
+                    toast(res.err || '更新失敗', 'error');
                     nicknameInput.value = window.playerNickname;
                 }
             });

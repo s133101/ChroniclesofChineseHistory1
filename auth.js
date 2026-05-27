@@ -215,6 +215,38 @@ const Auth = (() => {
                 emailHint: email.replace(/(.{2}).+(@.+)/, '$1***$2')};
     }
 
+    // ── 查詢名號是否已被使用 ──────────────────────────────────
+    async function checkNickname(nickname) {
+        const users = await _fbGet('/users');
+        if (!users) return true; // 查不到資料視為可用
+        const currentUsername = _cur ? _cur.username : null;
+        for (const [uname, data] of Object.entries(users)) {
+            if (uname === currentUsername) continue; // 跳過自己
+            if (data.nickname && data.nickname === nickname.trim()) return false; // 已被使用
+        }
+        return true; // 可使用
+    }
+
+    // ── 更新名號 ──────────────────────────────────────────────
+    async function updateNickname(newNickname) {
+        if (!_cur) return {ok: false, err: '尚未登入'};
+        const name = newNickname.trim();
+        if (!name) return {ok: false, err: '名號不能為空'};
+
+        const updated = {..._cur};
+        delete updated.username;
+        updated.nickname = name;
+
+        await _fbSet('/users/' + _cur.username, updated);
+        _cur.nickname = name;
+
+        const s = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+        s.nickname = name;
+        sessionStorage.setItem('hua_session', JSON.stringify(s));
+
+        return {ok: true};
+    }
+
     // ── 更新留言 ──────────────────────────────────────────────
     async function updateMessage(text) {
         if (!_cur) return {ok: false, err: '尚未登入'};
@@ -296,6 +328,8 @@ const Auth = (() => {
         verifyCode,
         changePassword,
         updateAvatar,
+        updateNickname,
+        checkNickname,
         updateMessage,
         updateEmail,
         adminCreateUser,
