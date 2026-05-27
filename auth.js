@@ -90,10 +90,24 @@ const Auth = (() => {
         const uname = username.toLowerCase().trim();
         if (!uname || !password) return {ok: false, err: '請填寫帳號與密碼'};
 
+        // 🛡 防火牆：速率限制 + 封鎖檢查
+        const _fw = window.HuaXiaSecurity;
+        if (_fw) {
+            if (_fw.isLoginBlocked(uname)) {
+                const sec = _fw.getBlockRemaining(uname);
+                return {ok: false, err: `帳號暫時鎖定中，請 ${Math.ceil(sec / 60)} 分鐘後再試`};
+            }
+            const rl = _fw.checkRate('login');
+            if (!rl.allowed) {
+                return {ok: false, err: `登入嘗試太頻繁，請稍後再試（本窗口已達上限）`};
+            }
+        }
+
         const user = await _fbGet('/users/' + uname);
 
         if (!user) {
-            // 帳號不存在，通知管理員
+            // 帳號不存在 — 記錄為失敗登入 + 通知管理員
+            _fw?.recordFailedLogin(uname);
             _sendEmail(EJ_NOTIFY, {
                 action:     '⚠ 有人嘗試登入不存在的帳號：' + username,
                 event_time: new Date().toLocaleString('zh-TW'),
@@ -104,8 +118,14 @@ const Auth = (() => {
 
         const hash = await _hash(password);
         if (user.password_hash !== hash) {
+            // 🛡 記錄失敗登入 / 觸發暴力破解偵測
+            const bf = _fw?.recordFailedLogin(uname);
+            if (bf?.blocked) return {ok: false, err: `密碼錯誤次數過多，帳號已鎖定 5 分鐘`};
             return {ok: false, err: '密碼錯誤，請再試一次'};
         }
+
+        // 🛡 登入成功 — 清除失敗計數
+        _fw?.recordSuccessLogin(uname);
 
         // 發送驗證碼
         const code    = String(Math.floor(100000 + Math.random() * 900000));
@@ -202,6 +222,13 @@ const Auth = (() => {
         if (!email.includes('@')) return {ok: false, err: '請輸入有效的信箱'};
         if (password.length < 6) return {ok: false, err: '密碼至少 6 個字元'};
         if (password !== confirmPassword) return {ok: false, err: '兩次密碼不一致'};
+
+        // 🛡 防火牆：速率限制
+        const _fw = window.HuaXiaSecurity;
+        if (_fw) {
+            const rl = _fw.checkRate('register');
+            if (!rl.allowed) return {ok: false, err: '註冊請求太頻繁，請稍後再試'};
+        }
 
         const exist = await _fbGet('/users/' + uname);
         if (exist) return {ok: false, err: '此帳號已被使用，請換一個'};

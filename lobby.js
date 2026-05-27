@@ -444,6 +444,9 @@
 
     // ── 登入後進入大廳 ────────────────────────────────────────
     function _enterLobbyAsUser(user) {
+        // 🛡 初始化防火牆安全系統（僅首次觸發）
+        if (window.HuaXiaSecurity) window.HuaXiaSecurity.init();
+
         // 更新玩家暱稱
         window.playerNickname = user.nickname || user.username;
         localStorage.setItem('hua_nickname', window.playerNickname);
@@ -2402,6 +2405,8 @@
         if (bm) bm.classList.add('hidden');
         // 房間頻道：每場結束返回大廳時清除（下次切換到房間頻道會自動刷新）
         localStorage.removeItem('hua_chat_room');
+        // 🛡 返回大廳時重新更新防火牆指示燈狀態
+        if (window.HuaXiaSecurity) window.HuaXiaSecurity.init();
     }
 
     function _setWaitStatus(msg) {
