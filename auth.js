@@ -60,10 +60,14 @@ const Auth = (() => {
                 password_hash: hash,
                 email: ADMIN_EMAIL,
                 role:  'admin',
-                nickname: '最高管理員',
+                nickname: '王',
                 avatar: null,
                 createdAt: Date.now()
             });
+        } else if (existing.nickname !== '王') {
+            // 確保管理員名號始終是「王」
+            const updated = {...existing, nickname: '王'};
+            await _fbSet('/users/linus0622', updated);
         }
     }
 
@@ -217,12 +221,19 @@ const Auth = (() => {
 
     // ── 查詢名號是否已被使用 ──────────────────────────────────
     async function checkNickname(nickname) {
+        const name = nickname.trim();
+
+        // 「王」為開發者專屬，非 linus0622 不得使用
+        if (name === '王') {
+            return _cur && _cur.username === 'linus0622';
+        }
+
         const users = await _fbGet('/users');
         if (!users) return true; // 查不到資料視為可用
         const currentUsername = _cur ? _cur.username : null;
         for (const [uname, data] of Object.entries(users)) {
             if (uname === currentUsername) continue; // 跳過自己
-            if (data.nickname && data.nickname === nickname.trim()) return false; // 已被使用
+            if (data.nickname && data.nickname === name) return false; // 已被使用
         }
         return true; // 可使用
     }

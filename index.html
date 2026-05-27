@@ -1,278 +1,277 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- ============================================================
-     華夏風雲錄 — 歷史卡牌對決
-     Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
-     未經開發者書面授權，嚴禁複製、修改或散佈本程式碼。
-     ============================================================ -->
+     ?臬?憸券????甇瑕?∠?撠捱
+     Copyright 穢 2026 linus622wang@gmail.com  All Rights Reserved.
+     ?芰????Ｘ?甈??渡?銴ˊ?耨?寞?????祉?撘Ⅳ??     ============================================================ -->
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="linus622wang@gmail.com">
-    <meta name="copyright" content="© 2026 linus622wang@gmail.com All Rights Reserved">
+    <meta name="copyright" content="穢 2026 linus622wang@gmail.com All Rights Reserved">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>華夏風雲錄 — 歷史卡牌對戰</title>
+    <title>?臬?憸券????甇瑕?∠?撠</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="protect.js?v=20260527b"></script>
-    <script src="auth.js?v=20260527b"></script>
+    <script src="protect.js?v=20260527c"></script>
+    <script src="auth.js?v=20260527c"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css?v=20260527b">
+    <link rel="stylesheet" href="styles.css?v=20260527c">
 </head>
 <body>
 
-<!-- 載入畫面 (Loading Screen) -->
+<!-- 頛?恍 (Loading Screen) -->
 <div id="loading-screen" class="hidden">
     <div class="loading-content">
-        <span class="loading-dragon">🐉</span>
-        <h1 class="loading-title">華夏風雲錄</h1>
+        <span class="loading-dragon">??</span>
+        <h1 class="loading-title">?臬?憸券??/h1>
         <p class="loading-sub">PREPARING FOR GLORY</p>
         <div class="loading-bar-wrap"><div id="loading-bar"></div></div>
     </div>
 </div>
 
-<!-- 遊戲結束畫面 (Game Over Screen) -->
+<!-- ?蝯??恍 (Game Over Screen) -->
 <div id="game-over-screen" class="hidden">
     <div class="gameover-content">
-        <div id="gameover-icon">🏆</div>
-        <h1 id="gameover-title">勝利！</h1>
-        <p id="gameover-sub">您已稱霸華夏大陸。</p>
+        <div id="gameover-icon">??</div>
+        <h1 id="gameover-title">?嚗?/h1>
+        <p id="gameover-sub">?典歇蝔梢?臬?憭折??/p>
         <div class="gameover-btns">
-            <button class="gameover-btn gameover-btn-primary" id="btn-play-again">⚔ 再玩一場</button>
-            <button class="gameover-btn gameover-btn-secondary" id="btn-return-lobby">🏠 回到大廳</button>
+            <button class="gameover-btn gameover-btn-primary" id="btn-play-again">???銝??/button>
+            <button class="gameover-btn gameover-btn-secondary" id="btn-return-lobby">?? ?憭批輒</button>
         </div>
     </div>
 </div>
 
-<!-- 等待室 (Room Wait Screen) -->
+<!-- 蝑?摰?(Room Wait Screen) -->
 <div id="room-wait-screen" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.95); display:flex; align-items:center; justify-content:center; z-index:8600;">
     <div class="wait-wrap" style="width:400px;text-align:center;background:rgba(12,18,28,0.95);padding:32px;border-radius:20px;border:1px solid rgba(212,175,55,0.3);">
-        <h2 style="color:var(--gold); margin-bottom:20px;">戰鬥待命</h2>
+        <h2 style="color:var(--gold); margin-bottom:20px;">?圈洛敺</h2>
         <div style="font-size:48px; font-family:monospace; color:#fff; letter-spacing:10px; margin:20px 0; border:2px dashed var(--gold); padding:20px;" id="wait-room-code">-----</div>
-        <p id="wait-status" style="margin-bottom:20px;">正在等待對方加入...</p>
-        <div id="wait-countdown-wrap" style="color:#c0392b; font-weight:900; margin-bottom:20px;"><span id="wait-countdown-label">超時切換 AI：</span><span id="wait-countdown">30</span>s</div>
-        <button id="btn-cancel-wait" class="lobby-btn" style="background:#333; color:#fff; border-color:#555;">取消等待</button>
+        <p id="wait-status" style="margin-bottom:20px;">甇?蝑?撠?...</p>
+        <div id="wait-countdown-wrap" style="color:#c0392b; font-weight:900; margin-bottom:20px;"><span id="wait-countdown-label">頞??? AI嚗?/span><span id="wait-countdown">30</span>s</div>
+        <button id="btn-cancel-wait" class="lobby-btn" style="background:#333; color:#fff; border-color:#555;">??蝑?</button>
 
-        <!-- 再配對超時對話框（預設隱藏）-->
+        <!-- ??撠???閰望?嚗?閮剝??-->
         <div id="wait-timeout-dialog" class="hidden" style="margin-top:20px; padding:16px; background:rgba(192,57,43,0.15); border:1px solid rgba(192,57,43,0.5); border-radius:12px;">
-            <p style="color:#e74c3c; font-weight:900; margin-bottom:12px;">⏱ 等待超過 30 秒，請選擇：</p>
+            <p style="color:#e74c3c; font-weight:900; margin-bottom:12px;">??蝑?頞? 30 蝘?隢??</p>
             <div style="display:flex; gap:10px; justify-content:center;">
-                <button id="btn-continue-wait" class="lobby-btn" style="flex:1; background:#1a3a1a; border-color:#2ecc71; color:#2ecc71;">繼續等待</button>
-                <button id="btn-switch-ai"     class="lobby-btn" style="flex:1; background:#3a1a1a; border-color:#e74c3c; color:#e74c3c;">換 AI 對決</button>
+                <button id="btn-continue-wait" class="lobby-btn" style="flex:1; background:#1a3a1a; border-color:#2ecc71; color:#2ecc71;">蝜潛?蝑?</button>
+                <button id="btn-switch-ai"     class="lobby-btn" style="flex:1; background:#3a1a1a; border-color:#e74c3c; color:#e74c3c;">??AI 撠捱</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 開場等待畫面 (Splash Screen) -->
+<!-- ?蝑??恍 (Splash Screen) -->
 <div id="splash-screen">
     <div id="splash-bg"></div>
     <div class="splash-overlay"></div>
     <div id="splash-content">
         <div id="splash-loader"><div id="splash-loader-bar"></div></div>
-        <p id="splash-hint">正在召喚英雄...</p>
+        <p id="splash-hint">甇??砍??梢?...</p>
     </div>
 </div>
 
-<!-- 史詩開場畫面 -->
+<!-- ?脰帘??恍 -->
 <div id="intro-screen">
     <div id="intro-ui">
         <div style="text-align:center; padding-top:40px;">
-            <h1 class="intro-game-title">華夏風雲錄</h1>
-            <p class="intro-game-subtitle">千古英雄 · 全球對決</p>
+            <h1 class="intro-game-title">?臬?憸券??/h1>
+            <p class="intro-game-subtitle">??梢? 繚 ?函?撠捱</p>
         </div>
 
         <div id="river-of-time-layer">
             <div class="river-strip" id="river-strip">
-                <!-- 由 JS 動態注入歷史節點 -->
+                <!-- ??JS ??瘜典甇瑕蝭暺?-->
             </div>
         </div>
 
         <div id="marvel-tokens-container">
-            <!-- 由 JS 注入漫威式英雄卡 -->
+            <!-- ??JS 瘜典瞍怠?撘? -->
         </div>
 
-        <button id="btn-enter-lobby" class="intro-start-btn">開 啟 征 途</button>
+        <button id="btn-enter-lobby" class="intro-start-btn">????敺???/button>
     </div>
 </div>
 
-<!-- ══ 登入畫面 ══ -->
+<!-- ?? ?餃?恍 ?? -->
 <div id="login-screen" class="hidden">
     <div class="login-bg"></div>
     <div class="login-container">
         <div class="login-logo-area">
-            <span style="font-size:56px;">🐉</span>
-            <h1 class="login-game-title">華夏風雲錄</h1>
-            <p class="login-game-sub">千古英雄 · 全球對決</p>
+            <span style="font-size:56px;">??</span>
+            <h1 class="login-game-title">?臬?憸券??/h1>
+            <p class="login-game-sub">??梢? 繚 ?函?撠捱</p>
         </div>
 
-        <!-- 帳密登入表單 -->
+        <!-- 撣喳??餃銵典 -->
         <div class="login-box" id="login-form-panel">
             <div class="login-field-group">
-                <label class="login-label">帳號</label>
+                <label class="login-label">撣唾?</label>
                 <input id="login-username" type="text" class="login-input"
-                       placeholder="請輸入帳號" autocomplete="username">
+                       placeholder="隢撓?亙董?? autocomplete="username">
             </div>
             <div class="login-field-group">
-                <label class="login-label">密碼</label>
+                <label class="login-label">撖Ⅳ</label>
                 <input id="login-password" type="password" class="login-input"
-                       placeholder="請輸入密碼" autocomplete="current-password">
+                       placeholder="隢撓?亙?蝣? autocomplete="current-password">
             </div>
             <div id="login-error" class="login-msg-err hidden"></div>
-            <button id="login-submit-btn" class="login-action-btn">登 入</button>
-            <!-- 登入 ↔ 註冊 切換 -->
+            <button id="login-submit-btn" class="login-action-btn">????/button>
+            <!-- ?餃 ??閮餃? ?? -->
             <div id="login-toggle-row" class="login-toggle-row">
-                <span>還沒有帳號？</span>
-                <button id="login-to-register-btn" class="login-link-btn">立即註冊</button>
+                <span>???董??</span>
+                <button id="login-to-register-btn" class="login-link-btn">蝡閮餃?</button>
             </div>
         </div>
 
-        <!-- 驗證碼輸入（登入 / 註冊後顯示）-->
+        <!-- 撽?蝣潸撓?伐??餃 / 閮餃?敺＊蝷綽?-->
         <div class="login-box hidden" id="login-code-panel">
-            <div class="login-code-hint" id="login-code-hint">驗證碼已傳送至您的信箱</div>
+            <div class="login-code-hint" id="login-code-hint">撽?蝣澆歇?喲?函?靽∠拳</div>
             <div class="login-field-group">
-                <label class="login-label">驗證碼</label>
+                <label class="login-label">撽?蝣?/label>
                 <input id="login-code-input" type="text" class="login-input login-code-input"
-                       placeholder="6 位數字" maxlength="6" inputmode="numeric">
+                       placeholder="6 雿摮? maxlength="6" inputmode="numeric">
             </div>
             <div id="login-code-error" class="login-msg-err hidden"></div>
-            <button id="login-code-btn" class="login-action-btn">確 認</button>
-            <button id="login-code-back-btn" class="login-back-btn">← 返回</button>
+            <button id="login-code-btn" class="login-action-btn">蝣?隤?/button>
+            <button id="login-code-back-btn" class="login-back-btn">??餈?</button>
         </div>
 
-        <!-- 註冊表單 -->
+        <!-- 閮餃?銵典 -->
         <div class="login-box hidden" id="login-register-panel">
             <div class="login-field-group">
-                <label class="login-label">帳號（英文小寫 / 數字 / 底線，3–20字）</label>
+                <label class="login-label">撣唾?嚗??撖?/ ?詨? / 摨?嚗???0摮?</label>
                 <input id="reg-username" type="text" class="login-input"
-                       placeholder="例：hero123" autocomplete="username">
+                       placeholder="靘?hero123" autocomplete="username">
             </div>
             <div class="login-field-group">
-                <label class="login-label">信箱（用於接收驗證碼）</label>
+                <label class="login-label">靽∠拳嚗?潭?園?霅Ⅳ嚗?/label>
                 <input id="reg-email" type="email" class="login-input"
                        placeholder="example@gmail.com" autocomplete="email">
             </div>
             <div class="login-field-group">
-                <label class="login-label">密碼（至少 6 字元）</label>
+                <label class="login-label">撖Ⅳ嚗撠?6 摮?嚗?/label>
                 <input id="reg-password" type="password" class="login-input"
-                       placeholder="請輸入密碼" autocomplete="new-password">
+                       placeholder="隢撓?亙?蝣? autocomplete="new-password">
             </div>
             <div class="login-field-group">
-                <label class="login-label">確認密碼</label>
+                <label class="login-label">蝣箄?撖Ⅳ</label>
                 <input id="reg-confirm" type="password" class="login-input"
-                       placeholder="再輸入一次密碼" autocomplete="new-password">
+                       placeholder="?撓?乩?甈∪?蝣? autocomplete="new-password">
             </div>
             <div id="reg-error" class="login-msg-err hidden"></div>
-            <button id="reg-submit-btn" class="login-action-btn">建 立 帳 號</button>
-            <button id="reg-back-btn" class="login-back-btn">← 返回登入</button>
+            <button id="reg-submit-btn" class="login-action-btn">撱?蝡?撣???/button>
+            <button id="reg-back-btn" class="login-back-btn">??餈??餃</button>
         </div>
 
     </div>
 </div>
 
-<!-- 玩家頭像按鈕（大廳左上角）-->
+<!-- ?拙振?剖???嚗之撱喳椰銝?嚗?->
 <div id="player-avatar-btn" class="player-avatar-btn hidden" onclick="window._openProfileModal()">
     <img id="player-avatar-img" src="" alt="" class="player-avatar-img hidden">
-    <span id="player-avatar-icon" class="player-avatar-icon">👤</span>
-    <span id="player-avatar-name" class="player-avatar-name">玩家</span>
+    <span id="player-avatar-icon" class="player-avatar-icon">?</span>
+    <span id="player-avatar-name" class="player-avatar-name">?拙振</span>
 </div>
 
-<!-- 玩家設定 Modal -->
+<!-- ?拙振閮剖? Modal -->
 <div id="profile-modal" class="profile-modal hidden">
     <div class="profile-modal-box">
         <div class="profile-modal-header">
-            <span>玩家設定</span>
-            <button class="profile-close-btn" onclick="window._closeProfileModal()">✕</button>
+            <span>?拙振閮剖?</span>
+            <button class="profile-close-btn" onclick="window._closeProfileModal()">??/button>
         </div>
 
-        <!-- ① 修改頭像 -->
+        <!-- ??靽格?剖? -->
         <div class="profile-section">
-            <div class="profile-section-title">🖼 修改頭像</div>
+            <div class="profile-section-title">? 靽格?剖?</div>
             <div class="profile-avatar-preview-wrap">
                 <div class="profile-avatar-preview" id="profile-avatar-preview">
                     <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                    <span id="profile-avatar-preview-icon" style="font-size:40px;">👤</span>
+                    <span id="profile-avatar-preview-icon" style="font-size:40px;">?</span>
                 </div>
-                <label class="profile-upload-btn" for="profile-avatar-upload">📁 選擇圖片</label>
+                <label class="profile-upload-btn" for="profile-avatar-upload">?? ?豢???</label>
                 <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
             </div>
             <div id="profile-avatar-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-avatar-save-btn">儲存頭像</button>
+            <button class="profile-save-btn" id="profile-avatar-save-btn">?脣??剖?</button>
         </div>
 
-        <!-- ② 名號 -->
+        <!-- ???? -->
         <div class="profile-section">
-            <div class="profile-section-title">🏷️ 名號</div>
+            <div class="profile-section-title">?儭???</div>
             <input type="text" id="nickname-input" class="profile-input"
-                   maxlength="12" placeholder="請輸入名號">
+                   maxlength="12" placeholder="隢撓?亙???>
             <div id="profile-nickname-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-nickname-save-btn">儲存名號</button>
+            <button class="profile-save-btn" id="profile-nickname-save-btn">?脣???</button>
         </div>
 
-        <!-- ③ 更改密碼 -->
+        <!-- ???湔撖Ⅳ -->
         <div class="profile-section">
-            <div class="profile-section-title">🔐 更改密碼</div>
-            <input type="password" id="profile-old-pwd" class="profile-input" placeholder="舊密碼">
-            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="新密碼（至少 6 字元）">
-            <input type="password" id="profile-confirm-pwd" class="profile-input" placeholder="再次輸入新密碼">
+            <div class="profile-section-title">?? ?湔撖Ⅳ</div>
+            <input type="password" id="profile-old-pwd" class="profile-input" placeholder="??蝣?>
+            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="?啣?蝣潘??喳? 6 摮?嚗?>
+            <input type="password" id="profile-confirm-pwd" class="profile-input" placeholder="?活頛詨?啣?蝣?>
             <div id="profile-pwd-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-pwd-save-btn">更改密碼</button>
+            <button class="profile-save-btn" id="profile-pwd-save-btn">?湔撖Ⅳ</button>
         </div>
 
-        <!-- ③ 個人留言 -->
+        <!-- ???犖?? -->
         <div class="profile-section">
-            <div class="profile-section-title">💬 個人留言</div>
-            <p class="profile-msg-note">其他玩家可以看到你的留言</p>
+            <div class="profile-section-title">? ?犖??</div>
+            <p class="profile-msg-note">?嗡??拙振?臭誑?雿???</p>
             <textarea id="profile-message" class="profile-textarea"
-                      placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
+                      placeholder="?犖?怎??" maxlength="120" rows="3"></textarea>
             <div id="profile-message-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-msg-save-btn">儲存留言</button>
+            <button class="profile-save-btn" id="profile-msg-save-btn">?脣???</button>
         </div>
     </div>
 </div>
 
-<!-- 大廳畫面 -->
+<!-- 憭批輒?恍 -->
 <div id="lobby-screen" class="hidden">
     <div class="lobby-wrap">
         <div class="lobby-logo-area">
-            <span class="loading-dragon" style="font-size:72px;">🐉</span>
-            <h1 class="lobby-title">華夏風雲錄</h1>
-            <p class="lobby-subtitle">千古英雄 · 全球對決</p>
-            <div id="lobby-silver-display" style="color:var(--gold); font-weight:900; font-size:20px; margin-top:10px; text-shadow:0 0 10px rgba(212,175,55,0.5);">💰 當前餘額: 0 兩</div>
+            <span class="loading-dragon" style="font-size:72px;">??</span>
+            <h1 class="lobby-title">?臬?憸券??/h1>
+            <p class="lobby-subtitle">??梢? 繚 ?函?撠捱</p>
+            <div id="lobby-silver-display" style="color:var(--gold); font-weight:900; font-size:20px; margin-top:10px; text-shadow:0 0 10px rgba(212,175,55,0.5);">? ?嗅?擗?: 0 ??/div>
         </div>
         <div class="lobby-card" style="margin-top:0;">
             <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
-                <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
+                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">?抬? 暺???(????)</button>
+                <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">??儭??澈</button>
             </div>
-            <button id="btn-vs-ai" class="lobby-btn">🤖 對決 智能 AI (單機)</button>
+            <button id="btn-vs-ai" class="lobby-btn">?? 撠捱 ?箄 AI (?格?)</button>
             <div style="margin:20px 0; color:#555; display:flex; align-items:center; gap:10px;">
-                <hr style="flex:1; border:0; border-top:1px solid #333"> 聯網對戰 <hr style="flex:1; border:0; border-top:1px solid #333">
+                <hr style="flex:1; border:0; border-top:1px solid #333"> ?舐雯撠 <hr style="flex:1; border:0; border-top:1px solid #333">
             </div>
-            <button id="btn-create-room" class="lobby-btn" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:#fff; border-color:#1e3c72;">🌐 建立戰鬥房間</button>
+            <button id="btn-create-room" class="lobby-btn" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:#fff; border-color:#1e3c72;">?? 撱箇??圈洛?輸?</button>
             <div style="display:flex; margin-top:15px; gap:10px;">
-                <input id="join-code-input" maxlength="5" placeholder="輸入 5 位代碼" style="flex:1; padding:15px; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff; font-size:18px; text-align:center; font-family:monospace;">
-                <button id="btn-join-room" class="lobby-btn" style="width:120px; margin-top:0;">加入</button>
+                <input id="join-code-input" maxlength="5" placeholder="頛詨 5 雿誨蝣? style="flex:1; padding:15px; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff; font-size:18px; text-align:center; font-family:monospace;">
+                <button id="btn-join-room" class="lobby-btn" style="width:120px; margin-top:0;">?</button>
             </div>
             <div id="lobby-error" class="hidden" style="margin-top:15px; color:#e74c3c; font-weight:700;"></div>
         </div>
     </div>
 </div>
 
-<!-- 遊戲視窗 -->
+<!-- ?閬? -->
 <div id="game-container" class="hidden">
 
-    <!-- ① 頂部欄：回合 | 階段 | 敵方資訊 (右) -->
+    <!-- ???甈??? | ?挾 | ?菜鞈? (?? -->
     <div class="game-topbar">
-        <div id="turn-indicator" class="turn-badge">🔵 載入中...</div>
+        <div id="turn-indicator" class="turn-badge">? 頛銝?..</div>
         <span id="phase-display" class="phase-chip"></span>
         <div style="flex:1;"></div>
         <div class="corner-info opp-corner">
-            <div class="corner-name opp-cname">👺 敵軍大本營</div>
+            <div class="corner-name opp-cname">? ?菔?憭扳??/div>
             <div class="corner-lp-row">
                 <div class="monarch-hp-bar-outer" style="width:130px;">
                     <div id="opp-monarch-hp-fill" class="monarch-hp-fill opp-fill" style="width:100%"></div>
@@ -280,82 +279,82 @@
                 <span id="opp-monarch-hp" class="monarch-hp-text">--/--</span>
             </div>
             <div class="sys-stats-row" id="opp-sys-stats">
-                <span class="sys-stat" id="opp-stat-mil"  title="兵力（大將軍/將軍）">⚔ --</span>
-                <span class="sys-stat" id="opp-stat-log"  title="儲備（後勤）">🌾 --</span>
-                <span class="sys-stat" id="opp-stat-dom"  title="民心（內政）">🏛 --</span>
-                <span class="sys-stat" id="opp-stat-insp" title="忠誠（監察）">👁 --</span>
+                <span class="sys-stat" id="opp-stat-mil"  title="?萄?嚗之撠?/撠?嚗?>??--</span>
+                <span class="sys-stat" id="opp-stat-log"  title="?脣?嚗??歹?">? --</span>
+                <span class="sys-stat" id="opp-stat-dom"  title="瘞?嚗?選?">?? --</span>
+                <span class="sys-stat" id="opp-stat-insp" title="敹?嚗撖?">?? --</span>
             </div>
-            <div class="corner-handcount">手牌: <span id="opp-hand-count">0</span></div>
+            <div class="corner-handcount">??: <span id="opp-hand-count">0</span></div>
         </div>
     </div>
 
-    <!-- ② 敵方手牌橫列 -->
+    <!-- ???菜??璈怠? -->
     <div id="opp-hand-container" class="hand-container opp-hand-area">
         <div id="opp-hand" class="hand-list"></div>
     </div>
 
-    <!-- ③ 主戰場 -->
+    <!-- ??銝餅??-->
     <div class="battlefield-main">
 
-        <!-- 中央戰場 -->
+        <!-- 銝剖亢?啣 -->
         <div class="battlefield-container">
-            <!-- 敵方後排 -->
+            <!-- ?菜敺? -->
             <div class="battlefield" id="opp-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 敵方前排 -->
+            <!-- ?菜?? -->
             <div class="battlefield" id="opp-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
 
             <div class="battle-divider">
-                <div class="divider-text">楚 河 漢 界</div>
+                <div class="divider-text">璆?瘝?瞍???/div>
             </div>
 
-            <!-- 我方前排 -->
+            <!-- ??? -->
             <div class="battlefield" id="my-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 我方後排 -->
+            <!-- ?敺? -->
             <div class="battlefield" id="my-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
         </div>
 
-        <!-- 右側欄：敵方牌庫/墳場 (上) + 我方墳場/牌庫 (下) -->
+        <!-- ?喳甈??菜?澈/憓喳 (銝? + ?憓喳/?澈 (銝? -->
         <div class="side-zone right-side">
-            <div id="opp-deck-slot" class="visual-slot deck-slot" title="敵方牌組">
-                <div class="slot-label">牌組</div>
+            <div id="opp-deck-slot" class="visual-slot deck-slot" title="?菜??">
+                <div class="slot-label">??</div>
                 <div id="opp-deck-count" class="slot-count">0</div>
             </div>
-            <div id="opp-grave-slot" class="visual-slot grave-slot" title="敵方墳場">
-                <div class="slot-label">墳場</div>
+            <div id="opp-grave-slot" class="visual-slot grave-slot" title="?菜憓喳">
+                <div class="slot-label">憓喳</div>
                 <div id="opp-grave-count" class="slot-count">0</div>
             </div>
             <div style="flex:1;"></div>
-            <div id="my-grave-slot" class="visual-slot grave-slot" title="我方墳場">
-                <div class="slot-label">墳場</div>
+            <div id="my-grave-slot" class="visual-slot grave-slot" title="?憓喳">
+                <div class="slot-label">憓喳</div>
                 <div id="my-grave-count" class="slot-count">0</div>
             </div>
-            <div id="my-deck-slot" class="visual-slot deck-slot interactive-deck" title="我方牌組">
-                <div class="slot-label">牌組</div>
+            <div id="my-deck-slot" class="visual-slot deck-slot interactive-deck" title="???">
+                <div class="slot-label">??</div>
                 <div id="my-deck-count" class="slot-count">0</div>
             </div>
         </div>
 
     </div>
 
-    <!-- ④ 我方手牌橫列 -->
+    <!-- ?????璈怠? -->
     <div id="my-hand-container" class="hand-container my-hand-area">
         <div id="my-hand" class="hand-list fan-hand"></div>
     </div>
 
-    <!-- ⑤ 底部欄：我方資訊 (左) | 結束回合 (右) -->
+    <!-- ??摨甈??鞈? (撌? | 蝯??? (?? -->
     <div class="game-bottombar">
         <div style="display:flex; align-items:center; gap:12px;">
-            <div class="hud-avatar-my" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">🛡️</div>
+            <div class="hud-avatar-my" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">?儭?/div>
             <div class="corner-info my-corner">
-                <div class="corner-name my-cname">🛡️ 我軍大門</div>
+                <div class="corner-name my-cname">?儭???憭折?</div>
                 <div class="corner-lp-row">
                     <div class="monarch-hp-bar-outer" style="width:130px;">
                         <div id="my-monarch-hp-fill" class="monarch-hp-fill my-fill" style="width:100%"></div>
@@ -363,18 +362,18 @@
                     <span id="my-monarch-hp" class="monarch-hp-text">--/--</span>
                 </div>
                 <div class="sys-stats-row" id="my-sys-stats">
-                    <span class="sys-stat" id="my-stat-mil"  title="兵力（大將軍/將軍）">⚔ --</span>
-                    <span class="sys-stat" id="my-stat-log"  title="儲備（後勤）">🌾 --</span>
-                    <span class="sys-stat" id="my-stat-dom"  title="民心（內政）">🏛 --</span>
-                    <span class="sys-stat" id="my-stat-insp" title="忠誠（監察）">👁 --</span>
+                    <span class="sys-stat" id="my-stat-mil"  title="?萄?嚗之撠?/撠?嚗?>??--</span>
+                    <span class="sys-stat" id="my-stat-log"  title="?脣?嚗??歹?">? --</span>
+                    <span class="sys-stat" id="my-stat-dom"  title="瘞?嚗?選?">?? --</span>
+                    <span class="sys-stat" id="my-stat-insp" title="敹?嚗撖?">?? --</span>
                 </div>
-                <div class="corner-handcount">手牌: <span id="my-hand-count">0</span></div>
+                <div class="corner-handcount">??: <span id="my-hand-count">0</span></div>
             </div>
         </div>
         <div style="flex:1;"></div>
         <div style="display:flex; align-items:center; gap:10px;">
-            <button id="end-turn-btn" class="action-btn pulse-btn" style="width:140px; height:44px; font-size:18px;">結束回合</button>
-            <button onclick="toggleBattleLog()" style="width:44px; height:44px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#888; font-size:16px; cursor:pointer;" title="戰報">📜</button>
+            <button id="end-turn-btn" class="action-btn pulse-btn" style="width:140px; height:44px; font-size:18px;">蝯???</button>
+            <button onclick="toggleBattleLog()" style="width:44px; height:44px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#888; font-size:16px; cursor:pointer;" title="?啣">??</button>
         </div>
     </div>
 
@@ -382,137 +381,136 @@
 
 <div id="toast-container" class="toast-container"></div>
 <div id="card-preview" class="hidden" style="position:fixed; left:20px; top:50%; transform:translateY(-50%); z-index:9999; pointer-events:none;"></div>
-<div id="action-hint" class="hidden" style="position:fixed; bottom:160px; left:50%; transform:translateX(-50%); background:rgba(212,175,55,0.9); color:#000; padding:8px 24px; border-radius:20px; font-weight:900; font-size:18px; z-index:1000; box-shadow:0 0 20px rgba(0,0,0,0.5);">提示訊息</div>
+<div id="action-hint" class="hidden" style="position:fixed; bottom:160px; left:50%; transform:translateX(-50%); background:rgba(212,175,55,0.9); color:#000; padding:8px 24px; border-radius:20px; font-weight:900; font-size:18px; z-index:1000; box-shadow:0 0 20px rgba(0,0,0,0.5);">?內閮</div>
 <div id="skill-fx-layer" style="position:fixed; inset:0; pointer-events:none; z-index:9000;"></div>
 
-<!-- 側邊欄：社交與競價公告 (Social & Bidding Center) -->
+<!-- ?湧?甈?蝷曆漱?奎?孵??(Social & Bidding Center) -->
 <div id="social-sidebar" class="glass-sidebar">
-    <button id="close-sidebar-btn" class="sidebar-close-btn" onclick="toggleSidebar()">×</button>
-    <button id="open-sidebar-btn" class="open-sidebar-trigger hidden" onclick="toggleSidebar()">‹</button>
+    <button id="close-sidebar-btn" class="sidebar-close-btn" onclick="toggleSidebar()">?</button>
+    <button id="open-sidebar-btn" class="open-sidebar-trigger hidden" onclick="toggleSidebar()">??/button>
     
     <div class="sidebar-tabs">
-        <button id="tab-btn-chat" class="tab-btn active" onclick="switchTab('chat')">💬 通訊<span id="chat-notif-dot" class="notif-dot hidden"></span></button>
-        <button id="tab-btn-leaderboard" class="tab-btn" onclick="switchTab('leaderboard')">⚔️ 英雄榜</button>
-        <button id="tab-btn-announcements" class="tab-btn" onclick="switchTab('announcements')">📜 皇榜</button>
+        <button id="tab-btn-chat" class="tab-btn active" onclick="switchTab('chat')">? ??<span id="chat-notif-dot" class="notif-dot hidden"></span></button>
+        <button id="tab-btn-leaderboard" class="tab-btn" onclick="switchTab('leaderboard')">?? ?梢?璁?/button>
+        <button id="tab-btn-announcements" class="tab-btn" onclick="switchTab('announcements')">?? ??</button>
     </div>
     
     <div id="tab-chat" class="tab-content active">
-        <!-- 聊天模式切換 -->
+        <!-- ?予璅∪??? -->
         <div class="chat-mode-toggle">
-            <button id="chat-mode-global" class="sub-tab-btn active" onclick="switchChatMode('global')">🏠 全域</button>
-            <button id="chat-mode-room" class="sub-tab-btn" onclick="switchChatMode('room')">⚔️ 房間</button>
-            <button id="chat-mode-friend" class="sub-tab-btn" onclick="switchChatMode('friend')">👤 好友</button>
+            <button id="chat-mode-global" class="sub-tab-btn active" onclick="switchChatMode('global')">?? ?典?</button>
+            <button id="chat-mode-room" class="sub-tab-btn" onclick="switchChatMode('room')">?? ?輸?</button>
+            <button id="chat-mode-friend" class="sub-tab-btn" onclick="switchChatMode('friend')">? 憟賢?</button>
         </div>
 
         <div id="chat-announce-board" class="announce-board">
-            <!-- 廣播區 -->
+            <!-- 撱?? -->
         </div>
 
         <div id="chat-context-header" style="background:#1a202c; padding:5px 15px; font-size:12px; color:var(--gold); border-bottom:1px solid #333; display:none;">
-            正在與 [未知好友] 私聊...
+            甇???[?芰憟賢?] 蝘?...
         </div>
 
-        <!-- 好友管理與搜尋 -->
+        <!-- 憟賢?蝞∠???撠?-->
         <div id="friend-list-area" class="friend-list-container hidden">
             <div style="display:flex; gap:8px; padding:10px; border-bottom:1px solid #333;">
-                <button class="lobby-btn" style="flex:1; margin:0; padding:6px; font-size:12px;" onclick="openAddFriendModal()">➕ 增加好友</button>
+                <button class="lobby-btn" style="flex:1; margin:0; padding:6px; font-size:12px;" onclick="openAddFriendModal()">??憓?憟賢?</button>
             </div>
             <div id="friend-items-list">
-                <!-- 內容由 JS 渲染 -->
+                <!-- ?批捆??JS 皜脫? -->
             </div>
         </div>
 
         <div id="chat-messages" class="chat-area">
-            <div class="sys-msg">正在切換全域通訊頻道...</div>
+            <div class="sys-msg">甇????典????駁?...</div>
         </div>
         
         <div class="chat-input-wrapper">
-            <input type="text" id="chat-input" placeholder="運籌帷幄...">
-            <button id="btn-send-chat">發送</button>
+            <input type="text" id="chat-input" placeholder="??撣瑕?...">
+            <button id="btn-send-chat">?潮?/button>
         </div>
     </div>
     
-    <!-- 英雄榜分頁 -->
+    <!-- ?梢?璁???-->
     <div id="tab-leaderboard" class="tab-content hidden">
         <div class="leaderboard-area">
-            <h3 style="color:var(--gold); margin-bottom:15px; text-align:center; letter-spacing:2px;">⚔️ 華夏連勝英雄榜</h3>
+            <h3 style="color:var(--gold); margin-bottom:15px; text-align:center; letter-spacing:2px;">?? ?臬?????梢?璁?/h3>
             <div id="leaderboard-stats-bar" style="background:rgba(212,175,55,0.1); padding:12px 16px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-around; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="text-align:center;">
-                    <div style="font-size:10px; color:#666; margin-bottom:2px;">當前連勝 (PvP)</div>
+                    <div style="font-size:10px; color:#666; margin-bottom:2px;">?嗅???? (PvP)</div>
                     <div id="my-current-streak" style="color:var(--gold); font-weight:900; font-size:24px; line-height:1;">0</div>
                 </div>
                 <div style="width:1px; height:36px; background:#333;"></div>
                 <div style="text-align:center;">
-                    <div style="font-size:10px; color:#666; margin-bottom:2px;">個人最高紀錄</div>
+                    <div style="font-size:10px; color:#666; margin-bottom:2px;">?犖?擃???/div>
                     <div id="my-best-streak" style="color:#d4af37; font-weight:900; font-size:24px; line-height:1;">0</div>
                 </div>
-                <div style="width:100%; font-size:10px; color:#444; text-align:center; margin-top:2px;">⚔ 僅計算真人對戰勝場，AI 對戰不計入</div>
+                <div style="width:100%; font-size:10px; color:#444; text-align:center; margin-top:2px;">????蝞?鈭箏??啣??湛?AI 撠銝???/div>
             </div>
             <div id="leaderboard-list">
-                <!-- 排行榜由 JS 渲染 -->
+                <!-- ??璁 JS 皜脫? -->
             </div>
         </div>
     </div>
 
-    <!-- 皇榜歷史與發布分頁 -->
+    <!-- ??甇瑕?撣???-->
     <div id="tab-announcements" class="tab-content hidden">
         <div class="bidding-area">
-            <h3 style="color:var(--gold); margin-bottom:10px; text-align:center;">📜 天下皇榜歷史</h3>
+            <h3 style="color:var(--gold); margin-bottom:10px; text-align:center;">?? 憭拐???甇瑕</h3>
             <div id="announcement-history-list" style="color:#aaa; text-align:center; padding: 10px;">
-                目前尚未有英雄躋身皇榜...
+                ?桀?撠???頨怎?璁?..
             </div>
         </div>
-        <button id="btn-publish-board" class="lobby-btn" style="width:100%; margin:0; padding:10px; font-size:14px;">發布皇榜 (10 銀兩)</button>
+        <button id="btn-publish-board" class="lobby-btn" style="width:100%; margin:0; padding:10px; font-size:14px;">?澆??? (10 ???</button>
     </div>
 </div>
 
-<!-- 聊天玩家右鍵互動選單 -->
+<!-- ?予?拙振?喲鈭??詨 -->
 <div id="chat-context-menu" class="context-menu hidden">
-    <div class="ctx-menu-header" id="ctx-menu-player-name">玩家</div>
-    <button class="ctx-menu-btn" id="ctx-add-friend">🤝 加為好友</button>
-    <button class="ctx-menu-btn" id="ctx-private-msg">💬 發起私聊</button>
-    <button class="ctx-menu-btn ctx-close" id="ctx-close">✖ 關閉</button>
+    <div class="ctx-menu-header" id="ctx-menu-player-name">?拙振</div>
+    <button class="ctx-menu-btn" id="ctx-add-friend">?? ?憟賢?</button>
+    <button class="ctx-menu-btn" id="ctx-private-msg">? ?潸絲蝘?</button>
+    <button class="ctx-menu-btn ctx-close" id="ctx-close">????</button>
 </div>
 
 
-<!-- 君王選擇 Modal -->
+<!-- ???豢? Modal -->
 <div id="monarch-select-modal" class="gacha-modal hidden">
     <div class="lobby-wrap" style="width:95vw; max-width:1200px; text-align:center; background:rgba(0,0,0,0.8); padding:40px; border-radius:30px; border:2px solid var(--gold);">
-        <h2 style="color:var(--gold); font-size:36px; margin-bottom:30px; letter-spacing:8px;">請選擇出征君主</h2>
+        <h2 style="color:var(--gold); font-size:36px; margin-bottom:30px; letter-spacing:8px;">隢?敺?銝?/h2>
         <div id="monarch-select-list" class="card-grid-5" style="max-height:60vh; overflow-y:auto;"></div>
         <div style="margin-top:40px; display:flex; gap:20px; justify-content:center;">
-            <button id="btn-confirm-monarch" class="lobby-btn" style="width:200px; font-size:20px;" disabled>確認出征</button>
-            <button class="lobby-btn" style="width:200px; font-size:20px; background:#333; color:#fff;" onclick="document.getElementById('monarch-select-modal').classList.add('hidden')">返回大廳</button>
+            <button id="btn-confirm-monarch" class="lobby-btn" style="width:200px; font-size:20px;" disabled>蝣箄??箏?</button>
+            <button class="lobby-btn" style="width:200px; font-size:20px; background:#333; color:#fff;" onclick="document.getElementById('monarch-select-modal').classList.add('hidden')">餈?憭批輒</button>
         </div>
     </div>
 </div>
 
-<!-- 點將臺 / 牌庫 Modal -->
+<!-- 暺???/ ?澈 Modal -->
 <div id="gacha-modal" class="gacha-modal hidden">
     <div id="gacha-sidebar" class="modal-sidebar">
-        <h3 style="color:var(--gold); text-align:center; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px;">分類篩選</h3>
-        <button class="filter-btn active" data-type="all">📔 全部卡牌</button>
-        <button class="filter-btn" data-type="君王">👑 君主</button>
-        <button class="filter-btn" data-type="大將軍">⚔️ 大將軍</button>
-        <button class="filter-btn" data-type="將軍">🐎 將軍</button>
-        <button class="filter-btn" data-type="軍師">📜 軍師</button>
-        <button class="filter-btn" data-type="後勤">🏛️ 後勤</button>
-        <button class="filter-btn" data-type="內政">🏮 內政</button>
-        <button class="filter-btn" data-type="監察">⚖️ 監察</button>
-        <button class="filter-btn" data-type="計策">♟️ 計策卡</button>
-        <button class="filter-btn" data-type="突發事件">🌩️ 突發事件</button>
+        <h3 style="color:var(--gold); text-align:center; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px;">??蝭拚</h3>
+        <button class="filter-btn active" data-type="all">?? ?券?∠?</button>
+        <button class="filter-btn" data-type="??">?? ?蜓</button>
+        <button class="filter-btn" data-type="憭批?頠?>?? 憭批?頠?/button>
+        <button class="filter-btn" data-type="撠?">?? 撠?</button>
+        <button class="filter-btn" data-type="頠葦">?? 頠葦</button>
+        <button class="filter-btn" data-type="敺">??儭?敺</button>
+        <button class="filter-btn" data-type="?扳">? ?扳</button>
+        <button class="filter-btn" data-type="???">?? ???</button>
+        <button class="filter-btn" data-type="閮?">?? 閮???/button>
+        <button class="filter-btn" data-type="蝒鈭辣">?儭?蝒鈭辣</button>
     </div>
     
     <div class="modal-main">
-        <div class="modal-close-btn" id="btn-gacha-close">×</div>
+        <div class="modal-close-btn" id="btn-gacha-close">?</div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h1 id="gacha-title" style="color:var(--gold); margin:0; font-size:32px; letter-spacing:4px;">天下豪傑</h1>
+            <h1 id="gacha-title" style="color:var(--gold); margin:0; font-size:32px; letter-spacing:4px;">憭拐?鞊芸?</h1>
             <div style="display:flex; gap:15px; align-items:center;">
                 <div id="gacha-silver-banner" style="background:rgba(212,175,55,0.15); padding:8px 20px; border-radius:30px; border:1px solid var(--gold); font-size:14px; color:var(--gold); font-weight:bold; box-shadow:0 0 10px rgba(212,175,55,0.2);">
-                    💰 當前餘額：<span id="gacha-silver-val">1000</span> 兩
-                </div>
+                    ? ?嗅?擗?嚗?span id="gacha-silver-val">1000</span> ??                </div>
                 <div id="collection-stats" style="background:rgba(255,255,255,0.05); padding:8px 20px; border-radius:30px; border:1px solid #444; font-size:14px; color:#aaa;">
-                    🎴 收集進度: <span id="collection-percent" style="color:#eee;">0%</span> (<span id="collection-count">0/0</span>)
+                    ? ?園??脣漲: <span id="collection-percent" style="color:#eee;">0%</span> (<span id="collection-count">0/0</span>)
                 </div>
             </div>
         </div>
@@ -521,218 +519,216 @@
             <div id="gacha-controls-area" class="gacha-controls" style="padding-top:10px;">
 
                 <div class="gacha-actions-stack" style="display:flex; flex-direction:column; gap:15px;">
-                    <button id="btn-gacha-single" class="lobby-btn" style="background:#444;">招募一位 (50 銀兩)</button>
-                    <button id="btn-gacha-ten" class="lobby-btn" style="background:linear-gradient(135deg, #8b0000, #b22222); border-color:var(--gold);">十連招募 (500 銀兩)</button>
-                    <button id="btn-gacha-twenty-five" class="lobby-btn" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; border-color:#fff; text-shadow:0 0 5px #fff; font-weight:900;">二十五連招募 (1200 銀兩)</button>
-                    <button id="btn-gacha-pool-view" class="lobby-btn" style="background:#222; border:1px solid #444;">📜 查看完整圖鑑</button>
+                    <button id="btn-gacha-single" class="lobby-btn" style="background:#444;">??銝雿?(50 ???</button>
+                    <button id="btn-gacha-ten" class="lobby-btn" style="background:linear-gradient(135deg, #8b0000, #b22222); border-color:var(--gold);">?????(500 ???</button>
+                    <button id="btn-gacha-twenty-five" class="lobby-btn" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; border-color:#fff; text-shadow:0 0 5px #fff; font-weight:900;">鈭?鈭????(1200 ???</button>
+                    <button id="btn-gacha-pool-view" class="lobby-btn" style="background:#222; border:1px solid #444;">?? ?亦?摰??</button>
                 </div>
-                <div id="gacha-result-hint" style="margin-top:20px; color:#666; font-size:12px; font-style:italic;">招募結果將顯示於此...</div>
+                <div id="gacha-result-hint" style="margin-top:20px; color:#666; font-size:12px; font-style:italic;">??蝯?撠＊蝷箸甇?..</div>
             </div>
             
             <div id="gacha-pool" class="gacha-pool card-grid-5">
-                <!-- 卡片列表動態注入 -->
+                <!-- ?∠??”??瘜典 -->
             </div>
             
             <div id="gacha-result" class="gacha-result">
-                <!-- 招募結果展示層 -->
+                <!-- ??蝯?撅內撅?-->
             </div>
         </div>
     </div>
 </div>
 
-<!-- 武將詳情彈窗 -->
+<!-- 甇血?閰單?敶? -->
 <div id="card-detail-modal" class="modal hidden">
     <div class="modal-content" style="width:500px; padding:0; background:#080a0d; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; border-radius:12px;">
         <div class="modal-header" style="background:linear-gradient(to right, #1a202c, #0d1117); border-bottom:1px solid #333; flex-shrink:0;">
-            <h2 id="detail-card-name" style="color:var(--gold); margin:0;">武將詳情</h2>
-            <div class="close-btn" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">×</div>
+            <h2 id="detail-card-name" style="color:var(--gold); margin:0;">甇血?閰單?</h2>
+            <div class="close-btn" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">?</div>
         </div>
         <div class="modal-body" style="padding:30px; text-align:center; overflow-y:auto; flex:1;">
-            <div id="detail-card-art" style="font-size:100px; margin-bottom:20px;">👑</div>
-            <div id="detail-card-dynasty" style="color:#888; letter-spacing:3px; margin-bottom:10px;">朝代</div>
-            <div id="detail-card-type" style="display:inline-block; padding:3px 12px; border-radius:4px; font-size:12px; font-weight:bold; margin-bottom:20px;">類型</div>
+            <div id="detail-card-art" style="font-size:100px; margin-bottom:20px;">??</div>
+            <div id="detail-card-dynasty" style="color:#888; letter-spacing:3px; margin-bottom:10px;">?誨</div>
+            <div id="detail-card-type" style="display:inline-block; padding:3px 12px; border-radius:4px; font-size:12px; font-weight:bold; margin-bottom:20px;">憿?</div>
             
             <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:12px; margin-bottom:20px; text-align:left;">
-                <h4 style="color:#ccc; margin-bottom:8px; border-left:3px solid var(--gold); padding-left:10px;">人物簡介</h4>
-                <p id="detail-card-desc" style="color:#aaa; font-size:14px; line-height:1.6;">簡介內容...</p>
-                <!-- 生平故事 / 歷史典故 由 JS 動態注入 -->
+                <h4 style="color:#ccc; margin-bottom:8px; border-left:3px solid var(--gold); padding-left:10px;">鈭箇蝪∩?</h4>
+                <p id="detail-card-desc" style="color:#aaa; font-size:14px; line-height:1.6;">蝪∩??批捆...</p>
+                <!-- ?像?? / 甇瑕?豢? ??JS ??瘜典 -->
             </div>
             
             <div style="background:rgba(212,175,55,0.05); padding:20px; border-radius:12px; border:1px solid rgba(212,175,55,0.1); text-align:left;">
-                <h4 style="color:var(--gold); margin-bottom:8px;">技能：<span id="detail-skill-name">技能名</span></h4>
-                <p id="detail-skill-desc" style="color:#eee; font-size:14px; line-height:1.6;">技能效果...</p>
+                <h4 style="color:var(--gold); margin-bottom:8px;">??踝?<span id="detail-skill-name">??賢?</span></h4>
+                <p id="detail-skill-desc" style="color:#eee; font-size:14px; line-height:1.6;">??賣???..</p>
             </div>
         </div>
         <div class="modal-footer" style="padding:20px; text-align:center; border-top:1px solid #1a202c; flex-shrink:0;">
-            <button class="lobby-btn" style="width:180px; margin:0 auto;" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">返回</button>
+            <button class="lobby-btn" style="width:180px; margin:0 auto;" onclick="document.getElementById('card-detail-modal').classList.add('hidden')">餈?</button>
         </div>
     </div>
 </div>
 
-<!-- 管理員密碼驗證彈窗 -->
+<!-- 蝞∠??∪?蝣潮?霅?蝒?-->
 <div id="admin-auth-modal" class="modal hidden" style="z-index: 10000;">
     <div class="modal-content" style="width:400px; background:#111; border:2px solid var(--crimson);">
         <div class="modal-header">
-            <h3 style="color:var(--crimson); margin:0;">🔒 管理員身分驗證</h3>
-            <div class="close-btn" onclick="document.getElementById('admin-auth-modal').classList.add('hidden')">×</div>
+            <h3 style="color:var(--crimson); margin:0;">?? 蝞∠??∟澈??霅?/h3>
+            <div class="close-btn" onclick="document.getElementById('admin-auth-modal').classList.add('hidden')">?</div>
         </div>
         <div class="modal-body" style="padding:20px; text-align:center;">
-            <p style="color:#aaa; font-size:14px; margin-bottom:15px;">請輸入最高權限密碼：</p>
+            <p style="color:#aaa; font-size:14px; margin-bottom:15px;">隢撓?交?擃???蝣潘?</p>
             <input type="password" id="admin-pwd-input" placeholder="******" style="width:100%; text-align:center; padding:10px; font-size:24px; background:#000; border:1px solid #333; color:var(--gold); border-radius:6px; letter-spacing:10px; margin-bottom:20px;">
-            <button id="btn-admin-verify" class="lobby-btn" style="width:100%; background:linear-gradient(135deg, #800, #400);">驗證</button>
+            <button id="btn-admin-verify" class="lobby-btn" style="width:100%; background:linear-gradient(135deg, #800, #400);">撽?</button>
         </div>
     </div>
 </div>
 
-<!-- 皇榜發布彈窗 -->
+<!-- ???澆?敶? -->
 <div id="announce-modal" class="modal hidden">
     <div class="modal-content" style="width:600px; background:#0d1117; border:1px solid var(--border);">
         <div class="modal-header">
-            <h2 id="announce-modal-title" style="color:var(--gold); margin:0; letter-spacing:4px;">📜 發布天下皇榜</h2>
-            <div class="close-btn" onclick="document.getElementById('announce-modal').classList.add('hidden')">×</div>
+            <h2 id="announce-modal-title" style="color:var(--gold); margin:0; letter-spacing:4px;">?? ?澆?憭拐???</h2>
+            <div class="close-btn" onclick="document.getElementById('announce-modal').classList.add('hidden')">?</div>
         </div>
         <div class="modal-body" style="padding:25px; text-align:center;">
-            <p style="color:#888; margin-bottom:20px;">選擇您的皇榜階級，震撼天下</p>
+            <p style="color:#888; margin-bottom:20px;">?豢??函?????嚗??澆予銝?/p>
             
             <div style="display:flex; gap:15px; justify-content:center; margin-bottom:30px;">
                 <div class="tier-card active" data-tier="1" data-cost="10" style="border-color:#b87333;">
-                    <div style="font-size:24px;">🥉</div>
-                    <div style="color:#b87333; font-weight:bold;">銅榜</div>
-                    <div style="font-size:12px; opacity:0.6;">10 銀兩</div>
+                    <div style="font-size:24px;">??</div>
+                    <div style="color:#b87333; font-weight:bold;">??</div>
+                    <div style="font-size:12px; opacity:0.6;">10 ???/div>
                 </div>
                 <div class="tier-card" data-tier="2" data-cost="50" style="border-color:silver;">
-                    <div style="font-size:24px;">🥈</div>
-                    <div style="color:silver; font-weight:bold;">銀榜</div>
-                    <div style="font-size:12px; opacity:0.6;">50 銀兩</div>
+                    <div style="font-size:24px;">??</div>
+                    <div style="color:silver; font-weight:bold;">?璁?/div>
+                    <div style="font-size:12px; opacity:0.6;">50 ???/div>
                 </div>
                 <div class="tier-card" data-tier="3" data-cost="100" style="border-color:gold;">
-                    <div style="font-size:24px;">🥇</div>
-                    <div style="color:gold; font-weight:gold;">金榜</div>
-                    <div style="font-size:12px; opacity:0.6;">100 銀兩</div>
+                    <div style="font-size:24px;">??</div>
+                    <div style="color:gold; font-weight:gold;">??</div>
+                    <div style="font-size:12px; opacity:0.6;">100 ???/div>
                 </div>
                 <div id="dev-tier-card" class="tier-card" data-tier="9" data-cost="0" style="display:none; border-color:#9f7aea;">
-                    <div style="font-size:24px;">🚀</div>
-                    <div style="color:#9f7aea; font-weight:bold;">開發者</div>
-                    <div style="font-size:12px; opacity:0.6;">0 銀兩</div>
+                    <div style="font-size:24px;">??</div>
+                    <div style="color:#9f7aea; font-weight:bold;">???/div>
+                    <div style="font-size:12px; opacity:0.6;">0 ???/div>
                 </div>
             </div>
             
             <div style="text-align:left; margin-bottom:10px;">
-                <label style="color:var(--gold); font-size:14px;">🚩 皇榜內容：</label>
+                <label style="color:var(--gold); font-size:14px;">? ???批捆嚗?/label>
             </div>
-            <textarea id="announce-input" placeholder="入木三分，語驚四座..." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none;"></textarea>
+            <textarea id="announce-input" placeholder="?交銝?嚗?撽?摨?.." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none;"></textarea>
             
             <div style="margin-top:20px; color:#666; font-size:12px;">
-                發布後將置頂顯示，全軍將士皆能瞻仰。
-            </div>
+                ?澆?敺?蝵桅?憿舐內嚗頠?憯怎??賜隞啜?            </div>
         </div>
         <div class="modal-footer" style="padding:20px; text-align:right; border-top:1px solid #1a202c;">
-            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="document.getElementById('announce-modal').classList.add('hidden')">取消</button>
-            <button id="btn-announce-confirm" class="lobby-btn" style="width:160px; margin:0;">確認發布 (10 兩)</button>
+            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="document.getElementById('announce-modal').classList.add('hidden')">??</button>
+            <button id="btn-announce-confirm" class="lobby-btn" style="width:160px; margin:0;">蝣箄??澆? (10 ??</button>
         </div>
     </div>
 </div>
-<!-- 增加好友 Modal -->
+<!-- 憓?憟賢? Modal -->
 <div id="add-friend-modal" class="modal hidden">
     <div class="modal-content add-friend-modal-content" style="background:#0d1117; border:1px solid var(--gold); border-radius:15px; box-shadow:0 0 30px rgba(212,175,55,0.2);">
         <div class="modal-header">
-            <h2 style="color:var(--gold); margin:0; font-size:20px;">🤝 結交四海英豪</h2>
-            <div class="close-btn" onclick="document.getElementById('add-friend-modal').classList.add('hidden')">×</div>
+            <h2 style="color:var(--gold); margin:0; font-size:20px;">?? 蝯漱?絲?梯悸</h2>
+            <div class="close-btn" onclick="document.getElementById('add-friend-modal').classList.add('hidden')">?</div>
         </div>
         <div class="modal-body" style="padding:20px;">
             <div class="search-row">
-                <input type="text" id="friend-search-input" class="search-input" placeholder="輸入英雄名號...">
+                <input type="text" id="friend-search-input" class="search-input" placeholder="頛詨?梢???...">
                 <button class="search-btn" onclick="searchFriend()">
-                    <span style="font-size:20px;">🔍</span>
+                    <span style="font-size:20px;">??</span>
                 </button>
             </div>
             
             <div id="search-result-container" class="search-result-area">
-                <div style="color:#666; font-size:14px;">請輸入名稱並開始搜尋</div>
+                <div style="color:#666; font-size:14px;">隢撓?亙?蝔曹蒂????</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 開發者專屬皇榜 Modal -->
+<!-- ???撅祉?璁?Modal -->
 <div id="dev-announce-modal" class="modal hidden">
     <div class="modal-content" style="width:600px; background:#0d1117; border:1px solid #9f7aea; box-shadow: 0 0 30px rgba(159,122,234,0.3);">
         <div class="modal-header">
-            <h2 style="color:#9f7aea; margin:0; letter-spacing:4px;">🛡️ 開發者專屬皇榜</h2>
-            <div class="close-btn" onclick="closeDevModal()">×</div>
+            <h2 style="color:#9f7aea; margin:0; letter-spacing:4px;">?儭????撅祉?璁?/h2>
+            <div class="close-btn" onclick="closeDevModal()">?</div>
         </div>
         <div class="modal-body" style="padding:25px; text-align:center;">
-            <p style="color:#888; margin-bottom:20px;">最高權限已啟動，請發布系統旨意</p>
+            <p style="color:#888; margin-bottom:20px;">?擃??歇??嚗??澆?蝟餌絞?冽?</p>
             
             <div style="display:flex; justify-content:center; margin-bottom:30px;">
                 <div class="tier-card active" data-tier="9" data-cost="0" style="border-color:#9f7aea; cursor:default;">
-                    <div style="font-size:24px;">🚀</div>
-                    <div style="color:#9f7aea; font-weight:bold;">開發者 (全服置頂)</div>
-                    <div style="font-size:12px; opacity:0.6;">0 銀兩</div>
+                    <div style="font-size:24px;">??</div>
+                    <div style="color:#9f7aea; font-weight:bold;">???(?冽?蝵桅?)</div>
+                    <div style="font-size:12px; opacity:0.6;">0 ???/div>
                 </div>
             </div>
             
             <div style="text-align:left; margin-bottom:10px;">
-                <label style="color:#9f7aea; font-size:14px;">🚩 系統旨意內容：</label>
+                <label style="color:#9f7aea; font-size:14px;">? 蝟餌絞?冽??批捆嚗?/label>
             </div>
-            <textarea id="dev-announce-input" placeholder="系統維護公告、全服活動..." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #9f7aea; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none; box-shadow:inset 0 0 10px rgba(159,122,234,0.1);"></textarea>
+            <textarea id="dev-announce-input" placeholder="蝟餌絞蝬剛風?砍???暑??.." style="width:100%; height:100px; background:rgba(0,0,0,0.3); border:1px solid #9f7aea; border-radius:8px; color:#eee; padding:15px; font-size:16px; resize:none; outline:none; box-shadow:inset 0 0 10px rgba(159,122,234,0.1);"></textarea>
             
             <div style="margin-top:20px; color:#666; font-size:12px;">
-                發布後將以系統最高優先級顯示。
-            </div>
+                ?澆?敺?隞亦頂蝯望?擃??憿舐內??            </div>
         </div>
         <div class="modal-footer" style="padding:20px; text-align:right; border-top:1px solid #1a202c;">
-            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="closeDevModal()">取消</button>
-            <button id="btn-dev-announce-confirm" class="lobby-btn" style="width:160px; margin:0; background:linear-gradient(135deg, #6b46c1, #4c1d95); border-color:#9f7aea;">確認發布 (0 兩)</button>
+            <button class="lobby-btn" style="width:120px; margin:0 10px 0 0; background:#333; color:#aaa; border-color:#444;" onclick="closeDevModal()">??</button>
+            <button id="btn-dev-announce-confirm" class="lobby-btn" style="width:160px; margin:0; background:linear-gradient(135deg, #6b46c1, #4c1d95); border-color:#9f7aea;">蝣箄??澆? (0 ??</button>
         </div>
     </div>
 </div>
 
-<!-- 防禦選擇 Modal (Defense Modal) -->
+<!-- ?脩戌?豢? Modal (Defense Modal) -->
 <div id="defense-modal" class="modal hidden">
     <div class="modal-content defense-modal-content">
-        <div class="defense-header">⚔ 敵軍突擊！</div>
-        <div class="defense-body" id="defense-text">敵軍發動突擊！</div>
+        <div class="defense-header">???菔?蝒?嚗?/div>
+        <div class="defense-body" id="defense-text">?菔??澆?蝒?嚗?/div>
         <div class="defense-actions">
-            <button id="defense-dodge-btn" class="modal-btn btn-dodge">🛡 閃避</button>
-            <button id="defense-take-btn" class="modal-btn btn-take">💥 硬扛</button>
+            <button id="defense-dodge-btn" class="modal-btn btn-dodge">? ?</button>
+            <button id="defense-take-btn" class="modal-btn btn-take">? 蝖祆?</button>
         </div>
     </div>
 </div>
 
-<!-- 墳場查看 Modal (Graveyard Modal) -->
+<!-- 憓喳?亦? Modal (Graveyard Modal) -->
 <div id="graveyard-modal" class="modal hidden">
     <div class="modal-content graveyard-modal-content">
         <div class="modal-header">
-            <h2 id="graveyard-title" style="color:var(--gold); margin:0;">☠ 墳場</h2>
-            <div class="close-btn" onclick="closeGraveyardModal()">×</div>
+            <h2 id="graveyard-title" style="color:var(--gold); margin:0;">??憓喳</h2>
+            <div class="close-btn" onclick="closeGraveyardModal()">?</div>
         </div>
         <div id="graveyard-list" class="graveyard-list-container"></div>
     </div>
 </div>
 
-<!-- 戰鬥日誌面板 (Battle Log Panel) -->
+<!-- ?圈洛?亥??Ｘ (Battle Log Panel) -->
 <div id="battle-log-panel" class="hidden">
     <div class="log-header">
-        📜 戰報
-        <span onclick="toggleBattleLog()" style="cursor:pointer; font-size:16px; color:#888;">×</span>
+        ?? ?啣
+        <span onclick="toggleBattleLog()" style="cursor:pointer; font-size:16px; color:#888;">?</span>
     </div>
     <div id="battle-log-content"></div>
 </div>
 
-<!-- 版權標示（不可移除） -->
+<!-- ??璅內嚗??舐宏?歹? -->
 <div id="dev-copyright" style="
     position:fixed; bottom:6px; right:10px; z-index:99999;
     font-size:10px; color:rgba(212,175,55,0.45);
     font-family:'Noto Serif TC',serif; letter-spacing:1px;
     pointer-events:none; user-select:none;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
-    © 2026 linus622wang@gmail.com
+    穢 2026 linus622wang@gmail.com
 </div>
 
-<script src="cards.js?v=20260527b"></script>
+<script src="cards.js?v=20260527c"></script>
 <script src="network.js"></script>
-<script src="game.js?v=20260527b"></script>
-<script src="lobby.js?v=20260527b"></script>
+<script src="game.js?v=20260527c"></script>
+<script src="lobby.js?v=20260527c"></script>
 </body>
 </html>

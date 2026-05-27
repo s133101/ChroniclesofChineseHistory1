@@ -1076,9 +1076,15 @@
                     document.getElementById('admin-pwd-input').focus();
                 }
                 
-                // 2. 開發者專屬密碼 ATW5856LINUS
+                // 2. 開發者專屬密碼 ATW5856LINUS（僅 linus0622 可觸發）
                 if (val === 'ATW5856LINUS') {
                     e.target.value = ''; // 清空密碼，防止下次打開直接觸發
+                    const devUser = Auth.current();
+                    if (!devUser || devUser.username !== 'linus0622') {
+                        toast('🚫 身份驗證失敗，非開發者帳號', 'danger');
+                        document.getElementById('announce-modal').classList.add('hidden');
+                        return;
+                    }
                     document.getElementById('announce-modal').classList.add('hidden');
                     document.getElementById('dev-announce-modal').classList.remove('hidden');
                     document.getElementById('dev-announce-input').value = '';
@@ -1124,6 +1130,13 @@
         const btnPublish = document.getElementById('btn-publish-board');
         if (btnPublish && annModal) {
             btnPublish.addEventListener('click', () => {
+                // 僅開發者帳號（linus0622）可發布皇榜
+                const me = Auth.current();
+                if (!me || me.username !== 'linus0622') {
+                    toast('🚫 此功能僅限開發者使用', 'danger');
+                    return;
+                }
+
                 // 重設狀態
                 annInput.value = '';
                 titleClickCount = 0;
@@ -1197,6 +1210,14 @@
         const btnDevConfirm = document.getElementById('btn-dev-announce-confirm');
         if (btnDevConfirm) {
             btnDevConfirm.onclick = () => {
+                // 最終身份確認：只有 linus0622 能發布開發者旨意
+                const devUser = Auth.current();
+                if (!devUser || devUser.username !== 'linus0622') {
+                    toast('🚫 身份確認失敗，拒絕發布', 'danger');
+                    window.closeDevModal();
+                    return;
+                }
+
                 const msgInput = document.getElementById('dev-announce-input');
                 const msg = msgInput ? msgInput.value.trim() : '';
                 if (!msg) { toast('請輸入系統旨意內容！', 'warn'); return; }
