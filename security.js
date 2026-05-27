@@ -1,5 +1,5 @@
 // ============================================================
-//  華夏風雲錄 — security.js  v20260527o
+//  華夏風雲錄 — security.js  v20260527p
 //  多層防火牆 · 安全監控中心 · 系統日誌 · 入侵預警
 //  Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
 // ============================================================
@@ -17,6 +17,7 @@
     const LEVEL = Object.freeze({ INFO: 'info', WARN: 'warn', CRITICAL: 'critical' });
     const CAT   = Object.freeze({
         SYSTEM   : 'system',
+        SECURITY : 'security',   // ← 安全日誌（修正：原版遺漏此常數）
         INTRUSION: 'intrusion',
         DB_ACCESS: 'db_access',
         ERROR    : 'error',
@@ -276,6 +277,7 @@
             console.warn(`[🛡 FW] 🚨 日誌斷層：${gapMin} 分鐘無日誌！`);
 
         } else if (gapMs > 5 * 60000 && !_gapAlertSent) {
+            _gapAlertSent = true;  // ← 修正：防止每 60s 重複觸發 WARN
             _addThreat(15);
             const warnEntry = {
                 t: Date.now(), lv: LEVEL.WARN,
@@ -676,7 +678,7 @@
         const ip  = document.getElementById('mon-ip-display');
         if (thr) {
             const C = _threatScore >= 50 ? '#ff4444' : _threatScore >= 20 ? '#ffcc00' : '#00ff88';
-            thr.innerHTML = `<span style="color:${C}">${_threatScore}</span><span style="color:#1a4a28;font-size:10px;">/100</span>`;
+            thr.innerHTML = `<span style="color:${C}">${_threatScore}</span><span style="color:#3a7a5a;font-size:10px;">/100</span>`;
         }
         if (cnt) { cnt.textContent = _intrusionCnt; cnt.style.color = _intrusionCnt > 0 ? '#ff4444' : '#00ff88'; }
         if (tot) tot.textContent = Object.values(_logs).reduce((s, a) => s + a.length, 0);
@@ -856,7 +858,7 @@
 
         _resolveIp().then(ip => {
             const now = new Date().toLocaleString('zh-TW');
-            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260527o`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260527p`);
             _log(LEVEL.INFO, CAT.SYSTEM, `客戶端 IP：${ip} ｜ 啟動時間：${now}`);
             _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1 輸入驗證 · L2 速率限制 · L3 行為分析 · L4 資料完整性 · L5 會話驗證`);
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
