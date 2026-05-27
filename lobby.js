@@ -3501,8 +3501,15 @@
         window.GAME_MODE     = 'ai';
         _tutStep = 0;
         _launchGame();
-        // 等遊戲載入完畢後顯示第一步
-        setTimeout(() => _showTutStep(0), 3200);
+        // 輪詢等遊戲容器顯示後再展示第一步（避免硬編碼延遲在慢速裝置上過早顯示）
+        (function _waitForGame() {
+            const gc = document.getElementById('game-container');
+            if (gc && !gc.classList.contains('hidden')) {
+                setTimeout(() => _showTutStep(0), 500);
+            } else {
+                setTimeout(_waitForGame, 150);
+            }
+        })();
     };
 
     /** 顯示第 n 步的教學面板 */

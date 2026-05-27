@@ -2366,6 +2366,11 @@ function triggerGameOver(win) {
     // 清除觀戰廣播狀態
     _clearSpectateState();
 
+    // 教學模式：強制清除教學面板與輪詢器，避免殘留在結束畫面之上
+    if (window.TUTORIAL_MODE && typeof window._endTutorial === 'function') {
+        window._endTutorial(false); // false = 不跳回大廳，讓 game-over 畫面正常顯示
+    }
+
     // 清除房間聊天紀錄
     localStorage.removeItem('hua_chat_room');
     

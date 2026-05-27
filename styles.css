@@ -3570,6 +3570,7 @@ body {
     box-shadow: 0 12px 60px rgba(0,0,0,0.85), 0 0 40px rgba(212,175,55,0.15);
     pointer-events: auto;
     animation: tutSlideUp .35s cubic-bezier(.34,1.56,.64,1);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 @keyframes tutSlideUp {
     from { opacity:0; transform: translateX(-50%) translateY(20px); }
