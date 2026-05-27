@@ -15,20 +15,34 @@
     <meta http-equiv="Expires" content="0">
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="protect.js?v=20260527m"></script>
-    <script src="auth.js?v=20260527m"></script>
+    <script src="protect.js?v=20260527n"></script>
+    <script src="auth.js?v=20260527n"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css?v=20260527m">
+    <link rel="stylesheet" href="styles.css?v=20260527n">
     <style>
-        /* 防火牆指示燈脈衝動畫 */
+        /* 防火牆指示燈脈衝 */
         @keyframes fw-pulse {
-            0%, 100% { opacity: 1;   transform: scale(1);    }
-            50%       { opacity: .5; transform: scale(.75);  }
+            0%, 100% { opacity: 1;  transform: scale(1);   }
+            50%       { opacity:.5; transform: scale(.75); }
         }
-        #fw-indicator:hover { filter: brightness(1.35); transform: translateY(-1px); }
+        #fw-indicator { transition: all .35s; }
+        #fw-indicator:hover { filter: brightness(1.4); transform: translateY(-1px); }
+
+        /* 入侵警報閃爍 */
+        @keyframes intrusion-vignette {
+            0%   { opacity: .55; }
+            100% { opacity: 1;   }
+        }
+        @keyframes intrusion-shake {
+            0%,100% { transform: translate(-50%,-50%); }
+            20%     { transform: translate(-52%,-50%); }
+            40%     { transform: translate(-48%,-50%); }
+            60%     { transform: translate(-52%,-49%); }
+            80%     { transform: translate(-48%,-51%); }
+        }
     </style>
 </head>
 <body>
@@ -320,74 +334,87 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════
-     🛡 安全儀表板 Modal
+     🛡 安全監控中心 Modal  (v20260527n)
      ════════════════════════════════════════════════════════════ -->
-<div id="security-dashboard" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9300;display:flex;align-items:center;justify-content:center;">
-    <div style="width:min(600px,96vw);max-height:84vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#050d08,#040a0d);border:1px solid #0d2015;border-radius:16px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,0.95),0 0 40px rgba(0,255,136,0.03);">
+<div id="security-monitor" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9300;display:flex;align-items:center;justify-content:center;">
+    <div style="width:min(780px,98vw);max-height:90vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#030d06,#030a0d);border:1px solid #0a2010;border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.97),0 0 60px rgba(0,255,136,0.04),inset 0 1px 0 rgba(0,255,136,0.05);">
 
-        <!-- Header -->
-        <div style="padding:16px 22px;background:linear-gradient(135deg,#020a04,#030b07);border-bottom:1px solid #0a1c0f;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-            <div>
-                <div style="color:#00ff88;font-size:17px;font-weight:900;letter-spacing:3px;">🛡 安全儀表板</div>
-                <div style="color:#1a4a28;font-size:11px;margin-top:3px;letter-spacing:1px;">防火牆 ｜ 驗證模塊 ｜ 系統日誌 ｜ 監控郵件</div>
-            </div>
-            <button onclick="window._closeSecurityDashboard()" style="background:none;border:none;color:#1a4a28;font-size:24px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;transition:all .2s;" onmouseover="this.style.color='#00ff88'" onmouseout="this.style.color='#1a4a28'">✕</button>
-        </div>
-
-        <!-- 狀態 Cards -->
-        <div style="padding:12px 16px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex-shrink:0;">
-            <div style="background:#041208;border:1px solid #0a1c0f;border-radius:8px;padding:12px;text-align:center;">
-                <div style="font-size:10px;color:#1a4a28;letter-spacing:1px;margin-bottom:6px;">防火牆狀態</div>
-                <div style="display:flex;justify-content:center;align-items:center;gap:6px;">
-                    <div id="dash-light" style="width:9px;height:9px;border-radius:50%;background:#00ff88;box-shadow:0 0 7px rgba(0,255,136,0.7);flex-shrink:0;"></div>
-                    <span id="dash-status-text" style="font-weight:900;font-size:13px;color:#00ff88;">安全</span>
+        <!-- ① 標題欄 -->
+        <div style="padding:14px 20px;background:linear-gradient(135deg,#020a04,#030d06);border-bottom:1px solid #0a1c0f;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div>
+                    <div style="color:#00ff88;font-size:16px;font-weight:900;letter-spacing:3px;">🔐 安全監控中心</div>
+                    <div style="color:#1a4a28;font-size:10px;margin-top:2px;letter-spacing:1px;">多層防火牆 · 入侵偵測 · 系統日誌 · 掃描模塊</div>
+                </div>
+                <!-- LIVE 指示燈 -->
+                <div style="display:flex;align-items:center;gap:4px;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.18);border-radius:10px;padding:3px 8px;">
+                    <div style="width:6px;height:6px;border-radius:50%;background:#00ff88;animation:fw-pulse 1.5s ease-in-out infinite;"></div>
+                    <span style="color:#00ff88;font-size:9px;letter-spacing:2px;">LIVE</span>
                 </div>
             </div>
-            <div style="background:#041208;border:1px solid #0a1c0f;border-radius:8px;padding:12px;text-align:center;">
-                <div style="font-size:10px;color:#1a4a28;letter-spacing:1px;margin-bottom:6px;">威脅分數</div>
-                <div id="dash-threat" style="font-weight:900;font-size:18px;">
-                    <span style="color:#00ff88;">0</span><span style="font-size:10px;color:#1a4a28;">/100</span>
+            <div style="display:flex;align-items:center;gap:16px;">
+                <!-- 快速統計 -->
+                <div style="display:flex;gap:14px;font-size:10px;">
+                    <div style="text-align:center;">
+                        <div style="color:#1a4a28;">威脅</div>
+                        <div id="mon-threat-val" style="font-weight:900;"><span style="color:#00ff88;">0</span><span style="color:#1a4a28;font-size:9px;">/100</span></div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="color:#1a4a28;">入侵</div>
+                        <div id="mon-intrusion-cnt" style="font-weight:900;color:#00ff88;">0</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="color:#1a4a28;">日誌</div>
+                        <div id="mon-total-logs" style="font-weight:900;color:#00ff88;">0</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="color:#1a4a28;">IP</div>
+                        <div id="mon-ip-display" style="font-weight:700;color:#3a7a5a;font-size:9px;">取得中…</div>
+                    </div>
                 </div>
-            </div>
-            <div style="background:#041208;border:1px solid #0a1c0f;border-radius:8px;padding:12px;text-align:center;">
-                <div style="font-size:10px;color:#1a4a28;letter-spacing:1px;margin-bottom:6px;">本地記錄</div>
-                <div id="dash-log-count" style="font-weight:900;font-size:18px;color:#00ff88;">0</div>
+                <button onclick="window._closeSecurityMonitor()" style="background:none;border:none;color:#1a4a28;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;transition:all .2s;" onmouseover="this.style.color='#00ff88'" onmouseout="this.style.color='#1a4a28'">✕</button>
             </div>
         </div>
 
-        <!-- 速率限制進度格 -->
-        <div style="padding:0 16px 10px;flex-shrink:0;">
-            <div style="font-size:10px;color:#0d2015;letter-spacing:2px;margin-bottom:6px;padding:0 2px;">── 速率限制狀態 ──</div>
-            <div id="dash-rate-limits" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;"></div>
-        </div>
-
-        <!-- 頁籤列 -->
-        <div style="padding:0 16px;display:flex;gap:4px;flex-shrink:0;border-bottom:1px solid #0a1c0f;">
-            <button id="dash-tab-log"   onclick="window._dashTab('log')"   style="background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);border-bottom:none;color:#00ff88;padding:6px 13px;border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;font-family:inherit;letter-spacing:1px;transition:all .2s;">📋 系統日誌</button>
-            <button id="dash-tab-rules" onclick="window._dashTab('rules')" style="background:none;border:1px solid #0d2015;border-bottom:none;color:#2a5a3a;padding:6px 13px;border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;font-family:inherit;letter-spacing:1px;transition:all .2s;">🔒 防火牆規則</button>
-            <button id="dash-tab-email" onclick="window._dashTab('email')" style="background:none;border:1px solid #0d2015;border-bottom:none;color:#2a5a3a;padding:6px 13px;border-radius:6px 6px 0 0;font-size:11px;cursor:pointer;font-family:inherit;letter-spacing:1px;transition:all .2s;">📧 監控郵件</button>
-        </div>
-
-        <!-- ① 系統日誌 Panel -->
-        <div id="dash-panel-log" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
-                <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                    <button id="dash-filter-all"      onclick="window._dashLogFilter('all')"      style="background:rgba(0,255,136,0.13);border:1px solid rgba(0,255,136,0.37);color:#00ff88;padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;">全部</button>
-                    <button id="dash-filter-critical" onclick="window._dashLogFilter('critical')" style="background:none;border:1px solid #0d2015;color:#2a5a3a;padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;">🚨 危急</button>
-                    <button id="dash-filter-warn"     onclick="window._dashLogFilter('warn')"     style="background:none;border:1px solid #0d2015;color:#2a5a3a;padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;">⚠️ 警告</button>
-                    <button id="dash-filter-info"     onclick="window._dashLogFilter('info')"     style="background:none;border:1px solid #0d2015;color:#2a5a3a;padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;">ℹ️ 資訊</button>
-                </div>
-                <button id="dash-refresh-btn" onclick="window._dashRefreshLogs()" style="background:none;border:1px solid #0d2015;color:#2a5a3a;padding:3px 11px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;transition:all .2s;" onmouseover="this.style.color='#00ff88'" onmouseout="this.style.color='#2a5a3a'">🔄 刷新</button>
+        <!-- ② 防火牆層級格 -->
+        <div style="padding:10px 16px 8px;flex-shrink:0;">
+            <div style="font-size:9px;color:#0d2015;letter-spacing:2px;margin-bottom:6px;">── 防火牆層級 &amp; 模塊狀態 ──</div>
+            <div id="mon-layer-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
+                <!-- JS 動態渲染 -->
             </div>
-            <div id="dash-log-list" style="display:flex;flex-direction:column;gap:4px;"></div>
         </div>
 
-        <!-- ② 防火牆規則 Panel -->
-        <div id="dash-panel-rules" class="hidden" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:0;"></div>
+        <!-- ③ 頁籤列 (6 tabs) -->
+        <div style="padding:0 16px;display:flex;gap:3px;flex-shrink:0;border-bottom:1px solid #0a1c0f;overflow-x:auto;">
+            <div id="mon-tab-bar" style="display:flex;gap:3px;">
+                <!-- JS 動態渲染 -->
+            </div>
+        </div>
 
-        <!-- ③ 監控郵件 Panel -->
-        <div id="dash-panel-email" class="hidden" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:0;"></div>
+        <!-- ④ 頁籤內容區 -->
+        <div id="mon-tab-content" style="flex:1;overflow-y:auto;padding:12px 16px;min-height:0;">
+            <!-- JS 動態渲染 -->
+        </div>
 
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     🚨 入侵警報 Overlay
+     ════════════════════════════════════════════════════════════ -->
+<div id="intrusion-alert-overlay" class="hidden" style="position:fixed;inset:0;z-index:99980;pointer-events:all;">
+    <!-- 紅色暈邊效果 -->
+    <div style="position:absolute;inset:0;pointer-events:none;animation:intrusion-vignette .7s ease-in-out infinite alternate;background:radial-gradient(ellipse at center,transparent 25%,rgba(180,0,0,0.4) 100%);"></div>
+    <!-- 警報框 -->
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;background:rgba(4,0,0,0.95);border:2px solid #cc0000;border-radius:14px;padding:28px 36px;box-shadow:0 0 50px rgba(200,0,0,0.6),inset 0 1px 0 rgba(255,60,60,0.15);animation:intrusion-shake .4s ease-in-out 1;min-width:280px;">
+        <div style="font-size:48px;margin-bottom:8px;">🚨</div>
+        <div style="color:#ff3333;font-size:20px;font-weight:900;letter-spacing:4px;margin-bottom:6px;">入　侵　警　報</div>
+        <div id="intrusion-detail-text" style="color:#ff8888;font-size:12px;margin-bottom:6px;max-width:300px;line-height:1.5;">偵測到未授權入侵嘗試</div>
+        <div style="color:#661111;font-size:10px;margin-bottom:20px;letter-spacing:1px;">已自動通報管理員 · 事件已記錄</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="window._openSecurityMonitor();window._dismissIntrusionAlert();" style="background:#1a0000;border:1px solid #cc0000;color:#ff5555;padding:8px 18px;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;letter-spacing:2px;transition:all .2s;" onmouseover="this.style.borderColor='#ff3333'" onmouseout="this.style.borderColor='#cc0000'">🛡 查看詳情</button>
+            <button onclick="window._dismissIntrusionAlert()" style="background:#0d0d0d;border:1px solid #333;color:#666;padding:8px 18px;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .2s;" onmouseover="this.style.color='#aaa'" onmouseout="this.style.color='#666'">確認</button>
+        </div>
     </div>
 </div>
 
@@ -871,7 +898,7 @@
 
 <!-- 防火牆狀態指示燈 -->
 <div id="fw-indicator"
-     onclick="window._openSecurityDashboard && window._openSecurityDashboard()"
+     onclick="window._openSecurityMonitor && window._openSecurityMonitor()"
      title="🛡 點擊查看安全儀表板"
      style="position:fixed;bottom:28px;right:10px;z-index:9100;display:flex;align-items:center;gap:6px;padding:5px 12px 5px 8px;border-radius:18px;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.22);cursor:pointer;transition:all .35s;font-family:'Noto Serif TC',serif;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,0.45);">
     <div id="fw-status-light" style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.55),0 0 12px rgba(0,255,136,0.55);animation:fw-pulse 2.5s ease-in-out infinite;"></div>
@@ -889,10 +916,10 @@
     © 2026 linus622wang@gmail.com
 </div>
 
-<script src="cards.js?v=20260527m"></script>
+<script src="cards.js?v=20260527n"></script>
 <script src="network.js"></script>
-<script src="game.js?v=20260527m"></script>
-<script src="security.js?v=20260527m"></script>
-<script src="lobby.js?v=20260527m"></script>
+<script src="game.js?v=20260527n"></script>
+<script src="security.js?v=20260527n"></script>
+<script src="lobby.js?v=20260527n"></script>
 </body>
 </html>

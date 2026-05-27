@@ -2405,8 +2405,11 @@
         if (bm) bm.classList.add('hidden');
         // 房間頻道：每場結束返回大廳時清除（下次切換到房間頻道會自動刷新）
         localStorage.removeItem('hua_chat_room');
-        // 🛡 返回大廳時重新更新防火牆指示燈狀態
-        if (window.HuaXiaSecurity) window.HuaXiaSecurity.init();
+        // 🛡 返回大廳時刷新防火牆指示燈 + 記錄操作
+        if (window.HuaXiaSecurity) {
+            window.HuaXiaSecurity.init();
+            window.HuaXiaSecurity.logOps('返回大廳');
+        }
     }
 
     function _setWaitStatus(msg) {

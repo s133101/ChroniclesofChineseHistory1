@@ -104,6 +104,7 @@ const Auth = (() => {
         }
 
         const user = await _fbGet('/users/' + uname);
+        _fw?.logDbAccess('READ', '/users/' + uname, uname);
 
         if (!user) {
             // 帳號不存在 — 記錄為失敗登入 + 通知管理員
@@ -131,6 +132,7 @@ const Auth = (() => {
         const code    = String(Math.floor(100000 + Math.random() * 900000));
         const expires = Date.now() + 5 * 60 * 1000;
         await _fbSet('/auth_codes/' + uname, {code, expires});
+        _fw?.logDbAccess('WRITE', '/auth_codes/' + uname, uname);
 
         _sendEmail(EJ_AUTHCODE, {
             to_email:  user.email,
@@ -146,14 +148,20 @@ const Auth = (() => {
     async function verifyCode(username, code) {
         const uname  = username.toLowerCase().trim();
         const stored = await _fbGet('/auth_codes/' + uname);
+        window.HuaXiaSecurity?.logDbAccess('READ', '/auth_codes/' + uname, uname);
 
         if (!stored)                   return {ok: false, err: '驗證碼不存在，請重新登入'};
         if (stored.expires < Date.now()) return {ok: false, err: '驗證碼已過期，請重新登入'};
-        if (stored.code !== code.trim()) return {ok: false, err: '驗證碼錯誤，請再試一次'};
+        if (stored.code !== code.trim()) {
+            window.HuaXiaSecurity?.recordEvent('warn', 'auth', `帳號 ${uname} 驗證碼錯誤`);
+            return {ok: false, err: '驗證碼錯誤，請再試一次'};
+        }
 
         _fbDel('/auth_codes/' + uname);
+        window.HuaXiaSecurity?.logDbAccess('DELETE', '/auth_codes/' + uname, uname);
 
         const user = await _fbGet('/users/' + uname);
+        window.HuaXiaSecurity?.logDbAccess('READ', '/users/' + uname, uname);
         _cur = {...user, username: uname};
 
         // 寫入 sessionStorage 快取
@@ -231,6 +239,7 @@ const Auth = (() => {
         }
 
         const exist = await _fbGet('/users/' + uname);
+        _fw?.logDbAccess('READ', '/users/' + uname, uname);
         if (exist) return {ok: false, err: '此帳號已被使用，請換一個'};
 
         const hash = await _hash(password);
@@ -244,11 +253,14 @@ const Auth = (() => {
             avatar: null,
             createdAt: Date.now()
         });
+        _fw?.logDbAccess('WRITE', '/users/' + uname, uname);
+        _fw?.logOps(`新帳號註冊：${uname}（暱稱：${nickname}）`);
 
         // 發送驗證碼
         const code    = String(Math.floor(100000 + Math.random() * 900000));
         const expires = Date.now() + 5 * 60 * 1000;
         await _fbSet('/auth_codes/' + uname, {code, expires});
+        _fw?.logDbAccess('WRITE', '/auth_codes/' + uname, uname);
 
         _sendEmail(EJ_AUTHCODE, {
             to_email:  email,
@@ -419,6 +431,7 @@ const Auth = (() => {
 
     // ── 取得全服排行榜資料 ────────────────────────────────────────
     async function getLeaderboardData() {
+        window.HuaXiaSecurity?.logDbAccess('READ', '/users (全服排行榜)', _cur?.username || 'guest');
         const users = await _fbGet('/users');
         if (!users) return [];
         return Object.entries(users)
