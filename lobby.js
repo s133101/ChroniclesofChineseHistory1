@@ -1435,7 +1435,12 @@
         const list = document.getElementById('monarch-select-list');
         const btnConfirm = document.getElementById('btn-confirm-monarch');
         
-        if(!modal || !list) return;
+        if(!modal || !list) {
+            // 還原配對按鈕（若從 matchmaking 流程呼叫過來）
+            const mmBtn = document.getElementById('btn-matchmaking');
+            if (mmBtn) { mmBtn.disabled = false; }
+            return;
+        }
         
         const monarchs = window.cardDatabase ? window.cardDatabase.filter(c => c.type === '君王') : [];
         let html = '';
@@ -1491,10 +1496,10 @@
                 // 配對：自己當主機，等對方加入
                 Network.createRoom(pendingJoinCode);
                 _showWaitScreen(pendingJoinCode, true);
-                _startCountdown();
+                _startCountdown(false, true); // mmHost 模式：超時後回大廳提示重試
                 // 等待畫面加上配對標示
                 const codeEl = document.getElementById('wait-room-code');
-                if (codeEl) codeEl.textContent = pendingJoinCode + '  🔍 配對中…';
+                if (codeEl) codeEl.textContent = '🔍 配對中…';
             } else if (pendingAction === 'mm_guest') {
                 // 配對：加入對方房間
                 Network.joinRoom(pendingJoinCode);
@@ -2133,6 +2138,7 @@
 
         Network.on('peer_connected', ({ isHost }) => {
             _clearTimer();
+            _mmHostMode = false; // 重置配對模式旗標
             _mmCleanup(); // 對手連線後，確保從配對佇列中移除
             window.GAME_MODE = isHost ? 'host' : 'guest';
             window.opponentNickname = null; // 等待對手傳來暱稱
@@ -2207,14 +2213,16 @@
     // ══════════════════════════════════════════
     //  計時器
     // ══════════════════════════════════════════
-    let _rematchMode = false; // 再配對模式：超時時詢問而非自動切 AI
+    let _rematchMode  = false; // 再配對模式：超時時詢問而非自動切 AI
+    let _mmHostMode   = false; // 配對等待模式：超時後重新搜尋佇列
 
-    function _startCountdown(rematch = false) {
+    function _startCountdown(rematch = false, mmHost = false) {
         _rematchMode = rematch;
+        _mmHostMode  = mmHost;
         _seconds = 30;
         // 更新標題文字
         const labelEl = document.getElementById('wait-countdown-label');
-        if (labelEl) labelEl.textContent = rematch ? '等待對手加入：' : '超時切換 AI：';
+        if (labelEl) labelEl.textContent = mmHost ? '配對等待：' : (rematch ? '等待對手加入：' : '超時切換 AI：');
         // 確保超時對話框隱藏
         const dlg = document.getElementById('wait-timeout-dialog');
         if (dlg) dlg.classList.add('hidden');
@@ -2224,7 +2232,17 @@
             _renderCountdown();
             if (_seconds <= 0) {
                 _clearTimer();
-                if (_rematchMode) {
+                if (_mmHostMode) {
+                    // 配對超時：清除佇列紀錄，重新搜尋一次
+                    _mmHostMode = false;
+                    Network.destroy();
+                    _mmCleanup();
+                    _showLobbyScreen();
+                    _setWaitStatus('');
+                    setTimeout(() => {
+                        _safeToast('未找到對手，請再試一次', 'info', 3000);
+                    }, 300);
+                } else if (_rematchMode) {
                     // 詢問玩家：繼續等 or 換 AI
                     _showTimeoutDialog();
                 } else {
@@ -2978,43 +2996,43 @@
         const me = typeof Auth !== 'undefined' ? Auth.current() : null;
         if (!me) { _showError('請先登入後才能配對！'); return; }
 
-        // 顯示「配對中」狀態
+        // 顯示「配對中」loading 狀態，避免重複點擊
         const btn = document.getElementById('btn-matchmaking');
         const origText = btn ? btn.textContent : '';
+        const _restoreBtn = () => { if (btn) { btn.disabled = false; btn.textContent = origText; } };
         if (btn) { btn.disabled = true; btn.textContent = '🔍 搜尋對手中…'; }
 
         try {
-            // 讀取 Firebase 配對佇列
+            // ① 讀取 Firebase 配對佇列
             const res  = await fetch(`${_MM_URL}.json`);
             const data = res.ok ? await res.json() : null;
 
-            // 過濾掉自己 & 超過 60 秒的殭屍紀錄
+            // ② 過濾：排除自己、超過 60 秒殭屍紀錄、code 欄位損毀的資料
             const now = Date.now();
             const candidates = data
                 ? Object.entries(data).filter(([k, v]) =>
-                    k !== me.username && (now - (v.timestamp || 0)) < 60000)
+                    k !== me.username &&
+                    v && v.code &&                              // 防 undefined.code crash
+                    (now - (v.timestamp || 0)) < 60000)
                 : [];
 
             if (candidates.length > 0) {
-                // 找到對手！— 取最早進佇列的
+                // ③ 找到對手 — 取最早進佇列的
                 candidates.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
                 const [hostUser, hostData] = candidates[0];
 
-                // 從佇列移除那筆（搶先刪掉，防止雙重配對）
+                // 從佇列搶先移除（防雙重配對；Firebase DELETE 是冪等的）
                 await fetch(`${_MM_URL}/${hostUser}.json`, { method: 'DELETE' });
 
-                // 記錄對手暱稱
                 window.opponentNickname = hostData.nickname || hostUser;
-
-                if (btn) { btn.disabled = false; btn.textContent = origText; }
+                _restoreBtn();
                 _openMonarchSelect('mm_guest', hostData.code);
 
             } else {
-                // 佇列空 — 自己建房等人
+                // ④ 佇列空 — 自己建房寫入等待
                 const code = Network.randomCode ? Network.randomCode()
                     : Math.random().toString(36).slice(2, 7).toUpperCase();
 
-                // 寫入佇列
                 await fetch(`${_MM_URL}/${me.username}.json`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -3025,11 +3043,11 @@
                     })
                 });
 
-                if (btn) { btn.disabled = false; btn.textContent = origText; }
+                _restoreBtn();
                 _openMonarchSelect('mm_host', code);
             }
         } catch(e) {
-            if (btn) { btn.disabled = false; btn.textContent = origText; }
+            _restoreBtn();
             _showError('配對服務暫時無法連線，請稍後再試。');
         }
     }
