@@ -2280,6 +2280,7 @@
     let _mmHostMode   = false; // 配對等待模式：超時後重新搜尋佇列
 
     function _startCountdown(rematch = false, mmHost = false) {
+        _clearTimer(); // 防止重複呼叫時舊計時器殘留
         _rematchMode = rematch;
         _mmHostMode  = mmHost;
         _seconds = 30;
