@@ -13,6 +13,12 @@
 // ---- 全域模式旗標 ----
 window.GAME_MODE = 'ai'; // 'ai' | 'host' | 'guest'
 
+// ==============================================================
+//  SPECTATE BROADCAST (觀戰狀態廣播)
+// ==============================================================
+const _SPECTATE_FB   = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app/spectate';
+let   _lastSpectateWrite = 0;
+
 // ---- State ----
 let myDeck = [], myHand = [];
 let myBoard  = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
@@ -401,6 +407,13 @@ function updateHUDs() {
     }
     const btn = document.getElementById('end-turn-btn');
     if (btn) btn.disabled = !isPlayerTurn;
+
+    // 觀戰廣播（主機每 3 秒寫一次）
+    const _now = Date.now();
+    if (_now - _lastSpectateWrite > 3000) {
+        _lastSpectateWrite = _now;
+        _writeSpectateState();
+    }
 }
 
 function renderHand() {
@@ -2336,7 +2349,10 @@ function _saveLeaderboardRecord(name, bestStreak) {
 function triggerGameOver(win) {
     gameActive = false;
     window.gameActive = false;
-    
+
+    // 清除觀戰廣播狀態
+    _clearSpectateState();
+
     // 清除房間聊天紀錄
     localStorage.removeItem('hua_chat_room');
     
@@ -3162,6 +3178,50 @@ function showGraveyard(isPlayer) {
 function closeGraveyardModal() {
     const m = document.getElementById('graveyard-modal');
     if (m) m.classList.add('hidden');
+}
+
+// ==============================================================
+//  SPECTATE STATE FUNCTIONS
+// ==============================================================
+async function _writeSpectateState() {
+    if (!gameActive || window.GAME_MODE !== 'host') return;
+    if (!window._roomCode) return;
+
+    const myMonarch  = myBoard.active.find(c => c && c.type === '君王')
+                    || myBoard.bench.find(c  => c && c.type === '君王');
+    const oppMonarch = oppBoard.active.find(c => c && c.type === '君王')
+                    || oppBoard.bench.find(c  => c && c.type === '君王');
+
+    const state = {
+        hostNick:   window.playerNickname   || '主機玩家',
+        guestNick:  window.opponentNickname || '客方玩家',
+        hostHp:     myMonarch  ? myMonarch.hp     : 0,
+        hostMaxHp:  myMonarch  ? myMonarch.maxHp  : 1,
+        guestHp:    oppMonarch ? oppMonarch.hp    : 0,
+        guestMaxHp: oppMonarch ? oppMonarch.maxHp : 1,
+        hostCards:  myHand.length,
+        guestCards: oppHandData.length,
+        hostField:  [...myBoard.active,  ...myBoard.bench].filter(Boolean).length,
+        guestField: [...oppBoard.active, ...oppBoard.bench].filter(Boolean).length,
+        turn:       turnCount,
+        isMyTurn:   isPlayerTurn,
+        updatedAt:  Date.now()
+    };
+
+    try {
+        await fetch(`${_SPECTATE_FB}/${window._roomCode}.json`, {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(state)
+        });
+    } catch (e) { /* silent — spectate is best-effort */ }
+}
+
+async function _clearSpectateState() {
+    if (window.GAME_MODE !== 'host' || !window._roomCode) return;
+    try {
+        await fetch(`${_SPECTATE_FB}/${window._roomCode}.json`, { method: 'DELETE' });
+    } catch (e) {}
 }
 
 // ==============================================================

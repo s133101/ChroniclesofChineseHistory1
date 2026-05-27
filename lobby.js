@@ -457,6 +457,8 @@
         }
         const _achBtn = document.getElementById('btn-achievements');
         if (_achBtn) _achBtn.classList.remove('hidden');
+        const _specBtn = document.getElementById('btn-spectate');
+        if (_specBtn) _specBtn.classList.remove('hidden');
 
         // 套用已儲存的縮放
         const savedZoom = parseInt(localStorage.getItem('hua_zoom') || '100');
@@ -464,8 +466,16 @@
 
         _switchScreen('lobby-screen');
         setTimeout(() => openSidebar(), 1500);
-        // 賽季檢查（登入後稍作延遲再執行，避免搶在 Auth 初始化前）
+        // 賽季檢查
         setTimeout(() => _checkSeason(), 2500);
+        // Phase 3：在線心跳 + 邀請輪詢 + 通知權限
+        setTimeout(() => {
+            _startOnlineHeartbeat();
+            _startInvitePolling();
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }, 3000);
     }
 
     // ── 更新頭像按鈕顯示 ──────────────────────────────────────
@@ -737,7 +747,9 @@
         let _chatMode = 'global'; // 'global', 'room', 'friend'
         let _targetFriend = null;
         let _lastGlobalTime = 0;
-        let _friends = JSON.parse(localStorage.getItem('hua_friends') || '[]');
+        // 好友格式遷移：舊格式為字串陣列，新格式為 {username, nickname} 物件陣列
+        let _friends = JSON.parse(localStorage.getItem('hua_friends') || '[]')
+            .map(f => typeof f === 'string' ? { username: f, nickname: f } : f);
 
         window._appendChatMessage = function(text, sender, mode = 'room', fromName = '匿名') {
             if (!chatMessages) return;
@@ -939,41 +951,70 @@
             window._renderChatHistory(mode);
         };
 
-        window.addFriend = (name) => {
-            if (!name) return;
-            if (!_friends.includes(name)) {
-                _friends.push(name);
+        window.addFriend = (username, nickname) => {
+            if (!username) return;
+            nickname = nickname || username;
+            if (!_friends.some(f => (f.username || f) === username)) {
+                _friends.push({ username, nickname });
                 localStorage.setItem('hua_friends', JSON.stringify(_friends));
-                toast(`已將 ${name} 加入好友！`, 'success');
+                _safeToast(`已將 ${nickname} 加入好友！`, 'success');
+            } else {
+                _safeToast(`${nickname} 已在好友清單中`, 'info');
             }
             renderFriendsList();
         };
 
-        function renderFriendsList() {
+        window.removeFriend = (username) => {
+            _friends = _friends.filter(f => (f.username || f) !== username);
+            localStorage.setItem('hua_friends', JSON.stringify(_friends));
+            renderFriendsList();
+        };
+
+        // 非同步：從 Firebase 抓在線狀態後渲染
+        async function renderFriendsList() {
             const area = document.getElementById('friend-items-list');
             if (!area) return;
             if (_friends.length === 0) {
                 area.innerHTML = '<div style="color:#555; text-align:center; padding:20px; font-size:12px;">尚無好友，請點擊上方按鈕新增。</div>';
                 return;
             }
-            area.innerHTML = _friends.map(f => `
-                <div class="friend-item" style="cursor:default;">
-                    <div class="friend-status-dot"></div>
-                    <div style="flex:1; color:#eee; font-size:14px;">${_escHtml(f)}</div>
-                    <div class="friend-avatar-btn" data-friend="${_escHtml(f)}" title="點擊私聊" style="cursor:pointer; background:rgba(212,175,55,0.2); border:1px solid var(--gold); border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:16px; transition:0.2s;">
-                        👤
-                    </div>
-                </div>
-            `).join('');
-            area.querySelectorAll('.friend-avatar-btn[data-friend]').forEach(btn => {
-                btn.addEventListener('click', () => window.selectFriend(btn.getAttribute('data-friend')));
+            // 先以 loading 骨架顯示，再更新在線狀態
+            area.innerHTML = _friends.map(f => {
+                const uname = f.username || f;
+                const nick  = f.nickname  || uname;
+                return `
+                <div class="friend-item" style="cursor:default;" data-username="${_escHtml(uname)}">
+                    <div class="friend-status-dot" id="dot-${_escHtml(uname)}"></div>
+                    <div style="flex:1; color:#eee; font-size:14px; cursor:pointer;" onclick="window.selectFriend('${_escHtml(uname)}','${_escHtml(nick)}')">${_escHtml(nick)}</div>
+                    <button class="friend-invite-btn" data-username="${_escHtml(uname)}" title="邀請對戰"
+                            style="background:none;border:1px solid #2a5298;border-radius:6px;padding:3px 8px;color:#6a9fd8;font-size:11px;cursor:pointer;margin-right:4px;">⚔️</button>
+                    <button onclick="window.removeFriend('${_escHtml(uname)}')" title="移除好友"
+                            style="background:none;border:none;color:#555;font-size:14px;cursor:pointer;padding:0 4px;">✕</button>
+                </div>`;
+            }).join('');
+
+            // 綁定邀請按鈕
+            area.querySelectorAll('.friend-invite-btn').forEach(btn => {
+                btn.addEventListener('click', () => _sendBattleInvite(btn.getAttribute('data-username')));
+            });
+
+            // 非同步更新在線狀態
+            _getOnlineUsers().then(online => {
+                _friends.forEach(f => {
+                    const uname = f.username || f;
+                    const dot = document.getElementById('dot-' + uname);
+                    if (dot) {
+                        dot.style.background = online[uname] ? '#2ecc71' : '#555';
+                        dot.title = online[uname] ? '在線' : '離線';
+                    }
+                });
             });
         }
 
-        window.selectFriend = (name) => {
-            _targetFriend = name;
+        window.selectFriend = (username, nickname) => {
+            _targetFriend = username;
             const chatHeader = document.getElementById('chat-context-header');
-            if (chatHeader) chatHeader.textContent = `正在與 [${name}] 私聊...`;
+            if (chatHeader) chatHeader.textContent = `正在與 [${nickname || username}] 私聊...`;
             window._renderChatHistory('friend');
         };
 
@@ -983,38 +1024,60 @@
             document.getElementById('search-result-container').innerHTML = '<div style="color:#666; font-size:14px;">請輸入名稱並開始搜尋</div>';
         };
 
-        window.searchFriend = () => {
+        window.searchFriend = async () => {
             const input = document.getElementById('friend-search-input');
             const resultArea = document.getElementById('search-result-container');
-            const name = input.value.trim();
-            if (!name) return;
+            const query = (input.value || '').trim().toLowerCase();
+            if (!query) return;
 
-            if (name === window.playerNickname) {
+            const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+            if (me && (query === me.username.toLowerCase() || query === (me.nickname || '').toLowerCase())) {
                 resultArea.innerHTML = '<div style="color:#e74c3c; font-size:14px;">不能搜尋自己！</div>';
                 return;
             }
 
-            resultArea.innerHTML = '<div class="loader"></div>';
+            resultArea.innerHTML = '<div style="color:#888; padding:10px;">🔍 搜尋中…</div>';
 
-            setTimeout(() => {
-                // 模擬搜尋邏輯：如果名字長度大於 2 就當作有此人 (為了示範)
-                if (name.length >= 2) {
+            try {
+                const _FB = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
+                const onlineMap = await _getOnlineUsers();
+                const res = await fetch(`${_FB}/users.json`);
+                const users = res.ok ? await res.json() : null;
+                if (!users) { resultArea.innerHTML = '<div style="color:#888;">找不到玩家</div>'; return; }
+
+                const matches = Object.entries(users)
+                    .filter(([uname, udata]) =>
+                        uname.toLowerCase().includes(query) ||
+                        (udata && udata.nickname || '').toLowerCase().includes(query))
+                    .filter(([uname]) => !me || uname !== me.username)
+                    .slice(0, 5);
+
+                if (matches.length === 0) {
                     resultArea.innerHTML = `
-                        <div class="search-result-avatar">👤</div>
-                        <div class="search-result-name">${_escHtml(name)}</div>
-                        <div style="color:#27ae60; font-size:12px; margin-top:5px;">● 在線</div>
-                        <button id="btn-search-add-friend" class="lobby-btn" style="margin-top:15px; width:120px;">➕ 加為好友</button>
-                    `;
-                    const addBtn = document.getElementById('btn-search-add-friend');
-                    if (addBtn) addBtn.addEventListener('click', () => window.addFriend(name));
-                } else {
-                    resultArea.innerHTML = `
-                        <div style="font-size:48px; margin-bottom:10px;">❓</div>
-                        <div style="color:#888;">毫無此人</div>
-                        <div style="font-size:12px; color:#555; margin-top:5px;">請確認名號是否輸入正確</div>
-                    `;
+                        <div style="font-size:40px; margin-bottom:8px;">❓</div>
+                        <div style="color:#888;">查無此人</div>`;
+                    return;
                 }
-            }, 800);
+
+                resultArea.innerHTML = matches.map(([uname, udata]) => {
+                    const nick = (udata && udata.nickname) || uname;
+                    const isOnline = !!onlineMap[uname];
+                    const alreadyFriend = _friends.some(f => (f.username || f) === uname);
+                    return `
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #222;">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${isOnline ? '#2ecc71' : '#555'};flex-shrink:0;"></div>
+                        <div style="flex:1;">
+                            <div style="color:#eee;font-size:14px;font-weight:700;">${_escHtml(nick)}</div>
+                            <div style="color:#555;font-size:11px;">@${_escHtml(uname)} · ${isOnline ? '<span style="color:#2ecc71">在線</span>' : '離線'}</div>
+                        </div>
+                        ${alreadyFriend
+                            ? '<div style="color:#555;font-size:12px;">已是好友</div>'
+                            : `<button onclick="window.addFriend('${_escHtml(uname)}','${_escHtml(nick)}')" style="padding:5px 12px;background:linear-gradient(135deg,#1a3c72,#2a5298);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">➕ 加入</button>`}
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                resultArea.innerHTML = '<div style="color:#e74c3c; font-size:13px;">搜尋失敗，請稍後再試。</div>';
+            }
         };
 
         // 第二個 addFriend 已移除（重複定義，且呼叫未定義的 _renderFriends）
@@ -2321,6 +2384,8 @@
         _setWaitStatus(isHost ? '等待對手加入...' : '正在連線中...');
         const cd = document.getElementById('wait-countdown-wrap');
         if (cd) cd.style.display = isHost ? 'flex' : 'none';
+        // 記錄房間代碼，供觀戰模式使用
+        if (isHost) window._roomCode = code;
     }
 
     function _showLobbyScreen() {
@@ -2975,6 +3040,289 @@
         if (!el) return;
         el.textContent = `🗓️ 當前賽季：${_seasonIdToName(seasonId)}`;
     }
+
+    // ══════════════════════════════════════════════════════════════
+    //  👥 Phase 3 — 好友系統強化 / 觀戰模式 / 推播通知
+    // ══════════════════════════════════════════════════════════════
+
+    const _FB_BASE       = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
+    const _PRESENCE_URL  = _FB_BASE + '/online';
+    const _INVITE_URL    = _FB_BASE + '/battle_invites';
+    const _SPECTATE_URL  = _FB_BASE + '/spectate';
+
+    let _heartbeatInterval = null;
+    let _invitePollInterval = null;
+
+    // ── 在線心跳 ────────────────────────────────────────────────
+    async function _startOnlineHeartbeat() {
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (!me) return;
+        const payload = { nickname: me.nickname || me.username, lastSeen: Date.now() };
+        const _write = () => fetch(`${_PRESENCE_URL}/${me.username}.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, lastSeen: Date.now() })
+        }).catch(() => {});
+        _write();
+        clearInterval(_heartbeatInterval);
+        _heartbeatInterval = setInterval(_write, 30000);
+        window.addEventListener('beforeunload', () => {
+            clearInterval(_heartbeatInterval);
+            clearInterval(_invitePollInterval);
+        }, { once: true });
+    }
+
+    // ── 抓在線玩家（90 秒內有心跳）────────────────────────────
+    async function _getOnlineUsers() {
+        try {
+            const res = await fetch(`${_PRESENCE_URL}.json`);
+            const data = res.ok ? await res.json() : null;
+            if (!data) return {};
+            const now = Date.now();
+            const result = {};
+            Object.entries(data).forEach(([u, v]) => {
+                if (v && (now - (v.lastSeen || 0)) < 90000) result[u] = v;
+            });
+            return result;
+        } catch(e) { return {}; }
+    }
+
+    // ── 傳送對戰邀請 ─────────────────────────────────────────
+    async function _sendBattleInvite(targetUsername) {
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (!me) { _safeToast('請先登入', 'danger'); return; }
+        const code = Network.randomCode ? Network.randomCode()
+            : Math.random().toString(36).slice(2, 7).toUpperCase();
+        try {
+            await fetch(`${_INVITE_URL}/${targetUsername}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code,
+                    fromUsername: me.username,
+                    fromNickname: me.nickname || me.username,
+                    timestamp: Date.now()
+                })
+            });
+            _safeToast('邀請已發送！等待對方接受…', 'success', 3000);
+            // 建立房間等待對方加入
+            if (typeof Network !== 'undefined') Network.createRoom(code);
+            window._roomCode = code;
+            _openMonarchSelect('mm_host', code);
+        } catch(e) {
+            _safeToast('邀請發送失敗，請稍後再試', 'danger');
+        }
+    }
+
+    // ── 輪詢是否有人邀請我 ────────────────────────────────────
+    function _startInvitePolling() {
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (!me) return;
+        clearInterval(_invitePollInterval);
+        _invitePollInterval = setInterval(async () => {
+            // 不在大廳時不彈窗
+            const lobbyScreen = document.getElementById('lobby-screen');
+            if (!lobbyScreen || lobbyScreen.classList.contains('hidden')) return;
+            try {
+                const res = await fetch(`${_INVITE_URL}/${me.username}.json`);
+                const invite = res.ok ? await res.json() : null;
+                if (!invite || !invite.code) return;
+                // 清除此邀請（防止重複彈窗）
+                await fetch(`${_INVITE_URL}/${me.username}.json`, { method: 'DELETE' });
+                // 超過 30 秒的邀請忽略
+                if ((Date.now() - (invite.timestamp || 0)) > 30000) return;
+                _showBattleInvitePopup(invite);
+            } catch(e) {}
+        }, 5000);
+    }
+
+    // ── 對戰邀請 Popup ─────────────────────────────────────────
+    function _showBattleInvitePopup(invite) {
+        const old = document.getElementById('battle-invite-popup');
+        if (old) old.remove();
+        const popup = document.createElement('div');
+        popup.id = 'battle-invite-popup';
+        popup.style.cssText = `
+            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);
+            background:linear-gradient(135deg,#0d1117,#1a202c);
+            border:2px solid var(--gold);border-radius:16px;padding:32px 44px;
+            text-align:center;z-index:300000;opacity:0;
+            box-shadow:0 10px 60px rgba(212,175,55,0.45);
+            transition:all .3s cubic-bezier(.34,1.56,.64,1);`;
+        popup.innerHTML = `
+            <div style="font-size:40px;margin-bottom:10px;">⚔️</div>
+            <div style="color:var(--gold);font-size:18px;font-weight:900;letter-spacing:2px;margin-bottom:8px;">對戰邀請</div>
+            <div style="color:#ccc;margin-bottom:24px;font-size:15px;">
+                <b style="color:#fff;">${_escHtml(invite.fromNickname)}</b> 邀請您加入對戰！
+            </div>
+            <div style="display:flex;gap:14px;justify-content:center;">
+                <button onclick="window._acceptBattleInvite('${_escHtml(invite.code)}')"
+                    style="padding:11px 28px;background:linear-gradient(135deg,#1a5c1a,#2ea42e);color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:700;">✅ 接受</button>
+                <button onclick="document.getElementById('battle-invite-popup').remove()"
+                    style="padding:11px 28px;background:#1a1a1a;color:#888;border:1px solid #333;border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;">❌ 拒絕</button>
+            </div>
+            <div style="color:#444;font-size:11px;margin-top:14px;">20 秒後自動關閉</div>
+        `;
+        document.body.appendChild(popup);
+        requestAnimationFrame(() => { popup.style.opacity = '1'; popup.style.transform = 'translate(-50%,-50%) scale(1)'; });
+        setTimeout(() => popup.remove(), 20000);
+        // 瀏覽器通知
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('⚔️ 華夏風雲錄 — 對戰邀請', {
+                body: `${invite.fromNickname} 邀請您加入對戰！`,
+                icon: 'assets/華夏文明人皇銘文圖.png'
+            });
+        }
+    }
+
+    window._acceptBattleInvite = function(code) {
+        const popup = document.getElementById('battle-invite-popup');
+        if (popup) popup.remove();
+        _openMonarchSelect('mm_guest', code);
+    };
+
+    // ── 觀戰模式：開啟活躍對戰清單 ─────────────────────────────
+    window._openSpectateModal = async function() {
+        let modal = document.getElementById('spectate-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'spectate-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:210000;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="width:min(620px,95vw);max-height:85vh;background:#0d1117;border:1px solid #333;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 60px rgba(0,0,0,0.8);">
+                    <div style="padding:18px 24px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to right,#0a1a0a,#0d1117);">
+                        <div>
+                            <div style="color:#7dff7d;font-size:17px;font-weight:900;letter-spacing:2px;">🔭 觀戰模式</div>
+                            <div style="color:#666;font-size:12px;margin-top:2px;">點擊任一場次即可觀看即時戰況</div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button onclick="window._refreshSpectateList()" style="background:none;border:1px solid #333;color:#666;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">🔄 刷新</button>
+                            <button onclick="document.getElementById('spectate-modal').remove()" style="background:none;border:none;color:#888;font-size:22px;cursor:pointer;">×</button>
+                        </div>
+                    </div>
+                    <div id="spectate-list" style="overflow-y:auto;padding:16px;flex:1;">
+                        <div style="color:#555;text-align:center;padding:40px;">載入中…</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            modal.style.display = 'flex';
+        }
+        window._refreshSpectateList();
+    };
+
+    window._refreshSpectateList = async function() {
+        const list = document.getElementById('spectate-list');
+        if (!list) return;
+        list.innerHTML = '<div style="color:#555;text-align:center;padding:40px;">載入中…</div>';
+        try {
+            const res = await fetch(`${_SPECTATE_URL}.json`);
+            const data = res.ok ? await res.json() : null;
+            const now = Date.now();
+            const games = data ? Object.entries(data).filter(([, v]) =>
+                v && (now - (v.updatedAt || 0)) < 20000) : [];
+
+            if (games.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center;padding:50px 20px;">
+                        <div style="font-size:48px;margin-bottom:12px;">😴</div>
+                        <div style="color:#666;font-size:14px;">目前沒有進行中的對戰</div>
+                        <div style="color:#444;font-size:12px;margin-top:6px;">對戰開始後將自動出現於此</div>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = games.map(([code, g]) => {
+                const hpPct  = h => Math.max(0, Math.round((h.hp / (h.maxHp || 1)) * 100));
+                const hHp    = Math.max(0, g.hostHp  || 0);
+                const gHp    = Math.max(0, g.guestHp || 0);
+                const hMax   = g.hostMaxHp  || 1;
+                const gMax   = g.guestMaxHp || 1;
+                const hPct   = Math.round(hHp / hMax * 100);
+                const gPct   = Math.round(gHp / gMax * 100);
+                const secAgo = Math.round((now - (g.updatedAt || now)) / 1000);
+                return `
+                <div onclick="window._watchGame('${_escHtml(code)}')" style="background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:10px;padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;"
+                     onmouseover="this.style.borderColor='#2d6a2d'" onmouseout="this.style.borderColor='#222'">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="color:#7dff7d;font-size:11px;font-weight:700;">🔴 LIVE · ${secAgo}s ago</span>
+                        <span style="color:#555;font-size:11px;">第 ${g.turn || 1} 回合</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;">
+                        <div>
+                            <div style="color:#eee;font-size:13px;font-weight:700;margin-bottom:4px;">${_escHtml(g.hostNick || '主機')}</div>
+                            <div style="background:#222;border-radius:4px;height:8px;overflow:hidden;">
+                                <div style="width:${hPct}%;height:100%;background:linear-gradient(90deg,#e74c3c,#c0392b);border-radius:4px;transition:.3s;"></div>
+                            </div>
+                            <div style="color:#888;font-size:11px;margin-top:2px;">${hHp} HP · 手牌 ${g.hostCards || 0}</div>
+                        </div>
+                        <div style="color:#555;font-size:18px;font-weight:900;">VS</div>
+                        <div style="text-align:right;">
+                            <div style="color:#eee;font-size:13px;font-weight:700;margin-bottom:4px;">${_escHtml(g.guestNick || '客方')}</div>
+                            <div style="background:#222;border-radius:4px;height:8px;overflow:hidden;">
+                                <div style="width:${gPct}%;height:100%;background:linear-gradient(90deg,#3498db,#2980b9);margin-left:auto;border-radius:4px;transition:.3s;"></div>
+                            </div>
+                            <div style="color:#888;font-size:11px;margin-top:2px;">${gHp} HP · 手牌 ${g.guestCards || 0}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            list.innerHTML = '<div style="color:#e74c3c;text-align:center;padding:30px;">載入失敗，請稍後再試</div>';
+        }
+    };
+
+    /** 觀看特定對局（自動刷新） */
+    window._watchGame = function(code) {
+        let watchInterval = null;
+        const container = document.getElementById('spectate-list');
+        if (!container) return;
+
+        const _render = async () => {
+            try {
+                const res = await fetch(`${_SPECTATE_URL}/${code}.json`);
+                const g = res.ok ? await res.json() : null;
+                if (!g) {
+                    container.innerHTML = '<div style="color:#888;text-align:center;padding:30px;">對戰已結束</div>';
+                    clearInterval(watchInterval);
+                    return;
+                }
+                const now = Date.now();
+                const hPct = Math.round(Math.max(0, g.hostHp || 0) / (g.hostMaxHp || 1) * 100);
+                const gPct = Math.round(Math.max(0, g.guestHp || 0) / (g.guestMaxHp || 1) * 100);
+                container.innerHTML = `
+                    <button onclick="clearInterval(${watchInterval});window._refreshSpectateList()" style="background:none;border:1px solid #333;color:#888;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:12px;">← 返回列表</button>
+                    <div style="text-align:center;padding:20px 10px;">
+                        <div style="color:#7dff7d;font-size:12px;margin-bottom:16px;">🔴 LIVE · 第 ${g.turn || 1} 回合 · ${g.isMyTurn ? g.hostNick : g.guestNick} 行動中</div>
+                        <div style="display:grid;grid-template-columns:1fr 60px 1fr;gap:16px;align-items:start;">
+                            <div style="background:rgba(231,76,60,0.08);padding:16px;border-radius:10px;border:1px solid rgba(231,76,60,0.2);">
+                                <div style="color:#e74c3c;font-size:11px;font-weight:700;margin-bottom:8px;">⚡ 主機</div>
+                                <div style="color:#fff;font-size:16px;font-weight:900;margin-bottom:10px;">${_escHtml(g.hostNick || '主機')}</div>
+                                <div style="background:#333;border-radius:6px;height:12px;overflow:hidden;margin-bottom:4px;">
+                                    <div style="width:${hPct}%;height:100%;background:linear-gradient(90deg,#e74c3c,#c0392b);border-radius:6px;transition:.5s;"></div>
+                                </div>
+                                <div style="color:#aaa;font-size:13px;">${g.hostHp || 0} / ${g.hostMaxHp || 1} HP</div>
+                                <div style="color:#666;font-size:11px;margin-top:6px;">手牌 ${g.hostCards || 0} · 場上 ${g.hostField || 0}</div>
+                            </div>
+                            <div style="color:#555;font-size:22px;font-weight:900;padding-top:30px;">VS</div>
+                            <div style="background:rgba(52,152,219,0.08);padding:16px;border-radius:10px;border:1px solid rgba(52,152,219,0.2);">
+                                <div style="color:#3498db;font-size:11px;font-weight:700;margin-bottom:8px;">⚡ 客方</div>
+                                <div style="color:#fff;font-size:16px;font-weight:900;margin-bottom:10px;">${_escHtml(g.guestNick || '客方')}</div>
+                                <div style="background:#333;border-radius:6px;height:12px;overflow:hidden;margin-bottom:4px;">
+                                    <div style="width:${gPct}%;height:100%;background:linear-gradient(90deg,#3498db,#2980b9);border-radius:6px;transition:.5s;"></div>
+                                </div>
+                                <div style="color:#aaa;font-size:13px;">${g.guestHp || 0} / ${g.guestMaxHp || 1} HP</div>
+                                <div style="color:#666;font-size:11px;margin-top:6px;">手牌 ${g.guestCards || 0} · 場上 ${g.guestField || 0}</div>
+                            </div>
+                        </div>
+                        <div style="color:#444;font-size:11px;margin-top:16px;">每 5 秒自動更新</div>
+                    </div>`;
+            } catch(e) {}
+        };
+        _render();
+        watchInterval = setInterval(_render, 5000);
+    };
 
     // ══════════════════════════════════════════════════════════════
     //  ⚔️ 自動配對系統（Firebase Matchmaking Queue）
