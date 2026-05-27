@@ -2421,6 +2421,7 @@
             initGame();
             setupEventListeners();
             window.gameActive = true;
+            _isLaunching = false; // 遊戲正式啟動後復位，讓 net_error 處理器恢復作用
 
             if (window.GAME_MODE === 'guest') {
                 _setupGuestHandlers();
@@ -3470,8 +3471,9 @@
 
     let _tutStep      = 0;
     let _tutWatcher   = null;
-    let _tutHlEl      = null;   // 目前高亮的 DOM 元素
-    let _tutOppHpSnap = 0;      // 記錄對手 HP 快照（攻擊偵測用）
+    let _tutHlEl      = null;       // 目前高亮的 DOM 元素
+    let _tutOppHpSnap = 0;          // 記錄對手 HP 快照（攻擊偵測用）
+    let _tutCompleted = false;      // 只有抵達最後步驟才標記為完成（成就防護）
 
     /** 取對手場上所有 HP 總和 */
     function _oppTotalHp() {
@@ -3500,6 +3502,7 @@
         window.TUTORIAL_MODE = true;
         window.GAME_MODE     = 'ai';
         _tutStep = 0;
+        _tutCompleted = false;
         _launchGame();
         // 輪詢等遊戲容器顯示後再展示第一步（避免硬編碼延遲在慢速裝置上過早顯示）
         (function _waitForGame() {
@@ -3517,6 +3520,8 @@
         _tutStep = n;
         const data = _TUT_STEPS[n];
         if (!data) { _endTutorial(false); return; }
+        // Bug 3 修正：只有抵達最終步才標記完成，避免中途 game-over 誤發成就
+        if (data.isLast) _tutCompleted = true;
 
         // ── 更新高亮 ──────────────────────────────────────────
         _tutClearHighlight();
@@ -3582,7 +3587,8 @@
                 if (_tutStep !== n) { clearInterval(_tutWatcher); return; }
                 if (_tutCheckCondition(data.waitFor)) {
                     clearInterval(_tutWatcher);
-                    setTimeout(() => _advanceTutStep(), 900);
+                    // Bug 2 修正：900ms 延遲到期時確認仍在教學模式才推進（避免 game-over 期間重建 overlay）
+                    setTimeout(() => { if (window.TUTORIAL_MODE) _advanceTutStep(); }, 900);
                 }
             }, 400);
         }
@@ -3638,8 +3644,8 @@
 
         window.TUTORIAL_MODE = false;
 
-        // 解鎖成就
-        if (!window.playerAchievements.includes('tutorial_done')) {
+        // 解鎖成就（Bug 3 修正：只有玩家完整跑到最後一步才解鎖）
+        if (_tutCompleted && !window.playerAchievements.includes('tutorial_done')) {
             window.playerAchievements.push('tutorial_done');
             _saveCollection();
             setTimeout(() => {
