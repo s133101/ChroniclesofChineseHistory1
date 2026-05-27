@@ -64,6 +64,10 @@ const Auth = (() => {
                 avatar: null,
                 createdAt: Date.now()
             });
+        } else if (existing.nickname === '王') {
+            // 修正之前誤設的名號，將「王」歸還給 wang 帳號
+            const updated = {...existing, nickname: '最高管理員'};
+            await _fbSet('/users/linus0622', updated);
         }
 
         // 建立開發者帳號 wang（若不存在）
