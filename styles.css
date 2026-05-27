@@ -2571,8 +2571,8 @@ body {
 .gc-flash-ssr {
     background: radial-gradient(ellipse 70% 60% at 50% 40%,
         rgba(255,230,80,0.85) 0%, rgba(212,175,55,0.45) 35%, transparent 70%);
-    animation: gcFlash 1.1s ease-out forwards;
-    box-shadow: inset 0 0 120px rgba(241,196,15,0.6);
+    animation: gcFlashSSR 1.4s ease-out forwards;
+    box-shadow: inset 0 0 180px rgba(241,196,15,0.7);
 }
 .gc-flash-sr {
     background: radial-gradient(ellipse 70% 60% at 50% 40%,
@@ -2588,6 +2588,42 @@ body {
     0%   { opacity: 1; transform: scale(0.85); }
     25%  { opacity: 1; transform: scale(1.2); }
     100% { opacity: 0; transform: scale(1.4); }
+}
+/* 君王 SSR 專屬：更震撼的光爆 + 粒子光暈 */
+@keyframes gcFlashSSR {
+    0%   { opacity: 0;   transform: scale(0.5); filter: brightness(3); }
+    15%  { opacity: 1;   transform: scale(1.3); filter: brightness(2.5); }
+    40%  { opacity: 0.9; transform: scale(1.1); filter: brightness(1.5); }
+    70%  { opacity: 0.6; transform: scale(1.2); filter: brightness(1.2); }
+    100% { opacity: 0;   transform: scale(1.5); filter: brightness(1); }
+}
+/* SSR 君王卡片翻開後持續光暈 */
+.ggc-card.ggc-ssr.ggc-flipped .ggc-front {
+    animation: ssrCardGlow 2s ease-in-out infinite alternate;
+}
+@keyframes ssrCardGlow {
+    from { box-shadow: 0 0 18px rgba(241,196,15,0.5), 0 0 40px rgba(241,196,15,0.2); }
+    to   { box-shadow: 0 0 35px rgba(241,196,15,0.9), 0 0 80px rgba(241,196,15,0.4), 0 0 120px rgba(255,220,50,0.15); }
+}
+/* 粒子裝飾（純 CSS，SSR 卡片四角） */
+.ggc-card.ggc-ssr.ggc-flipped::after {
+    content: '✦';
+    position: absolute; top: -8px; right: -4px;
+    color: #f1c40f; font-size: 14px; opacity: 0;
+    animation: ssrStar 1.2s 0.3s ease-out forwards;
+    pointer-events: none; z-index: 10;
+}
+.ggc-card.ggc-ssr.ggc-flipped::before {
+    content: '✦';
+    position: absolute; bottom: -8px; left: -4px;
+    color: #f1c40f; font-size: 10px; opacity: 0;
+    animation: ssrStar 1.2s 0.6s ease-out forwards;
+    pointer-events: none; z-index: 10;
+}
+@keyframes ssrStar {
+    0%   { opacity: 0; transform: scale(0) rotate(0deg) translateY(0); }
+    40%  { opacity: 1; transform: scale(1.5) rotate(180deg) translateY(-6px); }
+    100% { opacity: 0; transform: scale(0.5) rotate(360deg) translateY(-14px); }
 }
 
 /* ============================================================
@@ -3363,4 +3399,87 @@ body {
 .profile-zoom-label {
     font-size: 15px; font-weight: 900;
     color: var(--gold); min-width: 44px; text-align: right;
+}
+
+/* ============================================================
+   📱 手機版適配 (Mobile Responsive)
+   ============================================================ */
+@media (max-width: 768px) {
+    /* 大廳主畫面 */
+    #lobby-screen {
+        flex-direction: column;
+        padding: 0;
+    }
+
+    /* 中央大廳卡 */
+    .lobby-center {
+        padding: 16px 12px;
+        max-width: 100%;
+    }
+    .lobby-title { font-size: 26px; }
+    .lobby-subtitle { font-size: 11px; }
+
+    /* 側邊欄全寬展開 */
+    .glass-sidebar {
+        width: 100% !important;
+        max-width: 100%;
+        height: 60vh;
+        bottom: 0; top: auto;
+        border-radius: 20px 20px 0 0;
+        border-right: none;
+        border-top: 1px solid var(--border);
+    }
+    .open-sidebar-trigger {
+        top: auto; bottom: 62vh;
+        right: 12px; left: auto;
+        border-radius: 50%;
+        width: 40px; height: 40px;
+    }
+
+    /* 登入畫面 */
+    .login-container { padding: 12px; }
+    .login-box { padding: 20px 16px; }
+    .login-logo-area h1 { font-size: 22px; }
+
+    /* 個人資料 Modal */
+    .profile-modal {
+        width: 94vw !important;
+        max-height: 88vh;
+        left: 3vw; top: 6vh;
+        transform: none !important;
+    }
+
+    /* 卡片尺寸微縮 */
+    .card { width: 82px; height: 116px; }
+    .card-slot { width: 82px; height: 116px; }
+
+    /* 遊戲中 HUD */
+    .hud-box { padding: 6px 8px; font-size: 11px; }
+    #turn-indicator { font-size: 11px; padding: 5px 10px; }
+
+    /* 排行榜 stats bar 字體縮小 */
+    #leaderboard-stats-bar [style*="font-size:20px"] { font-size: 16px !important; }
+
+    /* 按鈕觸控面積加大 */
+    .lobby-btn { padding: 14px 16px; font-size: 15px; min-height: 50px; }
+
+    /* 開場 splash */
+    #splash-hint { font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+    .lobby-title { font-size: 22px; }
+    .card { width: 70px; height: 100px; }
+    .card-slot { width: 70px; height: 100px; }
+    .card-art { font-size: 32px; }
+    .hand { gap: 2px; }
+    .hand .card { margin-left: -18px; }
+
+    /* 排行榜 stats 改為 2×3 格局 */
+    #leaderboard-stats-bar > div:first-child {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    #leaderboard-stats-bar [style*="width:1px"] { display: none; }
 }

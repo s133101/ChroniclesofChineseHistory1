@@ -340,6 +340,79 @@ const Auth = (() => {
 
     function current() { return _cur; }
 
+    // ── 記錄一場對戰結果（同步 Firebase stats + battle_records）────
+    async function recordBattle(mode, win, opponentName, rounds, silver) {
+        if (!_cur) return;
+        const uname = _cur.username;
+
+        // 讀取最新使用者資料
+        const user = await _fbGet('/users/' + uname);
+        if (!user) return;
+
+        const s = user.stats || { wins:0, losses:0, aiWins:0, bestStreak:0, currentStreak:0, totalGames:0 };
+        const isPvP = mode === 'host' || mode === 'guest';
+        s.totalGames = (s.totalGames || 0) + 1;
+
+        if (win) {
+            if (isPvP) {
+                s.wins = (s.wins || 0) + 1;
+                s.currentStreak = (s.currentStreak || 0) + 1;
+                if (s.currentStreak > (s.bestStreak || 0)) s.bestStreak = s.currentStreak;
+            } else {
+                s.aiWins = (s.aiWins || 0) + 1;
+            }
+        } else if (isPvP) {
+            s.losses = (s.losses || 0) + 1;
+            s.currentStreak = 0;
+        }
+
+        const updated = {...user, stats: s};
+        await _fbSet('/users/' + uname, updated);
+        _cur = {..._cur, stats: s};
+
+        // 對戰記錄（最多保留 20 筆）
+        const history = await _fbGet('/battle_records/' + uname) || [];
+        history.unshift({
+            result:   win ? 'win' : 'lose',
+            mode:     isPvP ? 'pvp' : 'ai',
+            opponent: opponentName || (isPvP ? '未知對手' : 'AI 對手'),
+            rounds:   rounds || 0,
+            silver:   silver || 0,
+            time:     Date.now()
+        });
+        if (history.length > 20) history.splice(20);
+        await _fbSet('/battle_records/' + uname, history);
+    }
+
+    // ── 取得對戰記錄 ─────────────────────────────────────────────
+    async function getBattleHistory() {
+        if (!_cur) return [];
+        return await _fbGet('/battle_records/' + _cur.username) || [];
+    }
+
+    // ── 取得全服排行榜資料 ────────────────────────────────────────
+    async function getLeaderboardData() {
+        const users = await _fbGet('/users');
+        if (!users) return [];
+        return Object.entries(users)
+            .filter(([, u]) => u.stats && ((u.stats.wins || 0) + (u.stats.losses || 0)) > 0)
+            .map(([, u]) => {
+                const w = u.stats.wins    || 0;
+                const l = u.stats.losses  || 0;
+                const total = w + l;
+                return {
+                    nickname:      u.nickname || '無名英雄',
+                    wins:          w,
+                    losses:        l,
+                    winRate:       total > 0 ? Math.round(w / total * 100) : 0,
+                    bestStreak:    u.stats.bestStreak    || 0,
+                    currentStreak: u.stats.currentStreak || 0,
+                    totalGames:    u.stats.totalGames    || 0
+                };
+            })
+            .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate);
+    }
+
     return {
         initAdmin,
         login,
@@ -355,6 +428,9 @@ const Auth = (() => {
         getSession,
         restoreSession,
         logout,
-        current
+        current,
+        recordBattle,
+        getBattleHistory,
+        getLeaderboardData
     };
 })();

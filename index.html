@@ -15,13 +15,13 @@
     <meta http-equiv="Expires" content="0">
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="protect.js?v=20260527c"></script>
-    <script src="auth.js?v=20260527c"></script>
+    <script src="protect.js?v=20260527d"></script>
+    <script src="auth.js?v=20260527d"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css?v=20260527c">
+    <link rel="stylesheet" href="styles.css?v=20260527d">
 </head>
 <body>
 
@@ -435,19 +435,38 @@
     <!-- 英雄榜分頁 -->
     <div id="tab-leaderboard" class="tab-content hidden">
         <div class="leaderboard-area">
-            <h3 style="color:var(--gold); margin-bottom:15px; text-align:center; letter-spacing:2px;">⚔️ 華夏連勝英雄榜</h3>
-            <div id="leaderboard-stats-bar" style="background:rgba(212,175,55,0.1); padding:12px 16px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-around; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div style="text-align:center;">
-                    <div style="font-size:10px; color:#666; margin-bottom:2px;">當前連勝 (PvP)</div>
-                    <div id="my-current-streak" style="color:var(--gold); font-weight:900; font-size:24px; line-height:1;">0</div>
+            <h3 style="color:var(--gold); margin-bottom:12px; text-align:center; letter-spacing:2px;">⚔️ 華夏英雄榜</h3>
+            <!-- 個人戰績 bar -->
+            <div id="leaderboard-stats-bar" style="background:rgba(212,175,55,0.08); padding:12px; border-radius:10px; margin-bottom:8px; border:1px solid rgba(212,175,55,0.15);">
+                <div style="display:flex; justify-content:space-around; align-items:center; margin-bottom:8px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:9px; color:#555; margin-bottom:2px;">勝場</div>
+                        <div id="my-stat-wins" style="color:#2ecc71; font-weight:900; font-size:20px; line-height:1;">0</div>
+                    </div>
+                    <div style="width:1px; height:30px; background:#222;"></div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9px; color:#555; margin-bottom:2px;">敗場</div>
+                        <div id="my-stat-losses" style="color:#e74c3c; font-weight:900; font-size:20px; line-height:1;">0</div>
+                    </div>
+                    <div style="width:1px; height:30px; background:#222;"></div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9px; color:#555; margin-bottom:2px;">勝率</div>
+                        <div id="my-stat-winrate" style="color:var(--gold); font-weight:900; font-size:20px; line-height:1;">0%</div>
+                    </div>
+                    <div style="width:1px; height:30px; background:#222;"></div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9px; color:#555; margin-bottom:2px;">連勝</div>
+                        <div id="my-current-streak" style="color:#f39c12; font-weight:900; font-size:20px; line-height:1;">0</div>
+                    </div>
+                    <div style="width:1px; height:30px; background:#222;"></div>
+                    <div style="text-align:center;">
+                        <div style="font-size:9px; color:#555; margin-bottom:2px;">最高</div>
+                        <div id="my-best-streak" style="color:#d4af37; font-weight:900; font-size:20px; line-height:1;">0</div>
+                    </div>
                 </div>
-                <div style="width:1px; height:36px; background:#333;"></div>
-                <div style="text-align:center;">
-                    <div style="font-size:10px; color:#666; margin-bottom:2px;">個人最高紀錄</div>
-                    <div id="my-best-streak" style="color:#d4af37; font-weight:900; font-size:24px; line-height:1;">0</div>
-                </div>
-                <div style="width:100%; font-size:10px; color:#444; text-align:center; margin-top:2px;">⚔ 僅計算真人對戰勝場，AI 對戰不計入</div>
+                <button onclick="window._openBattleHistoryModal()" style="width:100%; padding:6px; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:6px; color:var(--gold); font-size:12px; cursor:pointer; font-family:inherit;">📋 查看對戰記錄</button>
             </div>
+            <div style="font-size:10px; color:#444; text-align:center; margin-bottom:10px;">⚔ 排名依 PvP 勝場數，AI 對戰不計入</div>
             <div id="leaderboard-list">
                 <!-- 排行榜由 JS 渲染 -->
             </div>
@@ -730,9 +749,9 @@
     © 2026 linus622wang@gmail.com
 </div>
 
-<script src="cards.js?v=20260527c"></script>
+<script src="cards.js?v=20260527d"></script>
 <script src="network.js"></script>
-<script src="game.js?v=20260527c"></script>
-<script src="lobby.js?v=20260527c"></script>
+<script src="game.js?v=20260527d"></script>
+<script src="lobby.js?v=20260527d"></script>
 </body>
 </html>

@@ -2358,7 +2358,6 @@ function triggerGameOver(win) {
                 currStreak++;
                 if (currStreak > bestStreak) {
                     bestStreak = currStreak;
-                    // 同步寫入英雄榜
                     _saveLeaderboardRecord(window.playerNickname || '無名英雄', bestStreak);
                 }
             } else {
@@ -2366,6 +2365,13 @@ function triggerGameOver(win) {
             }
             localStorage.setItem('hua_current_streak', currStreak.toString());
             localStorage.setItem('hua_best_streak', bestStreak.toString());
+        }
+        // ----------------
+
+        // --- 寫入 Firebase 對戰記錄 ---
+        if (typeof Auth !== 'undefined' && Auth.current()) {
+            const opponent = window.opponentNickname || (isPvP ? '未知對手' : 'AI 對手');
+            Auth.recordBattle(window.GAME_MODE || 'ai', win, opponent, turnCount, totalReward);
         }
         // ----------------
 

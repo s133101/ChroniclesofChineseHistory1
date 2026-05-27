@@ -1268,86 +1268,125 @@
         }
     }
 
-    // 渲染排行榜頁面（真實 PvP 連勝紀錄）
-    function renderLeaderboard() {
-        const board     = document.getElementById('leaderboard-list');
-        const streakVal = document.getElementById('my-current-streak');
-        const bestVal   = document.getElementById('my-best-streak');
+    // 渲染排行榜頁面（Firebase 全服資料）
+    async function renderLeaderboard() {
+        const board = document.getElementById('leaderboard-list');
         if (!board) return;
 
-        // 個人當前數據
-        const curr = parseInt(localStorage.getItem('hua_current_streak') || '0');
-        const best = parseInt(localStorage.getItem('hua_best_streak')    || '0');
-        if (streakVal) streakVal.textContent = curr;
-        if (bestVal)   bestVal.textContent   = best;
+        // 個人 stats（從 Auth.current()）
+        const me = Auth.current();
+        const myStats = me && me.stats ? me.stats : {};
+        const myNick  = window.playerNickname || '無名英雄';
 
-        // 讀取所有玩家記錄，依最高連勝降冪排列
-        let records = [];
-        try {
-            records = JSON.parse(localStorage.getItem('hua_leaderboard') || '[]');
-        } catch (_) { records = []; }
+        // 更新我的 stats bar
+        const elWins    = document.getElementById('my-stat-wins');
+        const elLosses  = document.getElementById('my-stat-losses');
+        const elWinRate = document.getElementById('my-stat-winrate');
+        const elStreak  = document.getElementById('my-current-streak');
+        const elBest    = document.getElementById('my-best-streak');
+        const w = myStats.wins    || 0;
+        const l = myStats.losses  || 0;
+        if (elWins)    elWins.textContent    = w;
+        if (elLosses)  elLosses.textContent  = l;
+        if (elWinRate) elWinRate.textContent = (w + l > 0 ? Math.round(w / (w + l) * 100) : 0) + '%';
+        if (elStreak)  elStreak.textContent  = myStats.currentStreak || 0;
+        if (elBest)    elBest.textContent    = myStats.bestStreak    || 0;
 
-        // 確保自己的最新紀錄也在榜中（若 best > 0 且尚未寫入）
-        if (best > 0) {
-            const myName = window.playerNickname || '無名英雄';
-            const mine   = records.find(r => r.name === myName);
-            if (!mine) {
-                records.push({ name: myName, bestStreak: best, updatedAt: Date.now() });
-                localStorage.setItem('hua_leaderboard', JSON.stringify(records));
-            } else if (best > mine.bestStreak) {
-                mine.bestStreak = best;
-                mine.updatedAt  = Date.now();
-                localStorage.setItem('hua_leaderboard', JSON.stringify(records));
-            }
-        }
+        board.innerHTML = '<div style="color:#555; font-size:12px; text-align:center; padding:20px;">載入中…</div>';
 
-        // 按最高連勝排序
-        records.sort((a, b) => b.bestStreak - a.bestStreak);
+        // 從 Firebase 抓全服資料
+        const records = await Auth.getLeaderboardData();
 
         if (records.length === 0) {
             board.innerHTML = `
-                <div style="color:#555; font-size:13px; text-align:center; padding:50px 20px; line-height:2;">
+                <div style="color:#555; font-size:13px; text-align:center; padding:40px 20px; line-height:2;">
                     <div style="font-size:28px; margin-bottom:12px;">⚔️</div>
-                    尚無 PvP 連勝紀錄<br>
-                    <span style="font-size:11px;">與真實對手對戰並獲勝後，紀錄將出現於此</span>
+                    尚無 PvP 對戰紀錄<br>
+                    <span style="font-size:11px;">與真實對手對戰後，紀錄將出現於此</span>
                 </div>`;
             return;
         }
 
         const medals = ['🥇','🥈','🥉'];
-        const myName = window.playerNickname || '無名英雄';
-
         board.innerHTML = records.map((p, idx) => {
-            const isMe    = p.name === myName;
+            const isMe    = p.nickname === myNick;
             const rankBg  = idx === 0 ? 'rgba(212,175,55,0.18)' :
                             idx === 1 ? 'rgba(192,192,192,0.12)' :
                             idx === 2 ? 'rgba(205,127,50,0.12)'  : 'transparent';
-            const rankBdr = idx === 0 ? '#d4af37' :
-                            idx === 1 ? '#aaa'     :
-                            idx === 2 ? '#cd7f32'  : '#2a2a2a';
+            const rankBdr = idx === 0 ? '#d4af37' : idx === 1 ? '#aaa' : idx === 2 ? '#cd7f32' : '#2a2a2a';
             const meBorder = isMe ? '; box-shadow:0 0 0 2px var(--gold)' : '';
             const rankLabel = idx < 3 ? medals[idx] : `<span style="font-size:13px; font-weight:700; color:#666;">${idx + 1}</span>`;
-            const date = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('zh-TW') : '';
+            const wColor = idx === 0 ? 'var(--gold)' : idx === 1 ? '#ccc' : idx === 2 ? '#cd7f32' : '#aaa';
 
             return `
-            <div class="rank-item ${idx < 3 ? 'rank-' + (idx+1) : ''}"
-                 style="background:${rankBg}; border-color:${rankBdr}${meBorder};">
+            <div class="rank-item ${idx < 3 ? 'rank-'+(idx+1) : ''}"
+                 style="background:${rankBg}; border-color:${rankBdr}${meBorder}; gap:6px;">
                 <div class="rank-pos">${rankLabel}</div>
-                <div style="flex:1; margin-left:10px; min-width:0;">
-                    <div style="color:${isMe ? 'var(--gold)' : '#eee'}; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                        ${isMe ? '👤 ' : ''}${_escHtml(p.name)}
+                <div style="flex:1; min-width:0; margin-left:8px;">
+                    <div style="color:${isMe ? 'var(--gold)' : '#eee'}; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px;">
+                        ${isMe ? '👤 ' : ''}${_escHtml(p.nickname)}
                     </div>
-                    <div style="font-size:10px; color:#555; margin-top:2px;">${date}</div>
+                    <div style="font-size:10px; color:#666; margin-top:2px;">
+                        ${p.bestStreak > 0 ? '🔥 最高連勝 ' + p.bestStreak : ''}
+                    </div>
                 </div>
-                <div style="text-align:right; flex-shrink:0;">
-                    <div style="font-size:22px; font-weight:900; color:${idx === 0 ? 'var(--gold)' : idx === 1 ? '#ccc' : idx === 2 ? '#cd7f32' : '#aaa'}; line-height:1;">
-                        ${p.bestStreak}
-                    </div>
-                    <div style="font-size:10px; color:#555;">最高連勝</div>
+                <div style="text-align:right; flex-shrink:0; line-height:1.4;">
+                    <div style="font-size:18px; font-weight:900; color:${wColor};">${p.wins}勝</div>
+                    <div style="font-size:10px; color:#666;">${p.losses}敗 · ${p.winRate}%</div>
                 </div>
             </div>`;
         }).join('');
     }
+
+    // 渲染對戰記錄 Modal
+    async function _openBattleHistoryModal() {
+        let modal = document.getElementById('battle-history-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'battle-history-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:210000;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:#0f1419;border:1px solid var(--gold);border-radius:16px;width:min(480px,95vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;">
+                    <div style="padding:16px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="color:var(--gold);font-size:16px;font-weight:700;">📋 對戰記錄</span>
+                        <button onclick="document.getElementById('battle-history-modal').remove()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;">×</button>
+                    </div>
+                    <div id="battle-history-list" style="overflow-y:auto;padding:16px;flex:1;">
+                        <div style="color:#555;text-align:center;padding:30px;">載入中…</div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        modal.style.display = 'flex';
+        const list = document.getElementById('battle-history-list');
+        const history = await Auth.getBattleHistory();
+
+        if (!history || history.length === 0) {
+            list.innerHTML = '<div style="color:#555;text-align:center;padding:40px;">尚無對戰記錄</div>';
+            return;
+        }
+
+        const modeLabel = m => m === 'pvp' ? '⚔️ PvP' : '🤖 AI';
+        list.innerHTML = history.map(r => {
+            const isWin = r.result === 'win';
+            const d = new Date(r.time).toLocaleString('zh-TW', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+            return `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:8px;background:${isWin ? 'rgba(46,204,113,0.07)' : 'rgba(231,76,60,0.07)'};border:1px solid ${isWin ? 'rgba(46,204,113,0.25)' : 'rgba(231,76,60,0.2)'};">
+                <div style="font-size:22px;">${isWin ? '🏆' : '💔'}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:${isWin ? '#2ecc71' : '#e74c3c'};">${isWin ? '勝利' : '敗北'} ${modeLabel(r.mode)}</div>
+                    <div style="font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">對手：${_escHtml(r.opponent)} · ${r.rounds} 回合</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                    <div style="font-size:12px;color:var(--gold);">+${r.silver} 兩</div>
+                    <div style="font-size:10px;color:#444;">${d}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    window._openBattleHistoryModal = _openBattleHistoryModal;
 
     // 渲染皇榜歷史 (搬遷自青史冊)
     function renderAnnouncementsHistory() {
@@ -2009,16 +2048,25 @@
         Network.on('peer_connected', ({ isHost }) => {
             _clearTimer();
             window.GAME_MODE = isHost ? 'host' : 'guest';
+            window.opponentNickname = null; // 等待對手傳來暱稱
             _setWaitStatus(isHost ? '🎉 對手已連線！準備開戰...' : '🎉 成功加入房間！準備開戰...');
             document.getElementById('btn-cancel-wait').style.display = 'none';
             const cd = document.getElementById('wait-countdown-wrap');
             if (cd) cd.style.display = 'none';
+            // 互傳暱稱
+            setTimeout(() => {
+                Network.send('player_info', { nickname: window.playerNickname || '無名英雄' });
+            }, 300);
             // 若遊戲已在進行（重連成功），主機重發狀態同步
             if (window.gameActive && isHost && typeof syncStateToGuest === 'function') {
                 setTimeout(() => syncStateToGuest(false), 800);
                 return;
             }
             setTimeout(_launchGame, 1800);
+        });
+
+        Network.on('player_info', ({ nickname }) => {
+            window.opponentNickname = nickname || '未知對手';
         });
 
         Network.on('reconnecting', ({ attempt, max }) => {
