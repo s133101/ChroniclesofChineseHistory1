@@ -204,7 +204,16 @@
             <button class="profile-save-btn" id="profile-avatar-save-btn">儲存頭像</button>
         </div>
 
-        <!-- ② 更改密碼 -->
+        <!-- ② 名號 -->
+        <div class="profile-section">
+            <div class="profile-section-title">🏷️ 名號</div>
+            <input type="text" id="nickname-input" class="profile-input"
+                   maxlength="12" placeholder="請輸入名號">
+            <div id="profile-nickname-msg" class="profile-msg hidden"></div>
+            <button class="profile-save-btn" id="profile-nickname-save-btn">儲存名號</button>
+        </div>
+
+        <!-- ③ 更改密碼 -->
         <div class="profile-section">
             <div class="profile-section-title">🔐 更改密碼</div>
             <input type="password" id="profile-old-pwd" class="profile-input" placeholder="舊密碼">
@@ -388,11 +397,6 @@
     </div>
     
     <div id="tab-chat" class="tab-content active">
-        <!-- 玩家暱稱 -->
-        <div class="nickname-row">
-            <span class="nickname-label">🏷️ 名號：</span>
-            <input type="text" id="nickname-input" class="nickname-input" maxlength="12" placeholder="無名大將">
-        </div>
         <!-- 聊天模式切換 -->
         <div class="chat-mode-toggle">
             <button id="chat-mode-global" class="sub-tab-btn active" onclick="switchChatMode('global')">🏠 全域</button>

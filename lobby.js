@@ -532,7 +532,40 @@
             };
         }
 
-        // ── ② 更改密碼 ────────────────────────────────────────
+        // ── ② 名號 ───────────────────────────────────────────
+        const nicknameInput  = document.getElementById('nickname-input');
+        const nicknameMsg    = document.getElementById('profile-nickname-msg');
+        const nicknameSave   = document.getElementById('profile-nickname-save-btn');
+        if (nicknameInput) nicknameInput.value = window.playerNickname || '';
+        if (nicknameSave) {
+            nicknameSave.onclick = async function() {
+                const v = (nicknameInput ? nicknameInput.value : '').trim();
+                if (!v) { _showProfileMsg(nicknameMsg, false, '名號不能為空'); return; }
+                if (v === window.playerNickname) { _showProfileMsg(nicknameMsg, true, '名號未變更'); return; }
+
+                nicknameSave.disabled = true;
+                const available = await Auth.checkNickname(v);
+                if (!available) {
+                    _showProfileMsg(nicknameMsg, false, '這名稱已被使用');
+                    nicknameSave.disabled = false;
+                    return;
+                }
+
+                const res = await Auth.updateNickname(v);
+                nicknameSave.disabled = false;
+                if (res.ok) {
+                    window.playerNickname = v;
+                    localStorage.setItem('hua_nickname', v);
+                    _showProfileMsg(nicknameMsg, true, '名號已更新');
+                    const avatarNameEl = document.getElementById('player-avatar-name');
+                    if (avatarNameEl) avatarNameEl.textContent = v;
+                } else {
+                    _showProfileMsg(nicknameMsg, false, res.err || '更新失敗');
+                }
+            };
+        }
+
+        // ── ③ 更改密碼 ────────────────────────────────────────
         const pwdMsg  = document.getElementById('profile-pwd-msg');
         const pwdSave = document.getElementById('profile-pwd-save-btn');
         const oldPwd  = document.getElementById('profile-old-pwd');
@@ -642,37 +675,7 @@
         const chatMessages = document.getElementById('chat-messages');
 
         // ── 暱稱初始化 ──
-        const nicknameInput = document.getElementById('nickname-input');
-        if (nicknameInput) {
-            nicknameInput.value = window.playerNickname;
-            nicknameInput.addEventListener('change', async () => {
-                const v = nicknameInput.value.trim();
-                if (!v) { nicknameInput.value = window.playerNickname; return; }
-                if (v === window.playerNickname) return; // 無變化
-
-                // 查重
-                const available = await Auth.checkNickname(v);
-                if (!available) {
-                    toast('這名稱已被使用', 'error');
-                    nicknameInput.value = window.playerNickname; // 恢復舊名
-                    return;
-                }
-
-                // 存到 Firebase
-                const res = await Auth.updateNickname(v);
-                if (res.ok) {
-                    window.playerNickname = v;
-                    localStorage.setItem('hua_nickname', v);
-                    toast('名號已更新為「' + v + '」', 'success');
-                    // 同步更新左上頭像的名稱
-                    const avatarNameEl = document.getElementById('player-avatar-name');
-                    if (avatarNameEl) avatarNameEl.textContent = v;
-                } else {
-                    toast(res.err || '更新失敗', 'error');
-                    nicknameInput.value = window.playerNickname;
-                }
-            });
-        }
+        // 名號輸入已移至頭像視圖 (profile modal)
 
         // ── 互動右鍵選單 ──
         const ctxMenu = document.getElementById('chat-context-menu');
