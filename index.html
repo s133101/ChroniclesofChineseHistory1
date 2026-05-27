@@ -15,13 +15,13 @@
     <meta http-equiv="Expires" content="0">
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="protect.js?v=20260527j"></script>
-    <script src="auth.js?v=20260527j"></script>
+    <script src="protect.js?v=20260527k"></script>
+    <script src="auth.js?v=20260527k"></script>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css?v=20260527j">
+    <link rel="stylesheet" href="styles.css?v=20260527k">
 </head>
 <body>
 
@@ -259,16 +259,54 @@
                 <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
                 <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
             </div>
-            <button id="btn-tutorial" class="lobby-btn hidden" onclick="window._startTutorial()" style="background:linear-gradient(135deg, #1a2a3a, #163050); color:#87ceeb; border-color:#1e4060; margin-bottom:2px;">🎓 新手教學（互動式入門）</button>
-            <button id="btn-vs-ai" class="lobby-btn">🤖 對決 智能 AI (單機)</button>
-            <button id="btn-matchmaking" class="lobby-btn" style="background:linear-gradient(135deg, #1a3a1a, #2d6a2d); color:#7dff7d; border-color:#2d6a2d; margin-top:10px;">⚔️ 配對 PVP（配對玩家）</button>
-            <button id="btn-spectate" class="lobby-btn hidden" onclick="window._openSpectateModal()" style="background:linear-gradient(135deg, #1a1a3a, #2d2d6a); color:#aaaaff; border-color:#2d2d6a; margin-top:10px;">🔭 觀戰（旁觀進行中的對局）</button>
-            <button id="btn-create-room" class="lobby-btn" style="background:linear-gradient(135deg, #1e3c72, #2a5298); color:#fff; border-color:#1e3c72; margin-top:10px;">🌐 建立戰鬥房間</button>
-            <div style="display:flex; margin-top:10px; gap:10px;">
-                <input id="join-code-input" maxlength="5" placeholder="輸入 5 位代碼" style="flex:1; padding:15px; border-radius:8px; border:1px solid var(--border); background:#111; color:#fff; font-size:18px; text-align:center; font-family:monospace;">
-                <button id="btn-join-room" class="lobby-btn" style="width:120px; margin-top:0;">加入</button>
+            <button id="btn-tutorial" class="lobby-btn hidden" onclick="window._startTutorial()" style="background:linear-gradient(135deg, #1a2a3a, #163050); color:#87ceeb; border-color:#1e4060; margin-bottom:8px;">🎓 新手教學（互動式入門）</button>
+            <button id="btn-battle-open" class="lobby-btn" onclick="window._openBattleModal()" style="background:linear-gradient(135deg,#5c0000,#8b0000); color:#ffd700; border-color:#c0392b; font-size:17px; font-weight:900; letter-spacing:3px; padding:18px;">⚔️ 戰　鬥</button>
+            <button id="btn-spectate" class="lobby-btn hidden" onclick="window._openSpectateModal()" style="background:linear-gradient(135deg, #1a1a3a, #2d2d6a); color:#aaaaff; border-color:#2d2d6a; margin-top:8px;">🔭 觀戰（旁觀進行中的對局）</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     戰鬥模式選擇 Modal
+     ════════════════════════════════════════════════════════════ -->
+<div id="battle-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:8000;display:flex;align-items:center;justify-content:center;">
+    <div style="width:min(440px,94vw);background:linear-gradient(180deg,#0e0a04,#0d1117);border:1px solid #3a2800;border-radius:18px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.95);">
+
+        <!-- Header -->
+        <div style="padding:22px 28px 16px;background:linear-gradient(135deg,#200e00,#2e1600);border-bottom:1px solid #3a2000;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <div style="color:#ffd700;font-size:20px;font-weight:900;letter-spacing:4px;">⚔️ 選擇對戰模式</div>
+                <div style="color:#886644;font-size:12px;margin-top:4px;">征戰四方，問鼎天下</div>
             </div>
-            <div id="lobby-error" class="hidden" style="margin-top:15px; color:#e74c3c; font-weight:700;"></div>
+            <button onclick="window._closeBattleModal()" style="background:none;border:none;color:#664422;font-size:26px;cursor:pointer;line-height:1;padding:0 4px;transition:color .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#664422'">×</button>
+        </div>
+
+        <!-- Options -->
+        <div style="padding:22px 26px;display:flex;flex-direction:column;gap:12px;">
+
+            <!-- ① 對決智能AI -->
+            <button id="btn-vs-ai" class="lobby-btn" style="margin:0;background:linear-gradient(135deg,#0c1a2e,#163050);color:#87ceeb;border-color:#1e4060;font-size:15px;padding:15px 20px;text-align:left;">
+                🤖 對決智能 AI（單機）
+            </button>
+
+            <!-- ② 配對PVP -->
+            <button id="btn-matchmaking" class="lobby-btn" style="margin:0;background:linear-gradient(135deg,#0a1f0a,#163616);color:#7dff7d;border-color:#2a5a2a;font-size:15px;padding:15px 20px;text-align:left;">
+                ⚔️ 配對 PVP（配對玩家）
+            </button>
+
+            <!-- ③ 建立戰鬥房間 ＋ 加入 -->
+            <div style="border-top:1px solid #2a1800;padding-top:14px;margin-top:2px;display:flex;flex-direction:column;gap:10px;">
+                <button id="btn-create-room" class="lobby-btn" style="margin:0;background:linear-gradient(135deg,#0a1830,#122040);color:#8ab4f8;border-color:#1e3c72;font-size:15px;padding:15px 20px;text-align:left;">
+                    🌐 建立戰鬥房間
+                </button>
+                <div style="display:flex;gap:10px;align-items:stretch;">
+                    <input id="join-code-input" maxlength="5" placeholder="輸入 5 位代碼"
+                           style="flex:1;min-width:0;padding:13px 10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font-size:18px;text-align:center;font-family:monospace;letter-spacing:5px;">
+                    <button id="btn-join-room" class="lobby-btn" style="flex-shrink:0;width:78px;margin:0;padding:0;font-size:14px;font-weight:700;">加入</button>
+                </div>
+            </div>
+
+            <div id="lobby-error" class="hidden" style="color:#e74c3c;font-weight:700;font-size:13px;text-align:center;padding:2px 0;"></div>
         </div>
     </div>
 </div>
@@ -761,9 +799,9 @@
     © 2026 linus622wang@gmail.com
 </div>
 
-<script src="cards.js?v=20260527j"></script>
+<script src="cards.js?v=20260527k"></script>
 <script src="network.js"></script>
-<script src="game.js?v=20260527j"></script>
-<script src="lobby.js?v=20260527j"></script>
+<script src="game.js?v=20260527k"></script>
+<script src="lobby.js?v=20260527k"></script>
 </body>
 </html>

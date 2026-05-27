@@ -1494,6 +1494,10 @@
     let pendingJoinCode = null;
 
     function _openMonarchSelect(actionType, joinCode) {
+        // 開啟君主選擇前，先關閉戰鬥 Modal（若仍開著）
+        const _bm = document.getElementById('battle-modal');
+        if (_bm) _bm.classList.add('hidden');
+
         pendingAction = actionType;
         pendingJoinCode = joinCode;
         const modal = document.getElementById('monarch-select-modal');
@@ -2393,6 +2397,9 @@
 
     function _showLobbyScreen() {
         _switchScreen('lobby-screen');
+        // 返回大廳時確保戰鬥 Modal 已關閉
+        const bm = document.getElementById('battle-modal');
+        if (bm) bm.classList.add('hidden');
         // 房間頻道：每場結束返回大廳時清除（下次切換到房間頻道會自動刷新）
         localStorage.removeItem('hua_chat_room');
     }
@@ -3636,6 +3643,24 @@
      * 結束教學
      * @param {boolean} goLobby - true: 返回大廳；false: 繼續對局
      */
+    // ══════════════════════════════════════════════════════════════
+    //  ⚔️ 戰鬥 Modal 開關
+    // ══════════════════════════════════════════════════════════════
+    window._openBattleModal = function() {
+        const modal = document.getElementById('battle-modal');
+        if (modal) modal.classList.remove('hidden');
+        // 清除上一次的輸入與錯誤訊息
+        const inp = document.getElementById('join-code-input');
+        if (inp) inp.value = '';
+        const err = document.getElementById('lobby-error');
+        if (err) err.classList.add('hidden');
+    };
+
+    window._closeBattleModal = function() {
+        const modal = document.getElementById('battle-modal');
+        if (modal) modal.classList.add('hidden');
+    };
+
     window._endTutorial = function(goLobby) {
         clearInterval(_tutWatcher);
         _tutClearHighlight();
