@@ -416,18 +416,29 @@ function renderLayerGrid(layers, modules) {
 }
 
 // ── Render: Online ───────────────────────────────────────
+// 與 lobby.js _getOnlineUsers 保持一致：90 秒內有心跳才算在線
+const ONLINE_TTL = 90000;
+
 function renderOnline(data) {
-    _onlineMap = data || {};
-    const cnt  = Object.keys(_onlineMap).length;
-    const ov   = document.getElementById('online-val');
-    const on   = document.getElementById('online-names');
+    if (data !== undefined) _onlineMap = data || {};
+    const now  = Date.now();
+    // 只計算 90s 內有心跳的條目，並保留 username(key) 供 nickname 缺失時顯示
+    const active = Object.entries(_onlineMap)
+        .filter(([, v]) => v && (now - (v.lastSeen || 0)) < ONLINE_TTL);
+    const cnt = active.length;
+    const ov  = document.getElementById('online-val');
+    const on  = document.getElementById('online-names');
     if (ov) { ov.textContent = cnt; ov.style.color = cnt > 0 ? '#00ff88' : '#2a6a4a'; }
     if (on) {
-        const list = Object.values(_onlineMap)
-            .map(u => u.nickname || '?').slice(0, 6);
-        on.textContent = list.join('、') + (cnt > 6 ? '...' : '');
+        if (cnt === 0) { on.textContent = '─'; return; }
+        // nickname 缺失時退回顯示 username(key)
+        const list = active.map(([k, v]) => v.nickname || k).slice(0, 6);
+        on.textContent = list.join('、') + (cnt > 6 ? '…' : '');
     }
 }
+
+// 每 30s 重新渲染一次，讓超過 90s 沒心跳的條目自動從畫面消失
+setInterval(() => renderOnline(), 30000);
 
 // ── Render: Logs ─────────────────────────────────────────
 const LV_BG  = { info:'rgba(0,255,136,0.02)', warn:'rgba(255,204,0,0.04)',  critical:'rgba(255,68,68,0.06)' };
