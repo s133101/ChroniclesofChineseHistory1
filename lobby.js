@@ -3705,7 +3705,7 @@
         clearInterval(_tutWatcher);
         _tutClearHighlight();
         const panel = document.getElementById('tut-panel');
-        if (panel) { panel.style.opacity = '0'; panel.style.transform = 'translateX(-50%) translateY(10px)'; setTimeout(() => panel.remove(), 300); }
+        if (panel) { panel.style.opacity = '0'; panel.style.transform = 'translateY(10px)'; setTimeout(() => panel.remove(), 300); }
 
         window.TUTORIAL_MODE = false;
 

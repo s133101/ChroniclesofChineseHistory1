@@ -3558,11 +3558,10 @@ body {
 /* 教學面板 */
 #tut-panel {
     position: fixed;
-    bottom: 170px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 24px;
+    left: 24px;
     z-index: 500000;
-    width: min(520px, 94vw);
+    width: min(420px, calc(100vw - 48px));
     background: linear-gradient(135deg, #0a1520, #10202e, #0a1520);
     border: 2px solid var(--gold);
     border-radius: 18px;
@@ -3573,8 +3572,8 @@ body {
     transition: opacity 0.3s ease, transform 0.3s ease;
 }
 @keyframes tutSlideUp {
-    from { opacity:0; transform: translateX(-50%) translateY(20px); }
-    to   { opacity:1; transform: translateX(-50%) translateY(0); }
+    from { opacity:0; transform: translateY(20px); }
+    to   { opacity:1; transform: translateY(0); }
 }
 #tut-panel .tut-step-badge {
     display: inline-block;
