@@ -416,13 +416,15 @@ function renderLayerGrid(layers, modules) {
 }
 
 // ── Render: Online ───────────────────────────────────────
-// 與 lobby.js _getOnlineUsers 保持一致：90 秒內有心跳才算在線
-const ONLINE_TTL = 90000;
+// 心跳間隔 30s，TTL 設為 150s（= 5 個心跳週期）
+// 留足夠緩衝防止 Firebase SSE 傳播延遲 + monitor setInterval 時序交錯導致瞬間歸零
+const ONLINE_HEARTBEAT = 30000;  // 與 lobby.js _startOnlineHeartbeat 一致
+const ONLINE_TTL       = 150000; // 5× heartbeat = 充足的容錯視窗
 
 function renderOnline(data) {
     if (data !== undefined) _onlineMap = data || {};
     const now  = Date.now();
-    // 只計算 90s 內有心跳的條目，並保留 username(key) 供 nickname 缺失時顯示
+    // 只計算 TTL 內有心跳的條目，nickname 缺失時退回顯示 username(key)
     const active = Object.entries(_onlineMap)
         .filter(([, v]) => v && (now - (v.lastSeen || 0)) < ONLINE_TTL);
     const cnt = active.length;
@@ -431,14 +433,14 @@ function renderOnline(data) {
     if (ov) { ov.textContent = cnt; ov.style.color = cnt > 0 ? '#00ff88' : '#2a6a4a'; }
     if (on) {
         if (cnt === 0) { on.textContent = '─'; return; }
-        // nickname 缺失時退回顯示 username(key)
         const list = active.map(([k, v]) => v.nickname || k).slice(0, 6);
         on.textContent = list.join('、') + (cnt > 6 ? '…' : '');
     }
 }
 
-// 每 30s 重新渲染一次，讓超過 90s 沒心跳的條目自動從畫面消失
-setInterval(() => renderOnline(), 30000);
+// 每 60s 重新渲染一次（2× heartbeat），清除真正長時間沒心跳的殭屍條目
+// 不用 30s 以免與心跳週期完全同步，造成時序邊界問題
+setInterval(() => renderOnline(), 60000);
 
 // ── Render: Logs ─────────────────────────────────────────
 const LV_BG  = { info:'rgba(0,255,136,0.02)', warn:'rgba(255,204,0,0.04)',  critical:'rgba(255,68,68,0.06)' };
