@@ -429,6 +429,15 @@ const Auth = (() => {
         return await _fbGet('/battle_records/' + _cur.username) || [];
     }
 
+    // ── 密碼驗證（不觸發驗證碼流程，供管理員密碼核對用）──────────
+    async function verifyPassword(username, password) {
+        const uname = username.toLowerCase().trim();
+        const user  = await _fbGet('/users/' + uname);
+        if (!user || !user.password_hash) return false;
+        const hash = await _hash(password);
+        return user.password_hash === hash;
+    }
+
     // ── 取得全服排行榜資料 ────────────────────────────────────────
     async function getLeaderboardData() {
         window.HuaXiaSecurity?.logDbAccess('READ', '/users (全服排行榜)', _cur?.username || 'guest');
@@ -471,6 +480,7 @@ const Auth = (() => {
         current,
         recordBattle,
         getBattleHistory,
-        getLeaderboardData
+        getLeaderboardData,
+        verifyPassword
     };
 })();

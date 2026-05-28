@@ -1,5 +1,5 @@
 // ============================================================
-//  華夏風雲錄 — security.js  v20260527p
+//  華夏風雲錄 — security.js  v20260528a
 //  多層防火牆 · 安全監控中心 · 系統日誌 · 入侵預警
 //  Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
 // ============================================================
@@ -60,11 +60,14 @@
     ];
 
     const _ATTACK_PATS = [
-        { n: 'XSS',   re: /<script|javascript:|on\w+\s*=|<iframe|<svg.*on|eval\s*\(|document\.\w/i },
-        { n: 'SQL',   re: /\bUNION\b.*\bSELECT\b|\bDROP\b\s+\bTABLE\b|\bINSERT\b\s+\bINTO\b/i    },
-        { n: 'PATH',  re: /\.\.[/\\]/                                                               },
-        { n: 'PROTO', re: /^(javascript|data|vbscript):/i                                           },
-        { n: 'CMD',   re: /[;&|`$]|\bexec\b|\bsystem\b|\bpasswd\b/i                                },
+        { n: 'XSS',      re: /<script|javascript:|on\w+\s*=|<iframe|<svg.*on|eval\s*\(|document\.\w/i },
+        { n: 'SQL',      re: /\bUNION\b.*\bSELECT\b|\bDROP\b\s+\bTABLE\b|\bINSERT\b\s+\bINTO\b/i    },
+        { n: 'PATH',     re: /\.\.[/\\]/                                                               },
+        { n: 'PROTO',    re: /^(javascript|data|vbscript):/i                                           },
+        { n: 'CMD',      re: /[;&|`$]|\bexec\b|\bsystem\b|\bpasswd\b/i                                },
+        // P2 新增攻擊模式
+        { n: 'TEMPLATE', re: /\{\{[\s\S]*?\}\}/                                                        }, // Server-Side 模板注入
+        { n: 'NULLBYTE', re: /\x00/                                                                    }, // Null Byte 注入
     ];
 
     // ════════════════════════════════════════════════════════
@@ -101,6 +104,13 @@
     // ── 日誌斷層追蹤 ────────────────────────────────────────
     let _lastLogTime  = Date.now();  // 上次寫入日誌的時間戳
     let _gapAlertSent = false;       // 避免重複發相同斷層警報
+
+    // ── P1：L2 記憶體雙重速率鎖（清除 localStorage 無法繞過）────
+    const _memRateLimit = {};
+
+    // ── P1：郵件告警節流（同主旨 5 分鐘內只發一封）────────────
+    const _emailThrottle   = new Map();
+    const _EMAIL_THROTTLE  = 5 * 60000;
 
     // ════════════════════════════════════════════════════════
     //  § 2  工具 helpers
@@ -154,6 +164,13 @@
     // ════════════════════════════════════════════════════════
     function _sendEmail(subject, body) {
         if (typeof emailjs === 'undefined') return;
+        // P1 節流：同主旨 5 分鐘內只發一封，防止攻擊洪流耗盡 EmailJS 額度
+        const last = _emailThrottle.get(subject) || 0;
+        if (Date.now() - last < _EMAIL_THROTTLE) {
+            console.log(`[🛡 FW] 郵件節流：「${subject}」距上次發送僅 ${Math.round((Date.now()-last)/1000)}s，略過`);
+            return;
+        }
+        _emailThrottle.set(subject, Date.now());
         emailjs.send(_EJ_SVC, _EJ_TMPL, {
             action    : `🛡 [安全告警] ${subject}\n\n${body}`,
             event_time: _ts(),
@@ -300,6 +317,7 @@
     function validateInput(type, value) {
         if (typeof value !== 'string') value = String(value ?? '');
 
+        // ① 掃描原始輸入
         for (const { n, re } of _ATTACK_PATS) {
             if (re.test(value)) {
                 _layerStatus.L1 = 'error';
@@ -309,6 +327,33 @@
                 _addThreat(35);
                 return { valid: false, threat: n, msg: '偵測到非法輸入，已記錄並通報管理員' };
             }
+        }
+
+        // ② P2：URL 解碼後再掃描（防止 %3Cscript%3E 等編碼繞過）
+        try {
+            const urlDecoded = decodeURIComponent(value);
+            if (urlDecoded !== value) {
+                for (const { n, re } of _ATTACK_PATS) {
+                    if (re.test(urlDecoded)) {
+                        _layerStatus.L1 = 'error';
+                        const msg = `${type} 欄位偵測到 URL 編碼繞過攻擊 ${n}（原始: ${value.slice(0, 40)}）`;
+                        logIntrusion(`L1 攔截 — ${msg}`);
+                        _log(LEVEL.CRITICAL, CAT.L1, msg, true);
+                        _addThreat(40);
+                        return { valid: false, threat: `ENCODED_${n}`, msg: '偵測到非法輸入，已記錄並通報管理員' };
+                    }
+                }
+            }
+        } catch { /* decodeURIComponent 失敗代表格式本身異常，允許通過 */ }
+
+        // ③ P2：CRLF 注入偵測（聊天以外的欄位不允許換行）
+        if (type !== 'chat' && /[\r\n]/.test(value)) {
+            _layerStatus.L1 = 'error';
+            const msg = `${type} 欄位偵測到 CRLF 注入`;
+            logIntrusion(`L1 攔截 — ${msg}`);
+            _log(LEVEL.CRITICAL, CAT.L1, msg, true);
+            _addThreat(30);
+            return { valid: false, threat: 'CRLF', msg: '偵測到非法輸入，已記錄並通報管理員' };
         }
 
         switch (type) {
@@ -338,31 +383,69 @@
         const cfg = RATE_CFG[type];
         if (!cfg) return { allowed: true, remaining: 999 };
 
-        const key = `fw_rl_${type}`, now = Date.now();
+        const now = Date.now();
+
+        // ── P1 記憶體層：清除 localStorage 也無法重置 ───────────
+        if (!_memRateLimit[type]) _memRateLimit[type] = { count: 0, w: now };
+        const mem = _memRateLimit[type];
+        if (now - mem.w > cfg.ms) { mem.count = 0; mem.w = now; }
+        mem.count++;
+
+        // ── localStorage 層：跨頁面刷新持久化 ─────────────────
+        const key = `fw_rl_${type}`;
         let d;
         try { d = JSON.parse(localStorage.getItem(key) || 'null'); } catch { d = null; }
         if (!d || now - d.w > cfg.ms) d = { count: 0, w: now };
         d.count++;
         try { localStorage.setItem(key, JSON.stringify(d)); } catch {}
 
-        const allowed = d.count <= cfg.max;
+        // ── 取兩者較高計數（更嚴格，清 localStorage 也無效）────
+        const effectiveCount = Math.max(mem.count, d.count);
+        const allowed = effectiveCount <= cfg.max;
+
         if (!allowed) {
             _layerStatus.L2 = 'warn';
-            _log(LEVEL.WARN, CAT.L2, `${cfg.label} 速率超限（${d.count}/${cfg.max}）`);
+            _log(LEVEL.WARN, CAT.L2,
+                `${cfg.label} 速率超限（${effectiveCount}/${cfg.max}，記憶體:${mem.count} 本地:${d.count}）`);
             _addThreat(10);
-            if (d.count >= cfg.max * 2) {
+            if (effectiveCount >= cfg.max * 2) {
                 _layerStatus.L2 = 'error';
-                logIntrusion(`L2 速率嚴重超限 — ${cfg.label}: ${d.count}/${cfg.max}`);
+                logIntrusion(`L2 速率嚴重超限 — ${cfg.label}: ${effectiveCount}/${cfg.max}`);
             }
         } else if (_layerStatus.L2 === 'error') {
             _layerStatus.L2 = 'warn';
         }
-        return { allowed, remaining: Math.max(0, cfg.max - d.count), count: d.count, max: cfg.max };
+        return { allowed, remaining: Math.max(0, cfg.max - effectiveCount), count: effectiveCount, max: cfg.max };
     }
 
     // ════════════════════════════════════════════════════════
     //  § 8  防火牆 L3 — 行為分析
     // ════════════════════════════════════════════════════════
+
+    // P2：無頭瀏覽器 / 自動化工具偵測（在 init() 呼叫一次）
+    function _detectHeadless() {
+        const checks = [
+            ['webdriver',    () => navigator.webdriver === true],
+            ['phantom',      () => !!(window.phantom || window._phantom)],
+            ['nightmare',    () => !!window.__nightmare],
+            ['headlessUA',   () => /HeadlessChrome|PhantomJS/i.test(navigator.userAgent)],
+            ['noPlugins',    () => navigator.plugins?.length === 0 && !navigator.userAgent.includes('Firefox')],
+            ['noLanguages',  () => !navigator.languages || navigator.languages.length === 0],
+        ];
+        const hit = checks.filter(([, fn]) => { try { return fn(); } catch { return false; } });
+        if (hit.length >= 2) {
+            _layerStatus.L3 = 'error';
+            _l3Healthy = false;
+            const features = hit.map(([n]) => n).join(', ');
+            logIntrusion(`L3 偵測到無頭瀏覽器/自動化工具（${hit.length} 項特徵：${features}）`);
+            _addThreat(45);
+        } else if (hit.length === 1) {
+            _layerStatus.L3 = 'warn';
+            _log(LEVEL.WARN, CAT.L3, `L3 可疑自動化特徵：${hit[0][0]}`);
+            _addThreat(15);
+        }
+    }
+
     function trackBehavior(action) {
         const now = Date.now();
         if (!_behaviorTrack[action]) _behaviorTrack[action] = [];
@@ -858,13 +941,16 @@
 
         _resolveIp().then(ip => {
             const now = new Date().toLocaleString('zh-TW');
-            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260527p`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528a`);
             _log(LEVEL.INFO, CAT.SYSTEM, `客戶端 IP：${ip} ｜ 啟動時間：${now}`);
-            _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1 輸入驗證 · L2 速率限制 · L3 行為分析 · L4 資料完整性 · L5 會話驗證`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1(+URL解碼/CRLF) · L2(記憶體雙鎖) · L3(無頭偵測) · L4 資料完整性 · L5 會話驗證`);
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
             const ipEl = document.getElementById('mon-ip-display');
             if (ipEl) ipEl.textContent = ip;
         });
+
+        // P2：無頭瀏覽器偵測（啟動後 500ms 執行，等 DOM 穩定）
+        setTimeout(() => _detectHeadless(), 500);
 
         _updateLight();
 

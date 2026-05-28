@@ -1,0 +1,89 @@
+{
+  "rules": {
+
+    "users": {
+      ".read": true,
+      "$uid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['password_hash','email','role','createdAt']) && newData.child('password_hash').isString() && newData.child('email').isString() && newData.child('createdAt').isNumber() && (newData.child('role').val() === 'player' || ($uid === 'linus0622' && newData.child('role').val() === 'admin') || ($uid === 'wang' && newData.child('role').val() === 'developer'))"
+      }
+    },
+
+    "auth_codes": {
+      "$uid": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['code','expires']) && newData.child('code').isString() && newData.child('code').val().length === 6 && newData.child('expires').isNumber() && newData.child('expires').val() > now"
+      }
+    },
+
+    "battle_records": {
+      "$uid": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.isArray()"
+      }
+    },
+
+    "seasons": {
+      ".read": true,
+      "$sid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['endTime'])"
+      }
+    },
+
+    "online": {
+      ".read": true,
+      "$uid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['nickname','lastSeen']) && newData.child('lastSeen').isNumber()"
+      }
+    },
+
+    "battle_invites": {
+      "$uid": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['from','time']) && newData.child('time').isNumber()"
+      }
+    },
+
+    "spectate": {
+      ".read": true,
+      ".write": true
+    },
+
+    "matchmaking": {
+      ".read": true,
+      "$uid": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['nickname','joinedAt']) && newData.child('joinedAt').isNumber()"
+      }
+    },
+
+    "sys_logs": {
+      ".read": true,
+      "$date": {
+        "$id": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['t','lv','cat','msg']) && newData.child('t').isNumber() && newData.child('lv').isString() && newData.child('cat').isString() && newData.child('msg').isString()"
+        }
+      }
+    },
+
+    "security_state": {
+      ".read": true,
+      "snapshot": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['status','threatScore','updatedAt']) && (newData.child('status').val() === 'green' || newData.child('status').val() === 'yellow' || newData.child('status').val() === 'red') && newData.child('threatScore').isNumber() && newData.child('updatedAt').isNumber()"
+      }
+    },
+
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+
+  }
+}

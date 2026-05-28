@@ -1176,20 +1176,33 @@
 
         const btnAdminVerify = document.getElementById('btn-admin-verify');
         if (btnAdminVerify) {
-            btnAdminVerify.onclick = () => {
+            btnAdminVerify.onclick = async () => {
                 const pwd = document.getElementById('admin-pwd-input').value;
-                if (pwd === '888888') {
+                if (!pwd) return;
+
+                // 🛡 P0 修正：不再明文比對，改用 Firebase 雜湊驗證
+                btnAdminVerify.disabled  = true;
+                btnAdminVerify.textContent = '⏳ 驗證中…';
+
+                const ok = (typeof Auth !== 'undefined') &&
+                           await Auth.verifyPassword('linus0622', pwd);
+
+                btnAdminVerify.disabled  = false;
+                btnAdminVerify.textContent = '驗證';
+
+                if (ok) {
                     document.getElementById('admin-auth-modal').classList.add('hidden');
                     toast('🔑 最高權限已解鎖！', 'success');
-                    
+                    window.HuaXiaSecurity?.logOps('管理員身分驗證成功');
+
                     // 升級為專屬管理員的發布天下皇榜
                     const devCard = document.getElementById('dev-tier-card');
                     if (devCard) devCard.style.display = 'block';
-                    
+
                     annTitle.textContent = '🚀 專屬管理員發布';
                     annTitle.style.color = '#9f7aea';
                     document.querySelector('#announce-modal .modal-content').style.borderColor = '#9f7aea';
-                    
+
                     // 自動選擇開發者階級
                     annCards.forEach(c => c.classList.remove('active'));
                     if (devCard) {
@@ -1201,6 +1214,7 @@
                     annConfirm.style.background = 'linear-gradient(135deg, #6b46c1, #9f7aea)';
                 } else {
                     toast('❌ 密碼錯誤，拒絕存取！', 'danger');
+                    window.HuaXiaSecurity?.recordEvent('warn', 'security', '管理員密碼驗證失敗');
                 }
             };
         }

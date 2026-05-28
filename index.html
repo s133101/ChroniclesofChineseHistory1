@@ -14,14 +14,32 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>華夏風雲錄 — 歷史卡牌對戰</title>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="protect.js?v=20260527p"></script>
-    <script src="auth.js?v=20260527p"></script>
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+
+    <!-- P3：CSP — 限制資料外送目標，防止 XSS 資料竊取 -->
+    <meta http-equiv="Content-Security-Policy"
+          content="connect-src 'self'
+                   https://*.firebasedatabase.app
+                   https://api64.ipify.org
+                   https://api.emailjs.com
+                   https://fonts.googleapis.com
+                   https://fonts.gstatic.com
+                   https://unpkg.com
+                   https://cdn.jsdelivr.net;
+                   object-src 'none';">
+
+    <!-- P3：SRI — 校驗 CDN 腳本完整性，防止供應鏈攻擊 -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"
+            integrity="sha384-SALc35EccAf6RzGw4iNsyj7kTPr33K7RoGzYu+7heZhT8s0GZouafRiCg1qy44AS"
+            crossorigin="anonymous"></script>
+    <script src="protect.js?v=20260528a"></script>
+    <script src="auth.js?v=20260528a"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"
+            integrity="sha384-QfGw0R4npwfR5dPhK7V7G0NNR+eDrkBOqtXT22mGx56CokD6Gx18KyAQMtDQbQne"
+            crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="styles.css?v=20260527p">
+    <link rel="stylesheet" href="styles.css?v=20260528a">
     <style>
         /* 防火牆指示燈脈衝 */
         @keyframes fw-pulse {
@@ -334,7 +352,7 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════
-     🛡 安全監控中心 Modal  (v20260527p)
+     🛡 安全監控中心 Modal  (v20260528a)
      ════════════════════════════════════════════════════════════ -->
 <div id="security-monitor" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9300;display:flex;align-items:center;justify-content:center;">
     <div style="width:min(780px,98vw);max-height:90vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#030d06,#030a0d);border:1px solid #0a2010;border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.97),0 0 60px rgba(0,255,136,0.04),inset 0 1px 0 rgba(0,255,136,0.05);">
@@ -916,10 +934,10 @@
     © 2026 linus622wang@gmail.com
 </div>
 
-<script src="cards.js?v=20260527p"></script>
-<script src="network.js?v=20260527p"></script>
-<script src="game.js?v=20260527p"></script>
-<script src="security.js?v=20260527p"></script>
-<script src="lobby.js?v=20260527p"></script>
+<script src="cards.js?v=20260528a"></script>
+<script src="network.js?v=20260528a"></script>
+<script src="game.js?v=20260528a"></script>
+<script src="security.js?v=20260528a"></script>
+<script src="lobby.js?v=20260528a"></script>
 </body>
 </html>
