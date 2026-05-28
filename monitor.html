@@ -439,12 +439,13 @@ function renderLogs() {
     const el = document.getElementById('log-stream');
     if (!el) return;
 
-    // 滾動位置判斷
+    // 滾動位置判斷（最新訊息在最下面，距底 < 80px 才自動捲動）
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
 
-    let list = [..._allLogs].sort((a, b) => b.t - a.t);
+    // 升冪排序：舊 → 新，最新訊息顯示在最下面
+    let list = [..._allLogs].sort((a, b) => a.t - b.t);
     if (_logFilter !== 'all') list = list.filter(e => e.lv === _logFilter);
-    list = list.slice(0, 200);
+    list = list.slice(-200); // 取最新 200 筆
 
     // 更新計數
     const countEl = document.getElementById('log-count');
@@ -469,6 +470,7 @@ function renderLogs() {
         </div>`;
     }).join('');
 
+    // 捲動到底部（最新訊息）
     if (_autoScroll && atBottom) {
         el.scrollTop = el.scrollHeight;
     }
