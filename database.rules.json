@@ -44,7 +44,7 @@
       "$uid": {
         ".read": true,
         ".write": true,
-        ".validate": "newData.hasChildren(['from','time']) && newData.child('time').isNumber()"
+        ".validate": "newData.hasChildren(['fromUsername','timestamp']) && newData.child('timestamp').isNumber()"
       }
     },
 
@@ -57,7 +57,7 @@
       ".read": true,
       "$uid": {
         ".write": true,
-        ".validate": "newData.hasChildren(['nickname','joinedAt']) && newData.child('joinedAt').isNumber()"
+        ".validate": "newData.hasChildren(['nickname','timestamp']) && newData.child('timestamp').isNumber()"
       }
     },
 

@@ -775,7 +775,7 @@
             if (mode === 'global') {
                 let gHist = JSON.parse(localStorage.getItem('hua_chat_global') || '[]');
                 gHist.push(msgObj);
-                // 只保留最近 10 分鐘
+                // 只保留最近 30 分鐘
                 gHist = gHist.filter(m => (Date.now() - m.time) < CHAT_GLOBAL_TTL);
                 localStorage.setItem('hua_chat_global', JSON.stringify(gHist));
             } else if (mode === 'room') {
@@ -904,7 +904,7 @@
         if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
         // ── 自動刷新計時器 ──────────────────────────────────────────
-        // 全域頻道：每 10 分鐘自動重新渲染（清除超時訊息）
+        // 全域頻道：每 30 分鐘自動重新渲染（清除超時訊息）
         setInterval(() => {
             if (_chatMode === 'global') {
                 window._renderChatHistory('global');
