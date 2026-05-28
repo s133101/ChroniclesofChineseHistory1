@@ -469,6 +469,12 @@
                 _monBtn.classList.add('hidden');
             }
         }
+        // 防火牆指示燈：僅 claude 和 wang 帳號顯示
+        const _fwIndicator = document.getElementById('fw-indicator');
+        if (_fwIndicator) {
+            const _allowedFw = ['claude', 'wang'];
+            _fwIndicator.style.display = _allowedFw.includes(user.username) ? 'flex' : 'none';
+        }
         const _specBtn = document.getElementById('btn-spectate');
         if (_specBtn) _specBtn.classList.remove('hidden');
         const _tutBtn = document.getElementById('btn-tutorial');
