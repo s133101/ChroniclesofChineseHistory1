@@ -112,6 +112,9 @@
     const _emailThrottle   = new Map();
     const _EMAIL_THROTTLE  = 5 * 60000;
 
+    // ── 廣播節流（最多每 5s 寫一次 Firebase，防止過量寫入）────
+    let _lastBroadcast = 0;
+
     // ════════════════════════════════════════════════════════
     //  § 2  工具 helpers
     // ════════════════════════════════════════════════════════
@@ -247,7 +250,34 @@
         if (_status !== prev) {
             _statusCbs.forEach(cb => { try { cb(_status, _threatScore); } catch {} });
             _updateLight();
+            _broadcastState(); // 狀態改變時立即廣播
         }
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  廣播安全狀態至 Firebase（供 Monitor APP 即時讀取）
+    // ════════════════════════════════════════════════════════
+    function _broadcastState() {
+        const now = Date.now();
+        if (now - _lastBroadcast < 5000) return; // 節流：最多每 5s 一次
+        _lastBroadcast = now;
+        const snap = {
+            status      : _status,
+            threatScore : _threatScore,
+            intrusionCnt: _intrusionCnt,
+            totalLogs   : Object.values(_logs).reduce((s, a) => s + a.length, 0),
+            layers      : { ..._layerStatus },
+            modules     : {
+                auth : typeof window.Auth !== 'undefined' ? 'ok' : 'error',
+                db   : _fbReachable                       ? 'ok' : 'error',
+                email: typeof emailjs     !== 'undefined' ? 'ok' : 'warn',
+                gap  : (now - _lastLogTime) > 10 * 60000 ? 'error'
+                     : (now - _lastLogTime) >  5 * 60000 ? 'warn' : 'ok',
+            },
+            clientIp : _clientIp || '?',
+            updatedAt: now,
+        };
+        _fbPatch('/security_state/snapshot', snap);
     }
 
     // ── 每 60s 威脅分數自然衰減 ──────────────────────────────
@@ -529,6 +559,9 @@
     }
 
     setInterval(() => { if (_sessionFp) validateSession(); }, 30000);
+
+    // 每 30s 定期廣播狀態（心跳，保持 Monitor APP 資料新鮮）
+    setInterval(() => { if (_initialized) _broadcastState(); }, 30000);
 
     // ════════════════════════════════════════════════════════
     //  § 11  暴力破解防護
@@ -947,6 +980,7 @@
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
             const ipEl = document.getElementById('mon-ip-display');
             if (ipEl) ipEl.textContent = ip;
+            setTimeout(() => _broadcastState(), 2000); // IP 取得後廣播初始狀態
         });
 
         // P2：無頭瀏覽器偵測（啟動後 500ms 執行，等 DOM 穩定）

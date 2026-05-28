@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡 安全監控中心 — 華夏風雲錄</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #020c05;
+            color: #7aaa8a;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 13px;
+            min-height: 100vh;
+            padding: 14px 16px 20px;
+        }
+
+        /* ── Header ─────────────────────────────────────────── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, rgba(0,255,136,0.04), rgba(0,255,136,0.02));
+            border: 1px solid rgba(0,255,136,0.14);
+            border-radius: 12px;
+            margin-bottom: 14px;
+        }
+        .header-title {
+            font-size: 17px;
+            font-weight: 900;
+            color: #00ff88;
+            letter-spacing: 3px;
+        }
+        .header-sub {
+            font-size: 9px;
+            color: #2a6a4a;
+            letter-spacing: 2px;
+            margin-top: 3px;
+            text-transform: uppercase;
+        }
+        .conn-badge {
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            transition: all 0.4s;
+        }
+        .conn-badge.live         { background: rgba(0,255,136,0.09); border: 1px solid rgba(0,255,136,0.30); color: #00ff88; }
+        .conn-badge.reconnecting { background: rgba(255,204,0,0.09); border: 1px solid rgba(255,204,0,0.30); color: #ffcc00; }
+        .conn-badge.offline      { background: rgba(255,68,68,0.09);  border: 1px solid rgba(255,68,68,0.30);  color: #ff4444; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; transition: background 0.4s; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        .live-dot.pulse { animation: blink 1.4s ease-in-out infinite; }
+        .last-upd { font-size: 9px; color: #1a4a2a; margin-top: 4px; letter-spacing: 1px; text-align: right; }
+
+        /* ── Top cards ──────────────────────────────────────── */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        @media (max-width: 680px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+        .card {
+            background: rgba(0,255,136,0.025);
+            border: 1px solid rgba(0,255,136,0.10);
+            border-radius: 11px;
+            padding: 14px 16px 12px;
+            text-align: center;
+            transition: border-color 0.4s;
+        }
+        .card-label {
+            font-size: 9px; color: #2a6a4a;
+            letter-spacing: 2px; text-transform: uppercase; margin-bottom: 9px;
+        }
+        .card-value {
+            font-size: 30px; font-weight: 900; line-height: 1;
+            transition: color 0.5s;
+        }
+        .card-sub { font-size: 10px; color: #2a6a4a; margin-top: 5px; }
+        .status-pill {
+            display: inline-block;
+            padding: 5px 18px; border-radius: 20px;
+            font-size: 13px; font-weight: 900; letter-spacing: 2px;
+            transition: all 0.5s;
+        }
+        .threat-bar-wrap {
+            background: rgba(0,0,0,0.35);
+            border-radius: 4px; overflow: hidden; height: 5px; margin-top: 8px;
+        }
+        .threat-bar { height: 100%; border-radius: 4px; transition: width 0.6s ease, background 0.6s ease; }
+        .online-names { font-size: 9px; color: #2a6a4a; margin-top: 4px; line-height: 1.5; }
+
+        /* ── Layer grid ─────────────────────────────────────── */
+        .section-title {
+            font-size: 9px; color: #2a6a4a;
+            letter-spacing: 2px; text-transform: uppercase;
+            margin-bottom: 8px; padding-left: 2px;
+        }
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        @media (max-width: 500px) { .layer-grid { grid-template-columns: repeat(2, 1fr); } }
+        .layer-card {
+            border-radius: 8px; padding: 9px 11px;
+            display: flex; align-items: center; gap: 8px;
+            transition: background 0.4s, border-color 0.4s;
+        }
+        .layer-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+            transition: background 0.4s;
+        }
+        .layer-name  { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .layer-state { font-size: 9px; margin-top: 1px; }
+
+        /* ── Separator ──────────────────────────────────────── */
+        .sep {
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(0,255,136,0.10), transparent);
+            margin: 14px 0;
+        }
+
+        /* ── Log area ───────────────────────────────────────── */
+        .log-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px; flex-wrap: wrap; gap: 6px;
+        }
+        .log-controls { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 3px 10px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            font-family: inherit; transition: all 0.2s;
+            border: 1px solid #0d2015; background: none; color: #3a7a5a;
+        }
+        .filter-btn.active { background: rgba(0,255,136,0.12); border-color: rgba(0,255,136,0.35); color: #00ff88; }
+        .filter-btn:hover  { color: #00ff88; }
+        .ctrl-btn {
+            padding: 3px 9px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            font-family: inherit; transition: all 0.2s;
+        }
+        .log-stream {
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(0,255,136,0.07);
+            border-radius: 10px; padding: 10px;
+            height: 440px; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: #0d2015 transparent;
+        }
+        .log-stream::-webkit-scrollbar { width: 4px; }
+        .log-stream::-webkit-scrollbar-track { background: transparent; }
+        .log-stream::-webkit-scrollbar-thumb { background: #0d2015; border-radius: 2px; }
+
+        .log-entry {
+            border-radius: 6px; padding: 7px 10px; margin-bottom: 4px; line-height: 1.5;
+            animation: fadeSlide 0.25s ease;
+        }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(-5px); }
+            to   { opacity: 1; transform: translateY(0);    }
+        }
+        .log-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; flex-wrap: wrap; gap: 4px; }
+        .log-cat { font-size: 10px; font-weight: 700; }
+        .log-ts  { font-size: 9px; color: #3a7a5a; font-family: monospace; letter-spacing: 0.5px; }
+        .log-msg { font-size: 11px; color: #7aaa8a; word-break: break-all; }
+        .log-meta{ font-size: 9px; margin-top: 2px; color: #3a8a5a; }
+
+        /* ── Footer ─────────────────────────────────────────── */
+        .footer {
+            text-align: center; font-size: 9px; color: #162a1e;
+            margin-top: 16px; letter-spacing: 1px; line-height: 1.7;
+        }
+
+        /* ── No-data placeholder ────────────────────────────── */
+        .placeholder { color: #2a6a4a; text-align: center; padding: 32px 0; font-size: 12px; }
+
+        /* ── Scan counter badge ─────────────────────────────── */
+        .log-count-badge {
+            background: rgba(0,255,136,0.08);
+            border: 1px solid rgba(0,255,136,0.18);
+            color: #00ff88; font-size: 10px;
+            padding: 2px 8px; border-radius: 10px; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     HEADER
+═════════════════════════════════════════════════════════ -->
+<div class="header">
+    <div>
+        <div class="header-title">🛡 安全監控中心</div>
+        <div class="header-sub">Huaxia Security Monitor · SSE Real-Time</div>
+    </div>
+    <div>
+        <div id="conn-badge" class="conn-badge reconnecting">
+            <div id="conn-dot" class="live-dot" style="background:#ffcc00;"></div>
+            <span id="conn-text">連線中...</span>
+        </div>
+        <div class="last-upd" id="last-upd">─</div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     TOP CARDS
+═════════════════════════════════════════════════════════ -->
+<div class="cards">
+
+    <!-- 防火牆狀態 -->
+    <div class="card" id="card-status">
+        <div class="card-label">防火牆狀態</div>
+        <div>
+            <span id="status-pill" class="status-pill"
+                  style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);color:#2a6a4a;">
+                ─
+            </span>
+        </div>
+        <div class="card-sub" id="status-ip">等待遊戲客戶端...</div>
+    </div>
+
+    <!-- 威脅分數 -->
+    <div class="card">
+        <div class="card-label">威脅分數</div>
+        <div class="card-value" id="threat-val" style="color:#2a6a4a;">─</div>
+        <div class="threat-bar-wrap">
+            <div class="threat-bar" id="threat-bar" style="width:0%;background:#00ff88;"></div>
+        </div>
+        <div class="card-sub">/ 100</div>
+    </div>
+
+    <!-- 入侵嘗試 -->
+    <div class="card">
+        <div class="card-label">入侵嘗試</div>
+        <div class="card-value" id="intrusion-val" style="color:#2a6a4a;">─</div>
+        <div class="card-sub">本 Session</div>
+    </div>
+
+    <!-- 在線玩家 -->
+    <div class="card">
+        <div class="card-label">在線玩家</div>
+        <div class="card-value" id="online-val" style="color:#2a6a4a;">─</div>
+        <div class="online-names" id="online-names">─</div>
+    </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     LAYER / MODULE GRID
+═════════════════════════════════════════════════════════ -->
+<div class="section-title">── 防火牆層級 &amp; 模塊狀態 ──</div>
+<div class="layer-grid" id="layer-grid">
+    <div class="placeholder" style="grid-column:1/-1;">等待遊戲客戶端廣播狀態...</div>
+</div>
+
+<div class="sep"></div>
+
+<!-- ════════════════════════════════════════════════════════
+     LOG STREAM
+═════════════════════════════════════════════════════════ -->
+<div class="log-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div class="section-title" style="margin-bottom:0;">── 即時日誌流 ──</div>
+        <span class="log-count-badge" id="log-count">0</span>
+    </div>
+    <div class="log-controls">
+        <!-- 篩選 -->
+        <button class="filter-btn active" onclick="setFilter('all')"      data-f="all">全部</button>
+        <button class="filter-btn"        onclick="setFilter('critical')" data-f="critical">🚨 危急</button>
+        <button class="filter-btn"        onclick="setFilter('warn')"     data-f="warn">⚠️ 警告</button>
+        <button class="filter-btn"        onclick="setFilter('info')"     data-f="info">ℹ️ 資訊</button>
+        <!-- 工具 -->
+        <button class="ctrl-btn" onclick="clearLogs()"
+            style="background:none;border:1px solid #0d2015;color:#3a5a4a;"
+            onmouseover="this.style.color='#ff4444'" onmouseout="this.style.color='#3a5a4a'">🗑 清除</button>
+        <button class="ctrl-btn" id="autoscroll-btn" onclick="toggleAutoScroll()"
+            style="background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.20);color:#00ff88;">↓ 自動</button>
+    </div>
+</div>
+
+<div class="log-stream" id="log-stream">
+    <div class="placeholder">── 等待日誌資料 ──</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     FOOTER
+═════════════════════════════════════════════════════════ -->
+<div class="footer">
+    華夏風雲錄 安全監控中心 · Firebase Realtime Database SSE · v20260528a<br>
+    <span id="footer-date"></span>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SCRIPT
+═════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── Config ───────────────────────────────────────────────
+const FB = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+// ── State ────────────────────────────────────────────────
+let _snap       = null;   // security_state/snapshot
+let _allLogs    = [];     // today's logs
+let _onlineMap  = {};
+let _logFilter  = 'all';
+let _autoScroll = true;
+
+let _sseSnap   = null;
+let _sseLogs   = null;
+let _sseOnline = null;
+
+// ── Helpers ──────────────────────────────────────────────
+function todayKey() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
+
+function fmtTs(t) {
+    return new Date(t).toLocaleString('zh-TW', {
+        month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+}
+
+function setConn(state) {
+    const badge = document.getElementById('conn-badge');
+    const dot   = document.getElementById('conn-dot');
+    const text  = document.getElementById('conn-text');
+    if (!badge) return;
+    badge.className = 'conn-badge ' + state;
+    const cfg = {
+        live        : { c:'#00ff88', t:'● LIVE',      pulse:true  },
+        reconnecting: { c:'#ffcc00', t:'◌ 重連中...',  pulse:false },
+        offline     : { c:'#ff4444', t:'✗ 連線失敗',   pulse:false },
+    }[state] || { c:'#ffcc00', t:'?', pulse:false };
+    dot.style.background = cfg.c;
+    dot.className = 'live-dot' + (cfg.pulse ? ' pulse' : '');
+    text.textContent = cfg.t;
+}
+
+function setLastUpd() {
+    const el = document.getElementById('last-upd');
+    if (el) el.textContent = '更新：' + fmtTs(Date.now());
+}
+
+// ── Render: Snapshot ─────────────────────────────────────
+function renderSnapshot(data) {
+    if (!data) return;
+    _snap = data;
+
+    // 狀態 pill
+    const S  = data.status || 'green';
+    const SC = { green:'#00ff88', yellow:'#ffcc00', red:'#ff4444' }[S] || '#00ff88';
+    const ST = { green:'✅ 安全',   yellow:'⚠️ 警戒',  red:'🔴 危險'  }[S] || S;
+    const pill = document.getElementById('status-pill');
+    if (pill) {
+        pill.textContent = ST;
+        pill.style.color      = SC;
+        pill.style.background = SC + '18';
+        pill.style.border     = `1px solid ${SC}35`;
+    }
+    const ipEl = document.getElementById('status-ip');
+    if (ipEl) ipEl.textContent = `IP: ${data.clientIp || '?'}`;
+
+    // 威脅分數
+    const ts  = data.threatScore ?? 0;
+    const TC  = ts >= 50 ? '#ff4444' : ts >= 20 ? '#ffcc00' : '#00ff88';
+    const tv  = document.getElementById('threat-val');
+    const bar = document.getElementById('threat-bar');
+    if (tv)  { tv.textContent = ts; tv.style.color = TC; }
+    if (bar) { bar.style.width = ts + '%'; bar.style.background = TC; }
+
+    // 入侵計數
+    const ic = document.getElementById('intrusion-val');
+    if (ic) {
+        const cnt = data.intrusionCnt ?? 0;
+        ic.textContent  = cnt;
+        ic.style.color  = cnt > 0 ? '#ff4444' : '#00ff88';
+    }
+
+    // 層級 grid
+    renderLayerGrid(data.layers, data.modules);
+
+    setLastUpd();
+}
+
+function renderLayerGrid(layers, modules) {
+    const el = document.getElementById('layer-grid');
+    if (!el) return;
+    const L = layers  || {};
+    const M = modules || {};
+    const items = [
+        { label:'L1 輸入驗證',  status: L.L1    || 'ok' },
+        { label:'L2 速率限制',  status: L.L2    || 'ok' },
+        { label:'L3 行為分析',  status: L.L3    || 'ok' },
+        { label:'L4 資料完整',  status: L.L4    || 'ok' },
+        { label:'L5 會話驗證',  status: L.L5    || 'ok' },
+        { label:'Auth 模塊',    status: M.auth  || 'ok' },
+        { label:'Firebase',     status: M.db    || 'ok' },
+        { label:'監控郵件',     status: M.email || 'ok' },
+        { label:'日誌連續性',   status: M.gap   || 'ok' },
+    ];
+    const COL = { ok:'#00ff88', warn:'#ffcc00', error:'#ff4444' };
+    const TXT = { ok:'正常',     warn:'警告',    error:'異常'   };
+    const BG  = { ok:'rgba(0,255,136,0.04)', warn:'rgba(255,204,0,0.05)', error:'rgba(255,68,68,0.07)' };
+    const BD  = { ok:'rgba(0,255,136,0.13)', warn:'rgba(255,204,0,0.15)', error:'rgba(255,68,68,0.22)' };
+    el.innerHTML = items.map(item => {
+        const s = item.status;
+        return `<div class="layer-card" style="background:${BG[s]||BG.ok};border:1px solid ${BD[s]||BD.ok};">
+            <div class="layer-dot" style="background:${COL[s]||COL.ok};box-shadow:0 0 5px ${COL[s]||COL.ok};"></div>
+            <div style="min-width:0;">
+                <div class="layer-name" style="color:${COL[s]||COL.ok};">${item.label}</div>
+                <div class="layer-state" style="color:${COL[s]||COL.ok}80;">${TXT[s]||'正常'}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Render: Online ───────────────────────────────────────
+function renderOnline(data) {
+    _onlineMap = data || {};
+    const cnt  = Object.keys(_onlineMap).length;
+    const ov   = document.getElementById('online-val');
+    const on   = document.getElementById('online-names');
+    if (ov) { ov.textContent = cnt; ov.style.color = cnt > 0 ? '#00ff88' : '#2a6a4a'; }
+    if (on) {
+        const list = Object.values(_onlineMap)
+            .map(u => u.nickname || '?').slice(0, 6);
+        on.textContent = list.join('、') + (cnt > 6 ? '...' : '');
+    }
+}
+
+// ── Render: Logs ─────────────────────────────────────────
+const LV_BG  = { info:'rgba(0,255,136,0.02)', warn:'rgba(255,204,0,0.04)',  critical:'rgba(255,68,68,0.06)' };
+const LV_BD  = { info:'rgba(0,255,136,0.07)', warn:'rgba(255,204,0,0.12)',  critical:'rgba(255,68,68,0.20)' };
+const LV_COL = { info:'#3a8a5a',              warn:'#9a8830',               critical:'#9a3030'              };
+const LV_IC  = { info:'ℹ️',                   warn:'⚠️',                    critical:'🚨'                   };
+
+function renderLogs() {
+    const el = document.getElementById('log-stream');
+    if (!el) return;
+
+    // 滾動位置判斷
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+
+    let list = [..._allLogs].sort((a, b) => b.t - a.t);
+    if (_logFilter !== 'all') list = list.filter(e => e.lv === _logFilter);
+    list = list.slice(0, 200);
+
+    // 更新計數
+    const countEl = document.getElementById('log-count');
+    if (countEl) countEl.textContent = _allLogs.length;
+
+    if (list.length === 0) {
+        el.innerHTML = `<div class="placeholder">── 暫無${_logFilter !== 'all' ? ' ' + _logFilter + ' 級別' : ''}日誌 ──</div>`;
+        return;
+    }
+
+    el.innerHTML = list.map(e => {
+        const lv = e.lv || 'info';
+        const ipEl   = (e.ip   && e.ip   !== '?' && e.ip   !== '無法取得') ? ` ｜ 🌐 ${e.ip}`   : '';
+        const userEl = (e.user && e.user !== '?' && e.user !== '未登入')  ? ` ｜ 👤 ${e.user}` : '';
+        return `<div class="log-entry" style="background:${LV_BG[lv]||LV_BG.info};border:1px solid ${LV_BD[lv]||LV_BD.info};">
+            <div class="log-top">
+                <span class="log-cat" style="color:${LV_COL[lv]||LV_COL.info};">${LV_IC[lv]||'📝'} ${e.cat||''}</span>
+                <span class="log-ts">🕐 ${fmtTs(e.t)}</span>
+            </div>
+            <div class="log-msg">${(e.msg||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            ${(ipEl||userEl) ? `<div class="log-meta">${ipEl}${userEl}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    if (_autoScroll && atBottom) {
+        el.scrollTop = el.scrollHeight;
+    }
+}
+
+function addLog(entry) {
+    if (!entry || !entry.t) return;
+    // 去重
+    if (_allLogs.some(l => l.t === entry.t && l.msg === entry.msg)) return;
+    _allLogs.push(entry);
+    if (_allLogs.length > 600) _allLogs.splice(0, _allLogs.length - 600);
+    renderLogs();
+}
+
+// ── SSE: snapshot ────────────────────────────────────────
+function connectSnapshot() {
+    if (_sseSnap) _sseSnap.close();
+    setConn('reconnecting');
+
+    _sseSnap = new EventSource(`${FB}/security_state/snapshot.json?accept=text/event-stream`);
+
+    _sseSnap.addEventListener('put', e => {
+        try {
+            const { data } = JSON.parse(e.data);
+            setConn('live');
+            if (data) renderSnapshot(data);
+            else {
+                document.getElementById('status-ip').textContent = '等待遊戲客戶端...';
+            }
+        } catch {}
+    });
+
+    _sseSnap.addEventListener('patch', e => {
+        try {
+            const { data } = JSON.parse(e.data);
+            if (_snap && data) renderSnapshot(Object.assign({}, _snap, data));
+            else if (data)      renderSnapshot(data);
+            setConn('live');
+        } catch {}
+    });
+
+    _sseSnap.onerror = () => setConn('reconnecting');
+    _sseSnap.onopen  = () => setConn('live');
+}
+
+// ── SSE: today's logs ────────────────────────────────────
+let _currentDayKey = '';
+
+function connectLogs() {
+    if (_sseLogs) _sseLogs.close();
+    _currentDayKey = todayKey();
+
+    _sseLogs = new EventSource(`${FB}/sys_logs/${_currentDayKey}.json?accept=text/event-stream`);
+
+    _sseLogs.addEventListener('put', e => {
+        try {
+            const { data } = JSON.parse(e.data);
+            _allLogs = [];
+            if (data) Object.values(data).forEach(entry => { if (entry && entry.t) _allLogs.push(entry); });
+            renderLogs();
+        } catch {}
+    });
+
+    _sseLogs.addEventListener('patch', e => {
+        try {
+            const { path, data } = JSON.parse(e.data);
+            if (!data) return;
+            if (path === '/') {
+                // 整個節點替換
+                _allLogs = [];
+                Object.values(data).forEach(entry => { if (entry && entry.t) _allLogs.push(entry); });
+                renderLogs();
+            } else {
+                // 單筆或小批次
+                if (data.t) {
+                    addLog(data); // 單筆 log entry
+                } else {
+                    Object.values(data).forEach(entry => { if (entry && entry.t) addLog(entry); });
+                }
+            }
+        } catch {}
+    });
+
+    _sseLogs.onerror = () => {};
+}
+
+// ── SSE: online users ────────────────────────────────────
+function connectOnline() {
+    if (_sseOnline) _sseOnline.close();
+
+    _sseOnline = new EventSource(`${FB}/online.json?accept=text/event-stream`);
+
+    _sseOnline.addEventListener('put', e => {
+        try {
+            const { data } = JSON.parse(e.data);
+            renderOnline(data || {});
+        } catch {}
+    });
+
+    _sseOnline.addEventListener('patch', e => {
+        try {
+            const { path, data } = JSON.parse(e.data);
+            const uid = path.replace(/^\//, '');
+            if (!uid || path === '/') {
+                renderOnline(data || {});
+            } else if (data === null) {
+                delete _onlineMap[uid];
+                renderOnline(_onlineMap);
+            } else {
+                _onlineMap[uid] = data;
+                renderOnline(_onlineMap);
+            }
+        } catch {}
+    });
+
+    _sseOnline.onerror = () => {};
+}
+
+// ── UI Controls ──────────────────────────────────────────
+function setFilter(f) {
+    _logFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.f === f);
+    });
+    renderLogs();
+}
+
+function clearLogs() {
+    _allLogs = [];
+    renderLogs();
+}
+
+function toggleAutoScroll() {
+    _autoScroll = !_autoScroll;
+    const btn = document.getElementById('autoscroll-btn');
+    if (!btn) return;
+    if (_autoScroll) {
+        btn.textContent = '↓ 自動';
+        btn.style.background   = 'rgba(0,255,136,0.07)';
+        btn.style.borderColor  = 'rgba(0,255,136,0.20)';
+        btn.style.color        = '#00ff88';
+    } else {
+        btn.textContent = '↓ 暫停';
+        btn.style.background   = 'rgba(255,204,0,0.07)';
+        btn.style.borderColor  = 'rgba(255,204,0,0.20)';
+        btn.style.color        = '#ffcc00';
+    }
+}
+
+// ── Health watchdog ──────────────────────────────────────
+// EventSource 自動重連，但多加一層防護
+setInterval(() => {
+    if (_sseSnap   && _sseSnap.readyState   === EventSource.CLOSED) connectSnapshot();
+    if (_sseOnline && _sseOnline.readyState === EventSource.CLOSED) connectOnline();
+
+    // 跨零點：重新訂閱新一天的日誌
+    if (todayKey() !== _currentDayKey) {
+        _allLogs = [];
+        connectLogs();
+    } else if (_sseLogs && _sseLogs.readyState === EventSource.CLOSED) {
+        connectLogs();
+    }
+}, 30000);
+
+// ── Boot ─────────────────────────────────────────────────
+document.getElementById('footer-date').textContent =
+    new Date().toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric' });
+
+connectSnapshot();
+connectLogs();
+connectOnline();
+</script>
+</body>
+</html>
