@@ -33,6 +33,7 @@
     const RATE_CFG = {
         login   : { max: 5,   ms: 5  * 60000, label: '登入'     },
         register: { max: 3,   ms: 60 * 60000, label: '註冊'     },
+        verify  : { max: 5,   ms: 5  * 60000, label: '驗證碼'   },
         fb_write: { max: 80,  ms: 60000,       label: '資料寫入' },
         fb_read : { max: 300, ms: 60000,       label: '資料讀取' },
         chat    : { max: 12,  ms: 30000,       label: '聊天訊息' },

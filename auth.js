@@ -33,16 +33,24 @@ const Auth = (() => {
     }
     async function _fbSet(path, data) {
         try {
-            await fetch(FB + path + '.json', {
+            const r = await fetch(FB + path + '.json', {
                 method: 'PUT',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(data)
             });
-            return true;
+            return r.ok; // Bug Fix #1：必須檢查 HTTP 狀態碼，Firebase 驗證失敗會回 400/401
         } catch { return false; }
     }
     async function _fbDel(path) {
         try { await fetch(FB + path + '.json', {method:'DELETE'}); } catch {}
+    }
+
+    // ── sessionStorage 安全存取（Bug Fix #4：private mode 下會 throw）──
+    function _saveSession(obj) {
+        try { sessionStorage.setItem('hua_session', JSON.stringify(obj)); } catch {}
+    }
+    function _loadSession() {
+        try { return JSON.parse(sessionStorage.getItem('hua_session') || 'null'); } catch { return null; }
     }
 
     // ── EmailJS 發信 ─────────────────────────────────────────
@@ -131,8 +139,10 @@ const Auth = (() => {
         // 發送驗證碼
         const code    = String(Math.floor(100000 + Math.random() * 900000));
         const expires = Date.now() + 5 * 60 * 1000;
-        await _fbSet('/auth_codes/' + uname, {code, expires});
+        const codeOk  = await _fbSet('/auth_codes/' + uname, {code, expires});
         _fw?.logDbAccess('WRITE', '/auth_codes/' + uname, uname);
+        // Bug Fix #5：驗證碼寫入失敗時不寄信，直接報錯避免使用者收到無效碼
+        if (!codeOk) return {ok: false, err: '伺服器暫時無法回應，請稍後再試'};
 
         _sendEmail(EJ_AUTHCODE, {
             to_email:  user.email,
@@ -147,10 +157,18 @@ const Auth = (() => {
     // ── 登入 Step 2：驗證驗證碼 ──────────────────────────────
     async function verifyCode(username, code) {
         const uname  = username.toLowerCase().trim();
+
+        // Bug Fix #3：加上驗證碼速率限制，防止暴力破解 6 位數碼
+        const _fw2 = window.HuaXiaSecurity;
+        if (_fw2) {
+            const rl = _fw2.checkRate('verify');
+            if (!rl.allowed) return {ok: false, err: '驗證碼嘗試太頻繁，請稍後再試'};
+        }
+
         const stored = await _fbGet('/auth_codes/' + uname);
         window.HuaXiaSecurity?.logDbAccess('READ', '/auth_codes/' + uname, uname);
 
-        if (!stored)                   return {ok: false, err: '驗證碼不存在，請重新登入'};
+        if (!stored)                     return {ok: false, err: '驗證碼不存在，請重新登入'};
         if (stored.expires < Date.now()) return {ok: false, err: '驗證碼已過期，請重新登入'};
         if (stored.code !== code.trim()) {
             window.HuaXiaSecurity?.recordEvent('warn', 'auth', `帳號 ${uname} 驗證碼錯誤`);
@@ -162,15 +180,22 @@ const Auth = (() => {
 
         const user = await _fbGet('/users/' + uname);
         window.HuaXiaSecurity?.logDbAccess('READ', '/users/' + uname, uname);
+
+        // Bug Fix #2：user 為 null 時若繼續執行，_cur 會是殘缺物件導致後續所有操作崩潰
+        if (!user) {
+            try { sessionStorage.removeItem('hua_session'); } catch {}
+            return {ok: false, err: '帳號資料讀取失敗，請重新登入'};
+        }
+
         _cur = {...user, username: uname};
 
-        // 寫入 sessionStorage 快取
-        sessionStorage.setItem('hua_session', JSON.stringify({
+        // Bug Fix #4：改用安全的 _saveSession 避免 private mode 拋出 SecurityError
+        _saveSession({
             username: uname,
             nickname: _cur.nickname || uname,
             role:     _cur.role,
             avatar:   _cur.avatar || null
-        }));
+        });
 
         return {ok: true, user: _cur};
     }
@@ -203,9 +228,10 @@ const Auth = (() => {
         await _fbSet('/users/' + _cur.username, updated);
         _cur.avatar = dataUrl;
 
-        const s = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+        // Bug Fix #4(updateAvatar)：改用安全輔助函式
+        const s = _loadSession() || {};
         s.avatar = dataUrl;
-        sessionStorage.setItem('hua_session', JSON.stringify(s));
+        _saveSession(s);
 
         return {ok: true, avatar: dataUrl};
     }
@@ -245,7 +271,8 @@ const Auth = (() => {
         const hash = await _hash(password);
         const nickname = _randomNickname();
 
-        await _fbSet('/users/' + uname, {
+        // Bug Fix #1(register)：檢查帳號寫入是否成功
+        const userOk = await _fbSet('/users/' + uname, {
             password_hash: hash,
             email,
             role: 'player',
@@ -254,13 +281,16 @@ const Auth = (() => {
             createdAt: Date.now()
         });
         _fw?.logDbAccess('WRITE', '/users/' + uname, uname);
+        if (!userOk) return {ok: false, err: '帳號建立失敗，請稍後再試'};
         _fw?.logOps(`新帳號註冊：${uname}（暱稱：${nickname}）`);
 
         // 發送驗證碼
         const code    = String(Math.floor(100000 + Math.random() * 900000));
         const expires = Date.now() + 5 * 60 * 1000;
-        await _fbSet('/auth_codes/' + uname, {code, expires});
+        // Bug Fix #5(register)：驗證碼寫入失敗時不寄信，直接報錯
+        const codeOk  = await _fbSet('/auth_codes/' + uname, {code, expires});
         _fw?.logDbAccess('WRITE', '/auth_codes/' + uname, uname);
+        if (!codeOk) return {ok: false, err: '伺服器暫時無法回應，請稍後再試'};
 
         _sendEmail(EJ_AUTHCODE, {
             to_email:  email,
@@ -298,9 +328,10 @@ const Auth = (() => {
         await _fbSet('/users/' + _cur.username, updated);
         _cur.nickname = name;
 
-        const s = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+        // Bug Fix #4(updateNickname)：改用安全輔助函式
+        const s = _loadSession() || {};
         s.nickname = name;
-        sessionStorage.setItem('hua_session', JSON.stringify(s));
+        _saveSession(s);
 
         return {ok: true};
     }
@@ -328,9 +359,10 @@ const Auth = (() => {
         await _fbSet('/users/' + _cur.username, updated);
         _cur.email = newEmail;
 
-        const s = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+        // Bug Fix #4(updateEmail)：改用安全輔助函式
+        const s = _loadSession() || {};
         s.email = newEmail;
-        sessionStorage.setItem('hua_session', JSON.stringify(s));
+        _saveSession(s);
 
         return {ok: true};
     }
@@ -357,24 +389,22 @@ const Auth = (() => {
 
     // ── Session 管理 ─────────────────────────────────────────
     function getSession() {
-        try {
-            const s = JSON.parse(sessionStorage.getItem('hua_session') || 'null');
-            return (s && s.username) ? s : null;
-        } catch { return null; }
+        const s = _loadSession();
+        return (s && s.username) ? s : null;
     }
 
     async function restoreSession() {
         const s = getSession();
         if (!s) return null;
         const user = await _fbGet('/users/' + s.username);
-        if (!user) { sessionStorage.removeItem('hua_session'); return null; }
+        if (!user) { try { sessionStorage.removeItem('hua_session'); } catch {} return null; }
         _cur = {...user, username: s.username};
         return _cur;
     }
 
     function logout() {
         _cur = null;
-        sessionStorage.removeItem('hua_session');
+        try { sessionStorage.removeItem('hua_session'); } catch {}
     }
 
     function current() { return _cur; }
