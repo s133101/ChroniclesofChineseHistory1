@@ -52,11 +52,13 @@
         { id: 'fw_l3',  label: 'L3 行為分析',   fn: () => _behaviorOk()                                                  },
         { id: 'fw_l4',  label: 'L4 資料完整性', fn: () => typeof window.HuaXiaSecurity?.validateCoreData === 'function' },
         { id: 'fw_l5',  label: 'L5 會話驗證',   fn: () => _sessionOk()                                                   },
-        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof window.Auth !== 'undefined'                             },
+        // Auth 模塊：啟動後最多等 10 秒才判定（避免載入競爭）
+        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof window.Auth !== 'undefined' || (Date.now() - _startTime < 10000) },
         { id: 'db',     label: 'Firebase 連線',  fn: () => _fbReachable                                                   },
         { id: 'dom',    label: '核心 DOM 元素',  fn: () => !!document.getElementById('lobby-screen')                     },
         { id: 'email',  label: '監控郵件模塊',   fn: () => typeof emailjs !== 'undefined'                                 },
-        { id: 'l1func', label: 'L1 功能驗證',   fn: () => { try { return window.HuaXiaSecurity.validateInput('chat', '<script>x</script>').valid === false; } catch { return false; } } },
+        // L1 功能驗證：使用靜默模式，避免觸發真實入侵警報 + 威脅分數
+        { id: 'l1func', label: 'L1 功能驗證',   fn: () => { try { return _validateInputSilent('chat', '<script>x</script>') === false; } catch { return false; } } },
     ];
 
     const _ATTACK_PATS = [
@@ -114,6 +116,9 @@
 
     // ── 廣播節流（最多每 5s 寫一次 Firebase，防止過量寫入）────
     let _lastBroadcast = 0;
+
+    // ── 啟動時間（供 Auth 模塊載入競爭判斷用）─────────────────
+    const _startTime = Date.now();
 
     // ════════════════════════════════════════════════════════
     //  § 2  工具 helpers
@@ -404,6 +409,19 @@
         }
         if (_layerStatus.L1 === 'error') _layerStatus.L1 = 'warn';
         return { valid: true };
+    }
+
+    // 靜默版 L1 驗證：只回傳 true/false，不觸發日誌 / 威脅分數 / 郵件
+    // 僅供 runScan() 功能測試使用，不作為正式防護
+    function _validateInputSilent(type, value) {
+        if (typeof value !== 'string') value = String(value ?? '');
+        for (const { re } of _ATTACK_PATS) { if (re.test(value)) return false; }
+        try {
+            const dec = decodeURIComponent(value);
+            if (dec !== value) { for (const { re } of _ATTACK_PATS) { if (re.test(dec)) return false; } }
+        } catch {}
+        if (type !== 'chat' && /[\r\n]/.test(value)) return false;
+        return true;
     }
 
     // ════════════════════════════════════════════════════════
