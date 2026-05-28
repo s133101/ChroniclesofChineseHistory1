@@ -221,15 +221,36 @@
     <span id="player-avatar-name" class="player-avatar-name">玩家</span>
 </div>
 <!-- 成就按鈕（頭像下方）-->
-<button id="btn-achievements" onclick="window._openAchievementsModal()" class="hidden" style="
-    position:fixed; top:68px; left:12px; z-index:199999;
-    background:linear-gradient(135deg,#2a1a00,#4a3000);
-    color:#f0c040; border:1px solid #7a5c00; border-radius:8px;
-    padding:5px 12px; font-size:12px; font-family:inherit;
-    cursor:pointer; white-space:nowrap;
-    box-shadow:0 2px 8px rgba(0,0,0,0.5);
-    transition:filter .2s;
-">🏅 成就</button>
+<div id="btn-achievements" onclick="window._openAchievementsModal()" class="hidden" style="
+    position:fixed; top:76px; left:16px; z-index:199999;
+    display:flex; align-items:center; gap:10px;
+    background:rgba(10,14,22,0.85);
+    border:1px solid rgba(212,175,55,0.3); border-radius:40px;
+    padding:8px 16px 8px 8px;
+    cursor:pointer; backdrop-filter:blur(8px);
+    transition:border-color .2s, box-shadow .2s;
+    user-select:none;
+" onmouseover="this.style.borderColor='#d4af37';this.style.boxShadow='0 0 16px rgba(212,175,55,0.2)'"
+   onmouseout="this.style.borderColor='rgba(212,175,55,0.3)';this.style.boxShadow=''">
+    <span style="font-size:28px;line-height:1;width:36px;text-align:center;">🏅</span>
+    <span style="font-size:13px;color:#d4af37;font-weight:700;white-space:nowrap;">成就</span>
+</div>
+
+<!-- 監控面板按鈕（成就下方，僅 claude 帳號可見）-->
+<div id="btn-monitor" onclick="window.open('monitor.html','_blank')" class="hidden" style="
+    position:fixed; top:138px; left:16px; z-index:199999;
+    display:flex; align-items:center; gap:10px;
+    background:rgba(10,14,22,0.85);
+    border:1px solid rgba(0,255,136,0.3); border-radius:40px;
+    padding:8px 16px 8px 8px;
+    cursor:pointer; backdrop-filter:blur(8px);
+    transition:border-color .2s, box-shadow .2s;
+    user-select:none;
+" onmouseover="this.style.borderColor='#00ff88';this.style.boxShadow='0 0 16px rgba(0,255,136,0.2)'"
+   onmouseout="this.style.borderColor='rgba(0,255,136,0.3)';this.style.boxShadow=''">
+    <span style="font-size:28px;line-height:1;width:36px;text-align:center;">🛡</span>
+    <span style="font-size:13px;color:#00ff88;font-weight:700;white-space:nowrap;">監控面板</span>
+</div>
 
 <!-- 玩家設定 Modal -->
 <div id="profile-modal" class="profile-modal hidden">

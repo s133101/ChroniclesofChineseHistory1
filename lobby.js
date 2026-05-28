@@ -460,6 +460,15 @@
         }
         const _achBtn = document.getElementById('btn-achievements');
         if (_achBtn) _achBtn.classList.remove('hidden');
+        // 監控面板按鈕：僅 claude 帳號顯示
+        const _monBtn = document.getElementById('btn-monitor');
+        if (_monBtn) {
+            if (user.username === 'claude') {
+                _monBtn.classList.remove('hidden');
+            } else {
+                _monBtn.classList.add('hidden');
+            }
+        }
         const _specBtn = document.getElementById('btn-spectate');
         if (_specBtn) _specBtn.classList.remove('hidden');
         const _tutBtn = document.getElementById('btn-tutorial');
@@ -3011,28 +3020,6 @@
             `;
         }).join('');
 
-        // 監控面板按鈕（僅 claude 帳號可見）
-        try {
-            const _sess = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
-            if (_sess.username === 'claude') {
-                list.innerHTML += `
-                    <div style="margin-top:8px;padding-top:14px;border-top:1px solid rgba(0,255,136,0.12);">
-                        <button onclick="window.open('monitor.html','_blank')"
-                            style="width:100%;padding:12px;border-radius:10px;
-                                   background:linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,255,136,0.04));
-                                   border:1px solid rgba(0,255,136,0.25);
-                                   color:#00ff88;font-size:13px;font-weight:700;
-                                   letter-spacing:2px;cursor:pointer;font-family:inherit;
-                                   display:flex;align-items:center;justify-content:center;gap:8px;
-                                   transition:all .2s;"
-                            onmouseover="this.style.background='linear-gradient(135deg,rgba(0,255,136,0.16),rgba(0,255,136,0.08))';this.style.borderColor='rgba(0,255,136,0.5)'"
-                            onmouseout="this.style.background='linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,255,136,0.04))';this.style.borderColor='rgba(0,255,136,0.25)'">
-                            🛡 安全監控面板
-                        </button>
-                    </div>
-                `;
-            }
-        } catch {}
     }
 
     // ══════════════════════════════════════════════════════════════
