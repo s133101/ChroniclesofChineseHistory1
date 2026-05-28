@@ -1,5 +1,5 @@
 // ============================================================
-//  華夏風雲錄 — security.js  v20260528a
+//  華夏風雲錄 — security.js  v20260528d
 //  多層防火牆 · 安全監控中心 · 系統日誌 · 入侵預警
 //  Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
 // ============================================================
@@ -999,7 +999,7 @@
 
         _resolveIp().then(ip => {
             const now = new Date().toLocaleString('zh-TW');
-            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528c`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528d`);
             _log(LEVEL.INFO, CAT.SYSTEM, `客戶端 IP：${ip} ｜ 啟動時間：${now}`);
             _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1(+URL解碼/CRLF) · L2(記憶體雙鎖) · L3(無頭偵測) · L4 資料完整性 · L5 會話驗證`);
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
