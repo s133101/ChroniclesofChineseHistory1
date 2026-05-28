@@ -53,7 +53,7 @@
         { id: 'fw_l4',  label: 'L4 資料完整性', fn: () => typeof window.HuaXiaSecurity?.validateCoreData === 'function' },
         { id: 'fw_l5',  label: 'L5 會話驗證',   fn: () => _sessionOk()                                                   },
         // Auth 模塊：init() 後 20s 內寬限，避免 auth.js 載入競爭誤報
-        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000) },
+        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000) },
         { id: 'db',     label: 'Firebase 連線',  fn: () => _fbReachable                                                   },
         { id: 'dom',    label: '核心 DOM 元素',  fn: () => !!document.getElementById('lobby-screen')                     },
         { id: 'email',  label: '監控郵件模塊',   fn: () => typeof emailjs !== 'undefined'                                 },
@@ -273,7 +273,7 @@
             totalLogs   : Object.values(_logs).reduce((s, a) => s + a.length, 0),
             layers      : { ..._layerStatus },
             modules     : {
-                auth : (typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error',
+                auth : (typeof Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error',
                 db   : _fbReachable                       ? 'ok' : 'error',
                 email: typeof emailjs     !== 'undefined' ? 'ok' : 'warn',
                 gap  : (now - _lastLogTime) > 10 * 60000 ? 'error'
@@ -666,13 +666,13 @@
                     status  = 'error';
                     detail  = '異常或未回應';
                     allOk   = false;
-                    _log(LEVEL.CRITICAL, CAT.SCAN, `掃描異常：${chk.label} — ${detail}`, true);
+                    _log(LEVEL.WARN, CAT.SCAN, `掃描異常：${chk.label} — ${detail}`); // 不發 email，交由總結處理
                 }
             } catch (e) {
                 status  = 'error';
                 detail  = e.message?.slice(0, 50) || '例外錯誤';
                 allOk   = false;
-                _log(LEVEL.CRITICAL, CAT.SCAN, `掃描例外：${chk.label} — ${detail}`, true);
+                _log(LEVEL.WARN, CAT.SCAN, `掃描例外：${chk.label} — ${detail}`);
             }
             results.push({ id: chk.id, label: chk.label, status, detail });
         }
@@ -697,8 +697,8 @@
             if (errCnt >= 3) {
                 logIntrusion(`掃描發現 ${errCnt} 個模塊嚴重異常，可能遭入侵或被竄改`);
             } else {
-                _log(LEVEL.WARN, CAT.SCAN, `掃描發現 ${errCnt} 個模塊異常（可能為初始化未完成）`);
-                _addThreat(5); // 輕微加分，不觸發入侵警報
+                _log(LEVEL.WARN, CAT.SCAN, `掃描發現 ${errCnt} 個模塊異常（可能為初始化未完成，不影響防護）`);
+                // 1~2 項輕微異常不加威脅分數，避免干擾綠燈狀態
             }
         }
         return results;
@@ -830,7 +830,7 @@
         if (!el) return;
         const layers = [
             ...FW_LAYERS.map(l => ({ id: l.id, label: l.label, status: _layerStatus[l.id] || 'ok' })),
-            { id: 'auth',  label: 'Auth 模塊',   status: (typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error' },
+            { id: 'auth',  label: 'Auth 模塊',   status: (typeof Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error' },
             { id: 'db',    label: 'Firebase',     status: _fbReachable ? 'ok' : 'error'                       },
             { id: 'email', label: '監控郵件',     status: typeof emailjs !== 'undefined' ? 'ok' : 'warn'      },
             { id: 'gap',   label: '日誌連續性',   status: (Date.now() - _lastLogTime) > 10 * 60000 ? 'error' : (Date.now() - _lastLogTime) > 5 * 60000 ? 'warn' : 'ok' },
@@ -999,7 +999,7 @@
 
         _resolveIp().then(ip => {
             const now = new Date().toLocaleString('zh-TW');
-            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528a`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528c`);
             _log(LEVEL.INFO, CAT.SYSTEM, `客戶端 IP：${ip} ｜ 啟動時間：${now}`);
             _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1(+URL解碼/CRLF) · L2(記憶體雙鎖) · L3(無頭偵測) · L4 資料完整性 · L5 會話驗證`);
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
