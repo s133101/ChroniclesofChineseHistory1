@@ -2992,6 +2992,8 @@
         if (!list) return;
         const unlocked = window.playerAchievements;
         if (progText) progText.textContent = `${unlocked.length} / ${ACHIEVEMENTS.length} 已解鎖`;
+
+        // 成就列表
         list.innerHTML = ACHIEVEMENTS.map(a => {
             const done = unlocked.includes(a.id);
             return `
@@ -3008,6 +3010,29 @@
                 </div>
             `;
         }).join('');
+
+        // 監控面板按鈕（僅 claude 帳號可見）
+        try {
+            const _sess = JSON.parse(sessionStorage.getItem('hua_session') || '{}');
+            if (_sess.username === 'claude') {
+                list.innerHTML += `
+                    <div style="margin-top:8px;padding-top:14px;border-top:1px solid rgba(0,255,136,0.12);">
+                        <button onclick="window.open('monitor.html','_blank')"
+                            style="width:100%;padding:12px;border-radius:10px;
+                                   background:linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,255,136,0.04));
+                                   border:1px solid rgba(0,255,136,0.25);
+                                   color:#00ff88;font-size:13px;font-weight:700;
+                                   letter-spacing:2px;cursor:pointer;font-family:inherit;
+                                   display:flex;align-items:center;justify-content:center;gap:8px;
+                                   transition:all .2s;"
+                            onmouseover="this.style.background='linear-gradient(135deg,rgba(0,255,136,0.16),rgba(0,255,136,0.08))';this.style.borderColor='rgba(0,255,136,0.5)'"
+                            onmouseout="this.style.background='linear-gradient(135deg,rgba(0,255,136,0.08),rgba(0,255,136,0.04))';this.style.borderColor='rgba(0,255,136,0.25)'">
+                            🛡 安全監控面板
+                        </button>
+                    </div>
+                `;
+            }
+        } catch {}
     }
 
     // ══════════════════════════════════════════════════════════════
