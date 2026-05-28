@@ -418,8 +418,8 @@ function renderLayerGrid(layers, modules) {
 // ── Render: Online ───────────────────────────────────────
 // 心跳間隔 30s，TTL 設為 150s（= 5 個心跳週期）
 // 留足夠緩衝防止 Firebase SSE 傳播延遲 + monitor setInterval 時序交錯導致瞬間歸零
-const ONLINE_HEARTBEAT = 30000;  // 與 lobby.js _startOnlineHeartbeat 一致
-const ONLINE_TTL       = 150000; // 5× heartbeat = 充足的容錯視窗
+const ONLINE_HEARTBEAT = 15000;  // 與 lobby.js _startOnlineHeartbeat 一致
+const ONLINE_TTL       = 60000;  // 4× heartbeat = 容許 SSE 最多延遲 45s 仍不歸零
 
 function renderOnline(data) {
     if (data !== undefined) _onlineMap = data || {};

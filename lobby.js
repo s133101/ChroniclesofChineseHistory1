@@ -3117,7 +3117,7 @@
         }).catch(() => {});
         _write();
         clearInterval(_heartbeatInterval);
-        _heartbeatInterval = setInterval(_write, 30000);
+        _heartbeatInterval = setInterval(_write, 15000);
         window.addEventListener('beforeunload', () => {
             clearInterval(_heartbeatInterval);
             clearInterval(_invitePollInterval);
