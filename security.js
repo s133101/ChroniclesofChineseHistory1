@@ -52,8 +52,8 @@
         { id: 'fw_l3',  label: 'L3 行為分析',   fn: () => _behaviorOk()                                                  },
         { id: 'fw_l4',  label: 'L4 資料完整性', fn: () => typeof window.HuaXiaSecurity?.validateCoreData === 'function' },
         { id: 'fw_l5',  label: 'L5 會話驗證',   fn: () => _sessionOk()                                                   },
-        // Auth 模塊：啟動後最多等 10 秒才判定（避免載入競爭）
-        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof window.Auth !== 'undefined' || (Date.now() - _startTime < 10000) },
+        // Auth 模塊：init() 後 20s 內寬限，避免 auth.js 載入競爭誤報
+        { id: 'auth',   label: 'Auth 驗證模塊',  fn: () => typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000) },
         { id: 'db',     label: 'Firebase 連線',  fn: () => _fbReachable                                                   },
         { id: 'dom',    label: '核心 DOM 元素',  fn: () => !!document.getElementById('lobby-screen')                     },
         { id: 'email',  label: '監控郵件模塊',   fn: () => typeof emailjs !== 'undefined'                                 },
@@ -117,8 +117,8 @@
     // ── 廣播節流（最多每 5s 寫一次 Firebase，防止過量寫入）────
     let _lastBroadcast = 0;
 
-    // ── 啟動時間（供 Auth 模塊載入競爭判斷用）─────────────────
-    const _startTime = Date.now();
+    // ── 啟動時間（在 init() 設定，供 Auth 模塊載入競爭判斷用）──
+    let _startTime = 0;
 
     // ════════════════════════════════════════════════════════
     //  § 2  工具 helpers
@@ -273,7 +273,7 @@
             totalLogs   : Object.values(_logs).reduce((s, a) => s + a.length, 0),
             layers      : { ..._layerStatus },
             modules     : {
-                auth : typeof window.Auth !== 'undefined' ? 'ok' : 'error',
+                auth : (typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error',
                 db   : _fbReachable                       ? 'ok' : 'error',
                 email: typeof emailjs     !== 'undefined' ? 'ok' : 'warn',
                 gap  : (now - _lastLogTime) > 10 * 60000 ? 'error'
@@ -693,7 +693,13 @@
         _log(LEVEL.INFO, CAT.SCAN, `掃描完成：${okCnt}/${results.length} 項正常${errCnt ? `，${errCnt} 項異常` : '，全部通過'}`);
 
         if (!allOk) {
-            logIntrusion(`掃描發現 ${errCnt} 個模塊異常，可能遭入侵或被竄改`);
+            // 只有 3 個以上模塊異常才視為入侵（避免 Auth/DOM 暫時未就緒誤報）
+            if (errCnt >= 3) {
+                logIntrusion(`掃描發現 ${errCnt} 個模塊嚴重異常，可能遭入侵或被竄改`);
+            } else {
+                _log(LEVEL.WARN, CAT.SCAN, `掃描發現 ${errCnt} 個模塊異常（可能為初始化未完成）`);
+                _addThreat(5); // 輕微加分，不觸發入侵警報
+            }
         }
         return results;
     }
@@ -824,7 +830,7 @@
         if (!el) return;
         const layers = [
             ...FW_LAYERS.map(l => ({ id: l.id, label: l.label, status: _layerStatus[l.id] || 'ok' })),
-            { id: 'auth',  label: 'Auth 模塊',   status: typeof window.Auth !== 'undefined' ? 'ok' : 'error' },
+            { id: 'auth',  label: 'Auth 模塊',   status: (typeof window.Auth !== 'undefined' || (_startTime > 0 && Date.now() - _startTime < 20000)) ? 'ok' : 'error' },
             { id: 'db',    label: 'Firebase',     status: _fbReachable ? 'ok' : 'error'                       },
             { id: 'email', label: '監控郵件',     status: typeof emailjs !== 'undefined' ? 'ok' : 'warn'      },
             { id: 'gap',   label: '日誌連續性',   status: (Date.now() - _lastLogTime) > 10 * 60000 ? 'error' : (Date.now() - _lastLogTime) > 5 * 60000 ? 'warn' : 'ok' },
@@ -989,6 +995,7 @@
     function init() {
         if (_initialized) { _updateLight(); return; }
         _initialized = true;
+        _startTime   = Date.now(); // 在 init() 設定，確保掃描寬限期計算正確
 
         _resolveIp().then(ip => {
             const now = new Date().toLocaleString('zh-TW');
@@ -1014,7 +1021,7 @@
             logError(`UnhandledPromise: ${String(e.reason).slice(0, 80)}`);
         });
 
-        setTimeout(() => runScan(), 3000);
+        setTimeout(() => runScan(), 8000); // 8s 後掃描，讓 auth.js 有足夠時間載入
     }
 
     // ════════════════════════════════════════════════════════
