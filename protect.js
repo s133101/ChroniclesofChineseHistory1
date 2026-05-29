@@ -11,7 +11,7 @@
     const SESSION_KEY = 'hua_dev_session';   // 目前等待中的 session ID
 
     // ── Resend API（取代 EmailJS，直接在程式碼裡組 HTML，不需要模板）──
-    const RESEND_KEY = 're_AtiGgxgt_3JuY9tWPWuT9s3ULkDYgP92E';
+    const RESEND_KEY = 're_g2NRiiqr_En7nbssw8FNxA6URD51DdrD4';
 
     // Firebase Realtime Database（REST API，不需 SDK）
     const FIREBASE_URL = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app/auth_requests';
