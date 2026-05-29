@@ -3534,7 +3534,7 @@ body {
 #tut-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.58);
     z-index: 498000;
     pointer-events: none;
     transition: opacity .35s;
@@ -3549,10 +3549,13 @@ body {
     border-radius: 10px !important;
     animation: tutPulse 1.6s ease-in-out infinite !important;
     pointer-events: auto !important;
+    /* 讓高亮區域明顯亮於周圍暗色遮罩 */
+    filter: brightness(1.45) !important;
+    background: rgba(212,175,55,0.07) !important;
 }
 @keyframes tutPulse {
-    0%, 100% { outline-color: #d4af37; box-shadow: 0 0 0 0 rgba(212,175,55,0.5); }
-    50%       { outline-color: #ffe97a; box-shadow: 0 0 0 8px rgba(212,175,55,0); }
+    0%, 100% { outline-color: #d4af37; box-shadow: 0 0 0 0 rgba(212,175,55,0.55), 0 0 24px rgba(212,175,55,0.18); }
+    50%       { outline-color: #ffe97a; box-shadow: 0 0 0 10px rgba(212,175,55,0), 0 0 40px rgba(212,175,55,0.30); }
 }
 
 /* 教學面板 */
