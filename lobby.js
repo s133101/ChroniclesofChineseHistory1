@@ -3497,8 +3497,12 @@
         },
         {
             title: '⚔️ 發動攻擊！',
-            body:  '你的將軍已就位！現在讓他攻擊對手。<br><br><b>① 點擊你的將軍</b>（他會變成金色選中狀態）<br><b>② 點擊對方前排任意卡牌</b>發動攻擊！',
-            target: '#opp-active-zone',
+            body:  '<b>兩步完成一次攻擊：</b><br><br>'
+                 + '👇 <b>第一步：點擊下方你自己的將軍卡</b><br>'
+                 + '<span style="color:#aaa;font-size:12px;margin-left:1em;">卡牌外框會變成金色 = 已選中</span><br><br>'
+                 + '👆 <b>第二步：點擊上方敵方任意卡牌</b><br>'
+                 + '<span style="color:#aaa;font-size:12px;margin-left:1em;">看到傷害數字彈出 = 攻擊成功！</span>',
+            target: '#my-active-zone',
             waitFor: 'attack_made',
         },
         {
