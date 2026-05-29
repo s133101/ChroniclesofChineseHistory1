@@ -2303,8 +2303,8 @@ body {
 .sys-stat.stat-crit { color: #e74c3c; border-color: rgba(231,76,60,0.35);  background: rgba(231,76,60,0.10);  animation: pulseCrit 1.2s ease-in-out infinite; }
 .sys-stat.stat-none { color: #555;    border-color: rgba(255,255,255,0.06); }
 
-/* ── 敵方手牌橫列 ──────────────────────────────────────────── */
-.hand-container {
+/* ── 敵方手牌橫列（只對敵方做 static，讓它留在 flex flow 頂部）── */
+#opp-hand-container {
     position: static !important;
     left: auto !important;
     transform: none !important;
@@ -2315,6 +2315,19 @@ body {
     flex-shrink: 0;
     overflow: visible;
     z-index: 5;
+}
+
+/* ── 我方手牌（position:fixed，不佔 flex 空間，讓戰場有完整高度）─ */
+#my-hand-container {
+    position: fixed !important;
+    bottom: 50px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 100 !important;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .opp-hand-area {
@@ -2332,7 +2345,7 @@ body {
     padding: 0 !important;
     gap: 0 !important;
     align-items: stretch !important;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .battlefield-container {
