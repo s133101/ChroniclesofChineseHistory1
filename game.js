@@ -28,6 +28,7 @@ let interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
 // 供教學系統偵測當前互動模式
 window._getInteractionMode = () => interactionState.mode;
 let wineBuff = 0; // 酒：下一張【殺】傷害 +1
+let _escListenerAdded = false; // M-9：防止 ESC 監聽器重複掛載
 
 const PHASES = ['抽牌階段','準備階段','主要階段','戰鬥階段','結束階段'];
 let currentPhaseIndex = 2;
@@ -206,6 +207,10 @@ function initGame() {
     interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
     turnCount = 1;
     isPlayerTurn = true;
+    // M-12：確保跨局 AI 狀態歸零，避免上一局殘留值影響新局
+    window._aiWineBuff     = 0;
+    window._aiLastAttacker = null;
+    window._aiLastAtkCard  = null;
 
     if (window.GAME_MODE === 'guest') {
         // 客方：等候主機送出初始狀態，不在本地建立牌組
@@ -241,6 +246,7 @@ function initGame() {
             tutKill ? { ...tutKill, uid: 'tut_k2_' + Date.now() + 1 } : myDeck.pop(),
             myDeck.pop(),
         ].filter(Boolean);
+        myHand.forEach(c => c && initCharCard(c)); // 教學模式手牌同步初始化
     } else {
         myHand = [myMonarch, myGeneral];
         for (let i = 0; i < 5; i++) {
@@ -248,6 +254,8 @@ function initGame() {
         }
         _shuffleArr(myHand);
     }
+    // 開局手牌一次性初始化（確保所有武將卡 HP×100 在手牌顯示時已生效）
+    myHand.forEach(c => c && initCharCard(c));
 
     // 十全武功：開局額外攜帶兩張突擊卡
     if (myMonarch.skillName === '十全武功') {
@@ -318,15 +326,18 @@ function setupEventListeners() {
         });
     }
 
-    // ESC 鍵：取消選目標狀態
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && interactionState.mode !== 'idle') {
-            interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
-            clearHighlights(); hideHint();
-            _SFX.click();
-            toast('⚠ 已取消選擇', 'info', 1500);
-        }
-    }, { once: false });
+    // ESC 鍵：取消選目標狀態（M-9：只掛載一次，避免 _launchGame 反覆呼叫累積監聽器）
+    if (!_escListenerAdded) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && interactionState.mode !== 'idle') {
+                interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
+                clearHighlights(); hideHint();
+                _SFX.click();
+                toast('⚠ 已取消選擇', 'info', 1500);
+            }
+        });
+        _escListenerAdded = true;
+    }
 
     // 滑鼠點擊墳場/牌組插槽
     const myGraveSlot = document.getElementById('my-grave-slot');
@@ -801,6 +812,7 @@ function drawCard(silent = false) {
         return;
     }
     const card = myDeck.pop();
+    initCharCard(card); // 進手牌時就完成 HP×100 初始化，手牌顯示才正確
     myHand.push(card);
     updateHUDs();
     renderHand();
@@ -1406,7 +1418,7 @@ function handleHandClick(handIndex) {
                     const ri = Math.floor(Math.random() * usefulCards.length);
                     const sc = usefulCards.splice(ri, 1)[0];
                     const oi = oppHandData.indexOf(sc);
-                    if (oi !== -1) { oppHandData.splice(oi, 1); myHand.push(sc); stolen.push(sc.name); }
+                    if (oi !== -1) { oppHandData.splice(oi, 1); initCharCard(sc); myHand.push(sc); stolen.push(sc.name); }
                 }
                 toast(`🐑 <b>順手牽羊</b> — 竊得 ${stolen.join('、')}！`, 'skill');
                 _SFX.skill();
@@ -1617,6 +1629,7 @@ function handleHandClick(handIndex) {
             }
             if (stealIdx === -1) stealIdx = 0;
             const stolen = oppHandData.splice(stealIdx, 1)[0];
+            initCharCard(stolen); // 從敵方手牌竊來的武將卡，HP 可能尚未初始化
             myHand.push(stolen);
             // 顯示剩餘手牌情報
             const remaining = oppHandData.map(c => c.name).join('、') || '（已空）';
@@ -1841,6 +1854,7 @@ function _placeCharacterCard(handIndex, card, board, isPlayer) {
                 toast(`🌙 <b>${wuzetian.name} · 日月當空</b> — 誘降 <b>${card.name}</b>！`, 'gold', 3000);
                 _SFX.skill();
                 renderOppBoard(); renderOppHandUI(); updateHUDs();
+                checkWinCondition(); // M-19：誘降後需檢查勝負（可能移除關鍵武將）
                 return true;
             }
         }
@@ -2478,7 +2492,10 @@ function applyHostState(state) {
     oppBoard.bench   = state.hostBoard.bench   || [null,null,null,null,null];
     oppBoard.discard = state.hostBoard.discard || [];
 
-    if (state.guestHand) myHand = state.guestHand;
+    if (state.guestHand) {
+        myHand = state.guestHand;
+        myHand.forEach(c => c && initCharCard(c)); // 網路同步的手牌可能尚未 HP×100
+    }
 
     // 用 hostHandCount 建立假的對手手牌陣列（只顯示背面）
     oppHandData = Array.from({ length: state.hostHandCount || 0 },
@@ -3152,6 +3169,7 @@ function _execWuGu() {
                 div.onmouseenter = () => { div.style.borderColor = '#b8a060'; div.style.background = '#22241c'; };
                 div.onmouseleave = () => { div.style.borderColor = '#444'; div.style.background = '#1a1c22'; };
                 div.onclick = () => {
+                    initCharCard(rc); // 揭示牌可能是武將卡，加入手牌前先初始化 HP
                     myHand.push(rc);
                     revealed.splice(ri, 1);
                     renderHand(); updateHUDs();

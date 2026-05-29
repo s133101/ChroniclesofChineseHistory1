@@ -42,7 +42,10 @@ const Auth = (() => {
         } catch { return false; }
     }
     async function _fbDel(path) {
-        try { await fetch(FB + path + '.json', {method:'DELETE'}); } catch {}
+        try {
+            const r = await fetch(FB + path + '.json', {method:'DELETE'});
+            return r.ok;
+        } catch { return false; }
     }
 
     // ── sessionStorage 安全存取（Bug Fix #4：private mode 下會 throw）──
@@ -175,7 +178,7 @@ const Auth = (() => {
             return {ok: false, err: '驗證碼錯誤，請再試一次'};
         }
 
-        _fbDel('/auth_codes/' + uname);
+        await _fbDel('/auth_codes/' + uname);
         window.HuaXiaSecurity?.logDbAccess('DELETE', '/auth_codes/' + uname, uname);
 
         const user = await _fbGet('/users/' + uname);
@@ -212,7 +215,8 @@ const Auth = (() => {
         delete updated.username;
         updated.password_hash = newHash;
 
-        await _fbSet('/users/' + _cur.username, updated);
+        const ok = await _fbSet('/users/' + _cur.username, updated);
+        if (!ok) return {ok: false, err: '密碼更新失敗，請稍後再試'};
         _cur.password_hash = newHash;
         return {ok: true};
     }
@@ -225,7 +229,8 @@ const Auth = (() => {
         delete updated.username;
         updated.avatar = dataUrl;
 
-        await _fbSet('/users/' + _cur.username, updated);
+        const ok = await _fbSet('/users/' + _cur.username, updated);
+        if (!ok) return {ok: false, err: '頭像更新失敗，請稍後再試'};
         _cur.avatar = dataUrl;
 
         // Bug Fix #4(updateAvatar)：改用安全輔助函式
@@ -325,7 +330,8 @@ const Auth = (() => {
         delete updated.username;
         updated.nickname = name;
 
-        await _fbSet('/users/' + _cur.username, updated);
+        const ok = await _fbSet('/users/' + _cur.username, updated);
+        if (!ok) return {ok: false, err: '名號更新失敗，請稍後再試'};
         _cur.nickname = name;
 
         // Bug Fix #4(updateNickname)：改用安全輔助函式
@@ -342,7 +348,8 @@ const Auth = (() => {
         const updated = {..._cur};
         delete updated.username;
         updated.message = text.trim();
-        await _fbSet('/users/' + _cur.username, updated);
+        const ok = await _fbSet('/users/' + _cur.username, updated);
+        if (!ok) return {ok: false, err: '留言更新失敗，請稍後再試'};
         _cur.message = text.trim();
         return {ok: true};
     }
@@ -356,7 +363,8 @@ const Auth = (() => {
         delete updated.username;
         updated.email = newEmail;
 
-        await _fbSet('/users/' + _cur.username, updated);
+        const ok = await _fbSet('/users/' + _cur.username, updated);
+        if (!ok) return {ok: false, err: '信箱更新失敗，請稍後再試'};
         _cur.email = newEmail;
 
         // Bug Fix #4(updateEmail)：改用安全輔助函式

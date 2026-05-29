@@ -911,7 +911,9 @@
 
         // ── 自動刷新計時器 ──────────────────────────────────────────
         // 全域頻道：每 30 分鐘自動重新渲染（清除超時訊息）
-        setInterval(() => {
+        // H-7：儲存 ID 並先清除舊計時器，避免多次登入後計時器累積
+        clearInterval(_chatCleanupInterval);
+        _chatCleanupInterval = setInterval(() => {
             if (_chatMode === 'global') {
                 window._renderChatHistory('global');
             }
@@ -3102,8 +3104,10 @@
     const _INVITE_URL    = _FB_BASE + '/battle_invites';
     const _SPECTATE_URL  = _FB_BASE + '/spectate';
 
-    let _heartbeatInterval = null;
-    let _invitePollInterval = null;
+    let _heartbeatInterval   = null;
+    let _invitePollInterval  = null;
+    let _chatCleanupInterval = null; // H-7：聊天清理計時器 ID（避免堆積）
+    let _beforeUnloadAdded   = false; // H-6：避免 beforeunload 重複掛載
 
     // ── 在線心跳 ────────────────────────────────────────────────
     async function _startOnlineHeartbeat() {
@@ -3118,10 +3122,15 @@
         _write();
         clearInterval(_heartbeatInterval);
         _heartbeatInterval = setInterval(_write, 15000);
-        window.addEventListener('beforeunload', () => {
-            clearInterval(_heartbeatInterval);
-            clearInterval(_invitePollInterval);
-        }, { once: true });
+        // H-6：beforeunload 只掛一次，避免多次登入累積監聽器
+        if (!_beforeUnloadAdded) {
+            window.addEventListener('beforeunload', () => {
+                clearInterval(_heartbeatInterval);
+                clearInterval(_invitePollInterval);
+                clearInterval(_chatCleanupInterval);
+            });
+            _beforeUnloadAdded = true;
+        }
     }
 
     // ── 抓在線玩家（90 秒內有心跳）────────────────────────────
