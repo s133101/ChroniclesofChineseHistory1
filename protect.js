@@ -307,6 +307,16 @@
                 _startListening(sessionId);
             });
 
+            // ── 備援輪詢：每秒檢查 localStorage，另一分頁點連結後自動解鎖 ──
+            const _poll = setInterval(() => {
+                if (_isVerified()) {
+                    clearInterval(_poll);
+                    const aw = document.getElementById('_ask_wall');
+                    if (aw) aw.remove();
+                    _showSuccessToast('✅ 開發者身份已確認，已授予完整存取權限');
+                }
+            }, 1000);
+
             // ── 傳送驗證信（EmailJS，action 欄位帶連結，Gmail 自動超連結）──
             if (typeof emailjs === 'undefined') {
                 btnYes.textContent = '❌ 郵件模組未載入';
