@@ -3531,16 +3531,16 @@ body {
    ============================================================ */
 
 /* 半透明遮罩（pointer-events:none 讓玩家仍可點擊遊戲元素） */
+/* tut-overlay 僅保留 pointer-events 隔離，視覺遮罩改由 .tut-highlight box-shadow 負責 */
 #tut-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.58);
+    background: transparent;
     z-index: 498000;
     pointer-events: none;
-    transition: opacity .35s;
 }
 
-/* 高亮目標元素：金色脈衝邊框，浮出遮罩 */
+/* 高亮目標元素：box-shadow 向外暗化，框內保持 100% 亮度 */
 .tut-highlight {
     position: relative !important;
     z-index: 499000 !important;
@@ -3549,13 +3549,20 @@ body {
     border-radius: 10px !important;
     animation: tutPulse 1.6s ease-in-out infinite !important;
     pointer-events: auto !important;
-    /* 讓高亮區域明顯亮於周圍暗色遮罩 */
-    filter: brightness(1.45) !important;
-    background: rgba(212,175,55,0.07) !important;
 }
 @keyframes tutPulse {
-    0%, 100% { outline-color: #d4af37; box-shadow: 0 0 0 0 rgba(212,175,55,0.55), 0 0 24px rgba(212,175,55,0.18); }
-    50%       { outline-color: #ffe97a; box-shadow: 0 0 0 10px rgba(212,175,55,0), 0 0 40px rgba(212,175,55,0.30); }
+    0%, 100% {
+        outline-color: #d4af37;
+        box-shadow: 0 0 0 9999px rgba(0,0,0,0.62),
+                    0 0 0 0 rgba(212,175,55,0.55),
+                    0 0 24px rgba(212,175,55,0.25);
+    }
+    50% {
+        outline-color: #ffe97a;
+        box-shadow: 0 0 0 9999px rgba(0,0,0,0.62),
+                    0 0 0 10px rgba(212,175,55,0),
+                    0 0 40px rgba(212,175,55,0.40);
+    }
 }
 
 /* 教學面板 */
