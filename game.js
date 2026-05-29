@@ -718,7 +718,7 @@ function getSlotEl(boardId, idx) {
 // ==============================================================
 function showHint(msg) {
     const h = document.getElementById('action-hint');
-    if (h) { h.innerText = msg; h.classList.remove('hidden'); }
+    if (h) { h.innerHTML = msg; h.classList.remove('hidden'); }
 }
 function hideHint() {
     const h = document.getElementById('action-hint');
