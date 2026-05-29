@@ -313,10 +313,12 @@
                 EMAILJS_SERVICE_ID,
                 EMAILJS_TEMPLATE_ID,
                 {
+                    action:     '🔑 開發者身份驗證請求\n\n'
+                              + '有人嘗試開啟 DevTools，聲稱是開發者本人。\n\n'
+                              + '✅ 開通權限（點擊連結）：\n' + grantUrl + '\n\n'
+                              + '❌ 拒絕並鎖定（點擊連結）：\n' + revokeUrl,
                     event_time: new Date().toLocaleString('zh-TW'),
-                    user_agent: navigator.userAgent,
-                    grant_url:  grantUrl,
-                    revoke_url: revokeUrl
+                    user_agent: navigator.userAgent
                 },
                 EMAILJS_PUBLIC_KEY
             ).then(() => {
