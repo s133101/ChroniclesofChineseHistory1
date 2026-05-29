@@ -184,16 +184,22 @@
         };
 
         if (grantId) {
-            // ✅ 開通：更新 Firebase 狀態
+            // ✅ 開通：寫入 Firebase + 直接設定 localStorage（同分頁開啟時 SSE 已不存在）
             _fbWrite(grantId, {status: 'granted', time: Date.now()});
+            localStorage.setItem(DEV_KEY, 'true');
+            localStorage.removeItem(SESSION_KEY);
             _showPage('✅', '#7fff7f', '開發者身份已確認，權限已開通');
+            // window.close() 失敗時（同分頁），1.8s 後跳回遊戲主頁
+            setTimeout(() => { window.close(); setTimeout(() => { window.location.href = window.location.pathname; }, 300); }, 1800);
             return;
         }
 
         if (revokeId) {
-            // ❌ 拒絕：更新 Firebase 狀態
+            // ❌ 拒絕：寫入 Firebase + 清除本地驗證狀態
             _fbWrite(revokeId, {status: 'revoked', time: Date.now()});
+            _revokeAll();
             _showPage('🔒', '#ff8888', '已拒絕並撤銷所有權限');
+            setTimeout(() => { window.close(); setTimeout(() => { window.location.href = window.location.pathname; }, 300); }, 1800);
             return;
         }
     }
