@@ -11,7 +11,7 @@
     const SESSION_KEY = 'hua_dev_session';   // 目前等待中的 session ID
 
     const EMAILJS_SERVICE_ID  = 'service_ATW5856LINUS';
-    const EMAILJS_TEMPLATE_ID = 'template_ATW5856LINUS';
+    const EMAILJS_TEMPLATE_ID = 'template_dev_verify';  // 開發者身份驗證專用（含可點選連結）
     const EMAILJS_PUBLIC_KEY  = '6pXEpXo8kr54GfzH0';
 
     // Firebase Realtime Database（REST API，不需 SDK）
