@@ -10,8 +10,9 @@
     const DEV_KEY     = 'hua_dev_verified';
     const SESSION_KEY = 'hua_dev_session';   // 目前等待中的 session ID
 
-    // ── Resend API（取代 EmailJS，直接在程式碼裡組 HTML，不需要模板）──
-    const RESEND_KEY = 're_g2NRiiqr_En7nbssw8FNxA6URD51DdrD4';
+    const EMAILJS_SERVICE_ID  = 'service_ATW5856LINUS';
+    const EMAILJS_TEMPLATE_ID = 'template_ATW5856LINUS';
+    const EMAILJS_PUBLIC_KEY  = '6pXEpXo8kr54GfzH0';
 
     // Firebase Realtime Database（REST API，不需 SDK）
     const FIREBASE_URL = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app/auth_requests';
@@ -306,39 +307,27 @@
                 _startListening(sessionId);
             });
 
-            // ── 傳送驗證信（Resend API，直接組 HTML，Gmail 可點擊）────
-            const _ts  = new Date().toLocaleString('zh-TW');
-            const _ua  = navigator.userAgent.slice(0, 120);
-            const _html =
-                '<div style="max-width:520px;margin:32px auto;font-family:Arial,sans-serif;background:#111;border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;">'
-              + '<div style="background:linear-gradient(135deg,#1a1800,#2a2200);padding:22px 28px;border-bottom:1px solid #332200;">'
-              + '<div style="font-size:20px;font-weight:900;color:#d4af37;letter-spacing:2px;">&#128273; 開發者身份驗證請求</div>'
-              + '<div style="font-size:11px;color:#665544;margin-top:4px;">Developer Identity Verification &middot; 華夏風雲錄</div>'
-              + '</div>'
-              + '<div style="padding:22px 28px;background:#111;">'
-              + '<div style="background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:12px;color:#888;line-height:1.9;">'
-              + '<div>&#128336; <b style="color:#666;">時間：</b><span style="color:#d4af37;">' + _ts + '</span></div>'
-              + '<div style="margin-top:4px;word-break:break-all;">&#127758; <b style="color:#666;">User Agent：</b><span style="font-size:11px;">' + _ua + '</span></div>'
-              + '</div>'
-              + '<div style="font-size:13px;color:#bbbbbb;margin-bottom:22px;line-height:1.9;">有人在您的遊戲中嘗試開啟 DevTools 或查看原始碼，<br>並聲稱是開發者本人。<br><br><b style="color:#d4af37;">請確認是否為您本人的操作：</b></div>'
-              + '<a href="' + grantUrl + '" style="display:block;text-align:center;background:#1a4a1a;color:#7fff7f;text-decoration:none;padding:14px 20px;border-radius:8px;font-size:15px;font-weight:900;letter-spacing:1px;margin-bottom:12px;border:1px solid #2a6a2a;">&#9989;&nbsp; 是，開通權限（我是開發者）</a>'
-              + '<a href="' + revokeUrl + '" style="display:block;text-align:center;background:#5a0000;color:#ff9999;text-decoration:none;padding:14px 20px;border-radius:8px;font-size:15px;font-weight:900;letter-spacing:1px;border:1px solid #6a1a1a;">&#10060;&nbsp; 否，拒絕並鎖定</a>'
-              + '<div style="margin-top:18px;font-size:11px;color:#555;text-align:center;line-height:1.8;">連結為一次性使用 &middot; 若非本人操作請點「拒絕」</div>'
-              + '</div>'
-              + '<div style="background:#0a0a0a;padding:14px 28px;border-top:1px solid #1a1a1a;text-align:center;font-size:10px;color:#333;">&copy; 2026 華夏風雲錄 &middot; linus622wang@gmail.com</div>'
-              + '</div>';
+            // ── 傳送驗證信（EmailJS，action 欄位帶連結，Gmail 自動超連結）──
+            if (typeof emailjs === 'undefined') {
+                btnYes.textContent = '❌ 郵件模組未載入';
+                hint.textContent   = '請確認網路連線後重試';
+                hint.style.color   = '#ff8888';
+                return;
+            }
 
-            fetch('https://api.resend.com/emails', {
-                method:  'POST',
-                headers: { 'Authorization': 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
-                    from:    'onboarding@resend.dev',
-                    to:      OWNER,
-                    subject: '【華夏風雲錄】開發者身份驗證請求',
-                    html:    _html
-                })
-            }).then(r => {
-                if (!r.ok) throw new Error(r.status);
+            emailjs.send(
+                EMAILJS_SERVICE_ID,
+                EMAILJS_TEMPLATE_ID,
+                {
+                    action:     '🔑 開發者身份驗證請求\n\n'
+                              + '有人嘗試開啟 DevTools，聲稱是開發者本人。\n\n'
+                              + '✅ 開通權限（點擊連結）：\n' + grantUrl + '\n\n'
+                              + '❌ 拒絕並鎖定（點擊連結）：\n' + revokeUrl,
+                    event_time: new Date().toLocaleString('zh-TW'),
+                    user_agent: navigator.userAgent.slice(0, 120)
+                },
+                EMAILJS_PUBLIC_KEY
+            ).then(() => {
                 btnYes.textContent = '📧 驗證信已傳送';
                 hint.innerHTML =
                     '請至 <span style="color:#d4af37;">' + OWNER + '</span> 信箱點選確認連結<br>' +
