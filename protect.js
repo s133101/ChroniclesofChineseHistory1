@@ -360,6 +360,16 @@
         };
     }
 
+    // ── 跨分頁偵測：另一個分頁點了信件連結後，storage 事件即時通知 ──
+    window.addEventListener('storage', function(e) {
+        if (e.key === DEV_KEY && e.newValue === 'true') {
+            if (_sse) { _sse.close(); _sse = null; }
+            const aw = document.getElementById('_ask_wall');
+            if (aw) aw.remove();
+            _showSuccessToast('✅ 開發者身份已確認，已授予完整存取權限');
+        }
+    });
+
     // ── 頁面載入：先處理信件回調 ─────────────────────────────
     _checkUrlCallback();
 
