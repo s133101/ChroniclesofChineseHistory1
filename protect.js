@@ -189,8 +189,8 @@
             localStorage.setItem(DEV_KEY, 'true');
             localStorage.removeItem(SESSION_KEY);
             _showPage('✅', '#7fff7f', '開發者身份已確認，權限已開通');
-            // window.close() 失敗時（同分頁），1.8s 後跳回遊戲主頁
-            setTimeout(() => { window.close(); setTimeout(() => { window.location.href = window.location.pathname; }, 300); }, 1800);
+            // 1.8s 後：嘗試關分頁；若關不掉（同分頁）立即跳回遊戲
+            setTimeout(() => { window.close(); window.location.replace(window.location.pathname); }, 1800);
             return;
         }
 
@@ -199,7 +199,7 @@
             _fbWrite(revokeId, {status: 'revoked', time: Date.now()});
             _revokeAll();
             _showPage('🔒', '#ff8888', '已拒絕並撤銷所有權限');
-            setTimeout(() => { window.close(); setTimeout(() => { window.location.href = window.location.pathname; }, 300); }, 1800);
+            setTimeout(() => { window.close(); window.location.replace(window.location.pathname); }, 1800);
             return;
         }
     }
