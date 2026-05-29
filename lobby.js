@@ -3636,6 +3636,23 @@
 
             _tutWatcher = setInterval(() => {
                 if (_tutStep !== n) { clearInterval(_tutWatcher); return; }
+
+                // 教學第 5 步：玩家選中我方將軍後，高亮切換到敵方戰場
+                if (data.waitFor === 'attack_made' && typeof window._getInteractionMode === 'function') {
+                    const imode = window._getInteractionMode();
+                    const myZone  = document.getElementById('my-active-zone');
+                    const oppZone = document.getElementById('opp-active-zone');
+                    if (imode === 'select_target_enemy') {
+                        // 玩家已選中攻擊者 → 改框敵方
+                        if (myZone  && myZone.classList.contains('tut-highlight'))  { myZone.classList.remove('tut-highlight');  _tutHlEl = null; }
+                        if (oppZone && !oppZone.classList.contains('tut-highlight')) { oppZone.classList.add('tut-highlight'); _tutHlEl = oppZone; }
+                    } else {
+                        // 玩家取消選中 → 恢復框我方
+                        if (oppZone && oppZone.classList.contains('tut-highlight'))  { oppZone.classList.remove('tut-highlight'); _tutHlEl = null; }
+                        if (myZone  && !myZone.classList.contains('tut-highlight'))  { myZone.classList.add('tut-highlight');  _tutHlEl = myZone; }
+                    }
+                }
+
                 if (_tutCheckCondition(data.waitFor)) {
                     clearInterval(_tutWatcher);
                     // Bug 2 修正：900ms 延遲到期時確認仍在教學模式才推進（避免 game-over 期間重建 overlay）

@@ -25,6 +25,8 @@ let myBoard  = { active:[null,null,null,null,null], bench:[null,null,null,null,n
 let oppDeck = [], oppHandData = [];
 let oppBoard = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
 let interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
+// 供教學系統偵測當前互動模式
+window._getInteractionMode = () => interactionState.mode;
 let wineBuff = 0; // 酒：下一張【殺】傷害 +1
 
 const PHASES = ['抽牌階段','準備階段','主要階段','戰鬥階段','結束階段'];
