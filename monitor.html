@@ -599,8 +599,19 @@ function connectOnline() {
         } catch {}
     });
 
-    _sseOnline.onerror = () => {};
+    _sseOnline.onerror = () => { fetchOnlineFallback(); };
 }
+
+// ── REST 備援：SSE 失敗或定期刷新時直接抓 Firebase ────────
+async function fetchOnlineFallback() {
+    try {
+        const r = await fetch(`${FB}/online.json`);
+        if (r.ok) renderOnline(await r.json());
+    } catch {}
+}
+
+// 每 30 秒強制刷新一次（確保 SSE 延遲也能更新）
+setInterval(fetchOnlineFallback, 30000);
 
 // ── UI Controls ──────────────────────────────────────────
 function setFilter(f) {
