@@ -678,6 +678,8 @@
             results.push({ id: chk.id, label: chk.label, status, detail });
         }
 
+        // 先寫入再讀取，確保路徑存在（Firebase 對不存在路徑的 GET 可能回傳非 200）
+        await _fbPatch('/sys_ping', { t: Date.now() });
         const fbStart = Date.now();
         await _fbGet('/sys_ping');
         const fbMs = Date.now() - fbStart;
