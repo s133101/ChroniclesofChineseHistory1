@@ -1104,6 +1104,7 @@
         // 第二個 addFriend 已移除（重複定義，且呼叫未定義的 _renderFriends）
 
         window.addEventListener('storage', (e) => {
+            try { // H-6 Fix：JSON.parse 可能失敗
             if (e.key === 'hua_global_chat_sync') {
                 const data = JSON.parse(e.newValue);
                 if (data && data.from !== window.playerNickname) {
@@ -1123,6 +1124,7 @@
                     }
                 }
             }
+            } catch {} // H-6 Fix end
         });
 
         // 2. 廣播公告 (頂端置頂) - 新介面邏輯
@@ -2510,8 +2512,10 @@
     /** 客方部署人物牌 */
     function _guestDeployChar(action) {
         const { cardUid, cardData, target } = action;
-        let idx  = oppHandData.findIndex(c => c.uid === cardUid);
-        let card = (idx !== -1) ? oppHandData.splice(idx, 1)[0] : cardData;
+        const idx = oppHandData.findIndex(c => c.uid === cardUid);
+        // H-9 Fix：拒絕不在手牌的卡，不信任原始 cardData 避免繞過驗證
+        if (idx === -1) { _sync(); return; }
+        const card = oppHandData.splice(idx, 1)[0];
         if (!card) { _sync(); return; }
         if (typeof initCharCard === 'function') initCharCard(card); // HP×100 + ATK/DEF
 
@@ -2573,9 +2577,9 @@
 
         const mods = execAttackMods(oppBoard);
         const { unDodgeable, ignoreFirstDodge, extraDmg, hasAoE, hasFireLianYing, hasFengLang } = mods;
-        // C-3 Fix：使用 guest 傳來的 attackerAtk，fallback 60（而非硬碼 1）
+        // C-3 Fix：使用 guest 傳來的 attackerAtk，H-4 Fix：扣除目標 DEF
         const guestAtk = action.attackerAtk || 60;
-        let dmg = Math.floor(guestAtk) + extraDmg;
+        let dmg = Math.max(1, Math.floor(guestAtk) - (target.def || 0)) + extraDmg;
         if (unDodgeable)     toast('⚔ 對手鎖定技發動！此次攻擊無法閃避！', 'skill');
         if (ignoreFirstDodge) toast('⚔ 對手【水戰】— 您的第一張固守被無視！', 'skill');
         if (hasFengLang)      toast('🐺 對手【風狼】— 攻擊附帶額外效果！', 'skill');
@@ -2636,6 +2640,7 @@
                     target.hp = 0;
                     spawnSkillFx('💀', getSlotEl('my-' + zone + '-zone', idx));
                     toast(`💀 <b>${target.name}</b> 壯烈犧牲！`, 'danger', 3500);
+                    execOnDeath(target, myBoard, true); // C-3 Fix
                     myBoard[zone][idx] = null;
                     myBoard.discard.push(target);
                     const attacker = oppBoard.active.find(c => c !== null);
@@ -2721,10 +2726,12 @@
             _guestShowDefense(data);
         });
 
-        Network.on('game_over', ({ winnerMsg }) => {
+        Network.on('game_over', ({ winnerMsg, hostWon }) => {
             if (typeof toast === 'function') toast(winnerMsg, 'gold', 5000);
+            // H-2/H-10 Fix：使用 hostWon 布林值，不再解析訊息文字
+            const guestWon = hostWon === false || (!hostWon && winnerMsg && winnerMsg.includes('客方'));
             setTimeout(() => {
-                if (typeof triggerGameOver === 'function') triggerGameOver(winnerMsg.includes('勝'));
+                if (typeof triggerGameOver === 'function') triggerGameOver(guestWon);
             }, 2000);
         });
     }
@@ -2947,7 +2954,8 @@
             all_monarchs: allMonarchs,
             star_3:       maxStar    >= 3,
             star_5:       maxStar    >= 5,
-            post_board:   boardPosts >= 1,
+            post_board:    boardPosts >= 1,
+            tutorial_done: parseInt(localStorage.getItem('hua_tutorial_done') || '0') > 0, // L-10 Fix
         };
 
         let newlyUnlocked = [];

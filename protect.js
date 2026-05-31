@@ -356,6 +356,8 @@
 
         // ── 按「否」→ 直接鎖定 ────────────────────────────────
         document.getElementById('_btn_no').onclick = function() {
+            clearInterval(_poll);           // L-1 Fix：清除備援輪詢
+            if (_sse) { _sse.close(); _sse = null; } // L-9 Fix：關閉 SSE
             _revokeAll();
             _hardLock();
         };

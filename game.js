@@ -510,7 +510,7 @@ function makeCardEl(card) {
         : artValue;
 
     const badge = card.skillName
-        ? `<div class="skill-badge" title="${card.skillName}">${card.skillName}</div>` : '';
+        ? `<div class="skill-badge" title="${_esc(card.skillName)}">${_esc(card.skillName)}</div>` : ''; // M-5 Fix
     
     // 象徵物元件
     const symbolHtml = card.symbolItem 
@@ -542,14 +542,14 @@ function makeCardEl(card) {
     }
 
     el.innerHTML = `
-      <div class="card-dynasty">${card.dynasty || ''}</div>
-      <div class="card-type">${card.type || ''}</div>
+      <div class="card-dynasty">${_esc(card.dynasty || '')}</div>
+      <div class="card-type">${_esc(card.type || '')}</div>
       ${badge}
       <div class="card-art">${artHtml}</div>
-      <div class="card-name">${card.name || ''}</div>
+      <div class="card-name">${_esc(card.name || '')}</div>
       ${symbolHtml}
       ${hpHtml}
-    `;
+    `; /* M-6 Fix: XSS 轉義 */
     return el;
 }
 
@@ -630,16 +630,16 @@ function showPreview(card) {
     el.innerHTML = `
       <div class="preview-card ${typeClass(card.type)}">
         <div class="preview-header">
-          <div class="preview-name">${card.name}</div>
-          <div class="preview-meta">[${card.dynasty}] · ${card.type}</div>
+          <div class="preview-name">${_esc(card.name)}</div>
+          <div class="preview-meta">[${_esc(card.dynasty)}] · ${_esc(card.type)}</div>
         </div>
         <div class="preview-art">${artHtml}</div>
         <div class="preview-body">
-          <div class="preview-desc">${card.desc || ''}</div>
+          <div class="preview-desc">${_esc(card.desc || '')}</div>
           ${card.skillName ? `<div class="preview-skill">
-            <div class="preview-skill-name">【${card.skillName}】</div>
-            <div class="preview-skill-desc">${card.skillDesc || ''}</div>
-          </div>` : ''}
+            <div class="preview-skill-name">【${_esc(card.skillName)}】</div>
+            <div class="preview-skill-desc">${_esc(card.skillDesc || '')}</div>
+          </div>` : ''} <!-- M-7 Fix: XSS escape -->
           ${(card.hp !== '-' && card.hp !== undefined) ? (() => {
             const pm = getStatMeta(card.type);
             const atkInfo = card.atk ? `<div class="preview-stat-row"><span>${pm.atkIcon} ${pm.atkLabel}：${card.atk}</span><span>${pm.defIcon} ${pm.defLabel}：${card.def || 0}</span></div>` : '';
@@ -790,7 +790,7 @@ function startMyTurn() {
     if (!gameActive) { gameActive = true; }
     isPlayerTurn = true;
     currentPhaseIndex = 0;
-    wineBuff = 0; // 回合結束重置酒效果
+    // L-4 Fix：wineBuff 只在 endPlayerTurn 重置，startMyTurn 不重複重置
     updateHUDs();
     // 綠色閃屏
     const gc = document.getElementById('game-container');
@@ -1114,11 +1114,15 @@ function execAoEDamage(targetIdx, targetZone, isPlayerAttacking) {
             arr[i].hp = 0;
             toast(`💀 <b>${arr[i].name}</b> 在大火中陣亡！`, 'danger', 3000);
             _SFX.death();
+            execOnDeath(arr[i], board, !isPlayerAttacking); // C-1 Fix
+            const attacker = isPlayerAttacking ? myBoard.active.find(c=>c) : oppBoard.active.find(c=>c);
+            execOnKill(attacker, arr[i], isPlayerAttacking); // C-1 Fix
             board.discard.push(arr[i]);
             arr[i] = null;
         }
     });
     if (isPlayerAttacking) renderOppBoard(); else renderBoard();
+    checkWinCondition(); // H-3 Fix：AoE 死亡後判斷勝負
 }
 
 function execDefenseMods(defender, dmg) {
@@ -1474,7 +1478,14 @@ function handleHandClick(handIndex) {
                         tgt.hp = Math.max(0, tgt.hp - 25);
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`⚔ <b>${tgt.name}</b> 無法應對，受 25 點傷害！`, 'danger', 1500);
-                        if (tgt.hp <= 0) { execOnKill(null, tgt, true); oppBoard[tgtZone][tgtIdx] = null; oppBoard.discard.push(tgt); }
+                        if (tgt.hp <= 0) {
+                            execOnDeath(tgt, oppBoard, false); // C-2 Fix
+                            execOnKill(null, tgt, true);
+                            oppBoard[tgtZone][tgtIdx] = null;
+                            oppBoard.discard.push(tgt);
+                            renderOppBoard(); updateHUDs();
+                            if (checkWinCondition()) { _maybeSyncHost(); return; } // C-2 Fix
+                        }
                     }
                     renderOppBoard(); updateHUDs();
                 }, nanDelay);
@@ -1504,7 +1515,14 @@ function handleHandClick(handIndex) {
                         tgt.hp = Math.max(0, tgt.hp - 25);
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`🏹 <b>${tgt.name}</b> 無法閃避，受 25 點傷害！`, 'danger', 1500);
-                        if (tgt.hp <= 0) { execOnKill(null, tgt, true); oppBoard[tgtZone][tgtIdx] = null; oppBoard.discard.push(tgt); }
+                        if (tgt.hp <= 0) {
+                            execOnDeath(tgt, oppBoard, false); // C-2 Fix
+                            execOnKill(null, tgt, true);
+                            oppBoard[tgtZone][tgtIdx] = null;
+                            oppBoard.discard.push(tgt);
+                            renderOppBoard(); updateHUDs();
+                            if (checkWinCondition()) { _maybeSyncHost(); return; } // C-2 Fix
+                        }
                     }
                     renderOppBoard(); updateHUDs();
                 }, wanDelay);
@@ -2314,7 +2332,7 @@ function checkWinCondition() {
     const oppGenDeaths = oppBoard.discard.filter(c => c.type === '大將軍' || c.type === '將軍').length;
     if (oppGenDeaths >= 2) {
         toast('🏆 敵方兩位大將軍/將軍相繼陣亡，敵軍潰散！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
     }
 
     // ── 我方系統崩潰 → 我方敗 ────────────────────────────────
@@ -2334,21 +2352,21 @@ function checkWinCondition() {
     // ── 敵方系統崩潰 → 我方勝 ────────────────────────────────
     if (isSystemCritical(oppBoard, '後勤')) {
         toast('🏆 敵方糧道斷絕，<b>捉襟見肘</b>，敵軍不戰自潰！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
     }
     if (isSystemCritical(oppBoard, '內政')) {
         toast('🏆 敵境<b>民怨四起</b>，後方大亂，敵軍渙散！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
     }
     if (isSystemCritical(oppBoard, '監察')) {
         toast('🏆 敵方<b>人人自危</b>，叛亂四起，土崩瓦解！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
     }
 
     // ── 敵方全軍覆沒且無牌可打 ───────────────────────────────
     const oppForces = [...oppBoard.active, ...oppBoard.bench].filter(c => c !== null);
     if (oppForces.length === 0 && oppHandData.length === 0 && oppDeck.length === 0) {
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！' });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！', hostWon: true });
         _SFX.win(); triggerGameOver(true); return true;
     }
     // ── 擊殺對方君主 ─────────────────────────────────────────
@@ -2356,14 +2374,14 @@ function checkWinCondition() {
     if (oppMonarch && oppMonarch.hp <= 0) {
         toast(`👑 <b>${oppMonarch.name}</b> 君主陣亡！`, 'gold', 3000);
         oppBoard.active[2] = null; oppBoard.discard.push(oppMonarch);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！' });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！', hostWon: true });
         _SFX.win(); triggerGameOver(true); return true;
     }
     // ── 我方君主陣亡 ─────────────────────────────────────────
     const myMonarch = myBoard.active[2];
     if (myMonarch && myMonarch.hp <= 0) {
         toast(`💔 <b>${myMonarch.name}</b> 君主陣亡！城破國滅！`, 'danger', 3000);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！' });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
     return false;
@@ -2389,6 +2407,7 @@ function _saveLeaderboardRecord(name, bestStreak) {
 }
 
 function triggerGameOver(win) {
+    if (!gameActive) return; // L-8 Fix：防止雙重觸發
     gameActive = false;
     window.gameActive = false;
 
@@ -2397,7 +2416,8 @@ function triggerGameOver(win) {
 
     // 教學模式：強制清除教學面板與輪詢器，避免殘留在結束畫面之上
     if (window.TUTORIAL_MODE && typeof window._endTutorial === 'function') {
-        window._endTutorial(false); // false = 不跳回大廳，讓 game-over 畫面正常顯示
+        if (win) localStorage.setItem('hua_tutorial_done', '1'); // L-10 Fix：教學勝利解鎖成就
+        window._endTutorial(false);
     }
 
     // 清除房間聊天紀錄
@@ -2432,7 +2452,9 @@ function triggerGameOver(win) {
         // ----------------
 
         // --- 寫入 Firebase 對戰記錄 ---
-        if (typeof Auth !== 'undefined' && Auth.current()) {
+        // H-1 Fix：PvP 時只由 host 端寫入，guest 端不重複
+        const _shouldRecord = !isPvP || window.GAME_MODE === 'host';
+        if (_shouldRecord && typeof Auth !== 'undefined' && Auth.current()) {
             const opponent = window.opponentNickname || (isPvP ? '未知對手' : 'AI 對手');
             Auth.recordBattle(window.GAME_MODE || 'ai', win, opponent, turnCount, totalReward).then(() => {
                 // 對戰記錄寫入後，立即檢查成就
@@ -3205,7 +3227,7 @@ function _execWuGu() {
                     revealed.splice(ri, 1);
                     renderHand(); updateHUDs();
                     toast(`🌾 你獲得了 <b>${rc.name}</b>！`, 'success', 1500);
-                    if (revealed.length === 0) { document.body.removeChild(modal); _maybeSyncHost(); return; }
+                    if (revealed.length === 0) { if (modal.parentNode) modal.parentNode.removeChild(modal); _maybeSyncHost(); return; } // L-7 Fix
                     // AI 的回合
                     renderWuGu(false);
                     setTimeout(() => {
@@ -3215,7 +3237,7 @@ function _execWuGu() {
                         oppHandData.push(aiPref);
                         renderOppHandUI();
                         toast(`🤖 對手獲得了 <b>${aiPref.name}</b>！`, 'info', 1500);
-                        if (revealed.length === 0) { document.body.removeChild(modal); _maybeSyncHost(); return; }
+                        if (revealed.length === 0) { if (modal.parentNode) modal.parentNode.removeChild(modal); _maybeSyncHost(); return; } // L-7 Fix
                         // 再次輪到玩家
                         renderWuGu(true);
                     }, 900);
