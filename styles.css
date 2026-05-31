@@ -3498,6 +3498,106 @@ body {
 }
 
 /* ============================================================
+   📱 手機版戰場強化（Task #6）
+   ============================================================ */
+@media (max-width: 768px) {
+    /* 戰場容器：允許垂直捲動 */
+    #game-screen {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 戰場主區縮小 */
+    #battlefield-main {
+        transform: scale(0.85);
+        transform-origin: top center;
+    }
+
+    /* 我方手牌：貼底，小螢幕自動縮 */
+    #my-hand-container {
+        bottom: 8px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+    }
+    #my-hand-container .card {
+        width: 68px !important;
+        height: 96px !important;
+        font-size: 10px !important;
+    }
+
+    /* 技能按鈕列 */
+    #skill-bar {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    #skill-bar button {
+        padding: 6px 10px;
+        font-size: 11px;
+        min-height: 36px;
+    }
+
+    /* HUD 縮小 */
+    #my-hud, #opp-hud {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    /* 回合指示器 */
+    #turn-indicator {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+
+    /* 結束回合按鈕加大觸控面積 */
+    #btn-end-turn {
+        min-height: 48px;
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+
+    /* 系統區縮小 */
+    .side-zone {
+        display: none; /* 手機隱藏側欄，節省空間 */
+    }
+
+    /* ELO 顯示在個人資料小字 */
+    .elo-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    #battlefield-main {
+        transform: scale(0.72);
+        transform-origin: top center;
+    }
+
+    /* 底部按鈕列改為 2×2 */
+    .action-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+}
+
+/* ELO 積分徽章 */
+.elo-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #2a1800, #5a3e00);
+    border: 1px solid #d4af37;
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #d4af37;
+    letter-spacing: 0.5px;
+}
+.elo-badge.platinum { border-color: #b0c4de; color: #b0c4de; background: linear-gradient(135deg, #1a1a2a, #2a2a4a); }
+.elo-badge.gold     { border-color: #ffd700; color: #ffd700; }
+.elo-badge.silver   { border-color: #c0c0c0; color: #c0c0c0; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); }
+
+/* ============================================================
    Phase 2 — 升星 / 成就 / 賽季
    ============================================================ */
 

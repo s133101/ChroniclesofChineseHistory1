@@ -2880,17 +2880,28 @@
     // ══════════════════════════════════════════════════════════════
 
     const ACHIEVEMENTS = [
+        // 勝負類
         { id: 'first_win',    name: '初戰告捷',  icon: '🏆', desc: '贏得第一場對戰（AI 或 PvP）' },
         { id: 'wins_10',      name: '百戰老將',  icon: '⚔️',  desc: '累計贏得 10 場對戰' },
         { id: 'wins_50',      name: '常勝將軍',  icon: '🎖️',  desc: '累計贏得 50 場對戰' },
+        { id: 'wins_100',     name: '百勝兵仙',  icon: '🎗️',  desc: '累計贏得 100 場對戰' },
         { id: 'pvp_win_5',    name: '江湖好手',  icon: '🗡️',  desc: '贏得 5 場 PvP 聯機對戰' },
+        { id: 'pvp_win_20',   name: '縱橫天下',  icon: '⚜️',  desc: '贏得 20 場 PvP 聯機對戰' },
+        // 連勝類
         { id: 'streak_5',     name: '五連連勝',  icon: '🔥',  desc: 'PvP 達成最高 5 連勝' },
         { id: 'streak_10',    name: '十連連勝',  icon: '💥',  desc: 'PvP 達成最高 10 連勝' },
+        // ELO 積分類
+        { id: 'elo_1400',     name: '嶄露頭角',  icon: '📈', desc: 'ELO 積分達到 1400' },
+        { id: 'elo_1600',     name: '獨步天下',  icon: '💎', desc: 'ELO 積分達到 1600' },
+        { id: 'elo_1800',     name: '天下無敵',  icon: '👑', desc: 'ELO 積分達到 1800' },
+        // 收集類
         { id: 'collect_10',   name: '初露鋒芒',  icon: '📚',  desc: '收集 10 位武將' },
-        { id: 'collect_30',   name: '天下英傑',  icon: '👑',  desc: '收集 30 位武將' },
+        { id: 'collect_30',   name: '天下英傑',  icon: '🗂️',  desc: '收集 30 位武將' },
         { id: 'all_monarchs', name: '帝王之選',  icon: '🏯',  desc: '收集所有君王' },
+        // 強化類
         { id: 'star_3',       name: '金星閃耀',  icon: '⭐',  desc: '將任意武將升至 3 星' },
         { id: 'star_5',       name: '滿星傳說',  icon: '🌟',  desc: '將任意武將升至 5 星' },
+        // 其他
         { id: 'post_board',    name: '名震天下',  icon: '📜',  desc: '首次發布皇榜' },
         { id: 'tutorial_done', name: '初入江湖',  icon: '🎓',  desc: '完成新手教學關卡' },
     ];
@@ -2908,13 +2919,20 @@
         const maxStar     = Object.values(window.playerCardStars).reduce((m, v) => Math.max(m, v), 0);
         const boardPosts  = parseInt(localStorage.getItem('hua_board_posts') || '0');
 
+        const myElo = (typeof Auth !== 'undefined' && Auth.current()?.elo) || 1200;
+
         const checks = {
             first_win:    totalWins  >= 1,
             wins_10:      totalWins  >= 10,
             wins_50:      totalWins  >= 50,
+            wins_100:     totalWins  >= 100,
             pvp_win_5:    pvpWins    >= 5,
+            pvp_win_20:   pvpWins    >= 20,
             streak_5:     bestStreak >= 5,
             streak_10:    bestStreak >= 10,
+            elo_1400:     myElo      >= 1400,
+            elo_1600:     myElo      >= 1600,
+            elo_1800:     myElo      >= 1800,
             collect_10:   ownedCount >= 10,
             collect_30:   ownedCount >= 30,
             all_monarchs: allMonarchs,
@@ -3419,18 +3437,29 @@
             const data = res.ok ? await res.json() : null;
 
             // ② 過濾：排除自己、超過 60 秒殭屍紀錄、code 欄位損毀的資料
-            const now = Date.now();
+            const now   = Date.now();
+            const myElo = me.elo || 1200;
             const candidates = data
                 ? Object.entries(data).filter(([k, v]) =>
                     k !== me.username &&
-                    v && v.code &&                              // 防 undefined.code crash
+                    v && v.code &&
                     (now - (v.timestamp || 0)) < 60000)
                 : [];
 
             if (candidates.length > 0) {
-                // ③ 找到對手 — 取最早進佇列的
-                candidates.sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0));
+                // ③ 找到對手 — 優先找 ELO 最接近的（容忍差距隨等待時間擴大）
+                candidates.sort((a, b) => {
+                    const aElo  = a[1].elo || 1200;
+                    const bElo  = b[1].elo || 1200;
+                    const aWait = now - (a[1].timestamp || now);
+                    const bWait = now - (b[1].timestamp || now);
+                    // 等待每 10 秒擴大 100 分容忍度
+                    const aScore = Math.abs(myElo - aElo) - Math.floor(aWait / 10000) * 100;
+                    const bScore = Math.abs(myElo - bElo) - Math.floor(bWait / 10000) * 100;
+                    return aScore - bScore;
+                });
                 const [hostUser, hostData] = candidates[0];
+                window.opponentUsername = hostUser;
 
                 // 從佇列搶先移除（防雙重配對；Firebase DELETE 是冪等的）
                 await fetch(`${_MM_URL}/${hostUser}.json`, { method: 'DELETE' });
@@ -3449,7 +3478,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         code,
-                        nickname: me.nickname || me.username,
+                        nickname:  me.nickname || me.username,
+                        elo:       me.elo || 1200,
                         timestamp: Date.now()
                     })
                 });

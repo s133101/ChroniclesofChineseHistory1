@@ -96,6 +96,34 @@ const Auth = (() => {
         }
     }
 
+    // ── 地理異常偵測 ─────────────────────────────────────────
+    async function _checkGeoAnomaly(uname, userData) {
+        try {
+            const r = await fetch('https://ip-api.com/json/?fields=country,countryCode,city', { signal: AbortSignal.timeout(4000) });
+            if (!r.ok) return;
+            const geo = await r.json();
+            const country = geo.countryCode || '??';
+            const city    = geo.city || '';
+            const now     = Date.now();
+
+            const lastGeo = userData.lastGeo;
+            if (lastGeo && lastGeo.country && lastGeo.country !== country) {
+                // 國家不同 → 異常告警
+                const msg = `帳號 ${uname} 從新地點登入：${city}, ${country}（上次：${lastGeo.city || ''}, ${lastGeo.country}）`;
+                _fw?.logIntrusion ? _fw.logIntrusion(msg) : null;
+                _sendEmail(EJ_NOTIFY, {
+                    action:     `🌍 地理異常登入\n\n${msg}\n\nIP：${geo.query || '?'}`,
+                    event_time: new Date().toLocaleString('zh-TW'),
+                    user_agent: navigator.userAgent
+                });
+            }
+            // 更新最後登入地點
+            await _fbPatch('/users/' + uname, {
+                lastGeo: { country, city, ts: now }
+            });
+        } catch {}
+    }
+
     // ── 登入 Step 1：驗證帳密 ────────────────────────────────
     async function login(username, password) {
         const uname = username.toLowerCase().trim();
@@ -138,6 +166,9 @@ const Auth = (() => {
 
         // 🛡 登入成功 — 清除失敗計數
         _fw?.recordSuccessLogin(uname);
+
+        // 🌍 地理異常偵測 — 比對上次登入地點
+        _checkGeoAnomaly(uname, user).catch(() => {});
 
         // 發送驗證碼
         const code    = String(Math.floor(100000 + Math.random() * 900000));
@@ -283,7 +314,11 @@ const Auth = (() => {
             role: 'player',
             nickname,
             avatar: null,
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            elo: 1200,   // ELO 初始積分
+            wins: 0,
+            losses: 0,
+            silver: 100  // 新手銀兩
         });
         _fw?.logDbAccess('WRITE', '/users/' + uname, uname);
         if (!userOk) return {ok: false, err: '帳號建立失敗，請稍後再試'};
@@ -373,6 +408,74 @@ const Auth = (() => {
         _saveSession(s);
 
         return {ok: true};
+    }
+
+    // ── ELO 積分系統 ─────────────────────────────────────────
+    // K 係數：積分越高越穩定，新手波動大
+    function _eloK(elo) {
+        if (elo < 1400) return 32;
+        if (elo < 1800) return 24;
+        return 16;
+    }
+
+    // 計算 ELO 變化量（winner / loser 各自的分數）
+    function calcElo(winnerElo, loserElo) {
+        const expected = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+        const k = _eloK(winnerElo);
+        const delta = Math.round(k * (1 - expected));
+        return { winnerNew: winnerElo + delta, loserNew: loserElo - delta, delta };
+    }
+
+    // 對局結束後更新雙方 ELO、勝敗數、銀兩
+    async function recordGameResult(winnerUsername, loserUsername) {
+        try {
+            const [wData, lData] = await Promise.all([
+                _fbGet('/users/' + winnerUsername),
+                _fbGet('/users/' + loserUsername)
+            ]);
+            if (!wData || !lData) return;
+
+            const wElo = wData.elo || 1200;
+            const lElo = lData.elo || 1200;
+            const { winnerNew, loserNew, delta } = calcElo(wElo, lElo);
+
+            await Promise.all([
+                _fbPatch('/users/' + winnerUsername, {
+                    elo:    winnerNew,
+                    wins:   (wData.wins || 0) + 1,
+                    silver: (wData.silver || 0) + 50 + Math.floor(delta / 2)
+                }),
+                _fbPatch('/users/' + loserUsername, {
+                    elo:    Math.max(800, loserNew), // 最低 800 分
+                    losses: (lData.losses || 0) + 1,
+                    silver: (lData.silver || 0) + 10  // 敗者也有少量銀兩
+                })
+            ]);
+
+            // 更新排行榜快取
+            await _fbPatch('/leaderboard/' + winnerUsername, {
+                nickname: wData.nickname || winnerUsername,
+                elo: winnerNew,
+                wins: (wData.wins || 0) + 1
+            });
+            await _fbPatch('/leaderboard/' + loserUsername, {
+                nickname: lData.nickname || loserUsername,
+                elo: Math.max(800, loserNew),
+                wins: lData.wins || 0
+            });
+
+            return { delta, winnerNew, loserNew };
+        } catch { return null; }
+    }
+
+    // 取得排行榜（前 N 名）
+    async function getLeaderboard(limit = 20) {
+        const data = await _fbGet('/leaderboard');
+        if (!data) return [];
+        return Object.entries(data)
+            .map(([k, v]) => ({ username: k, ...v }))
+            .sort((a, b) => (b.elo || 1200) - (a.elo || 1200))
+            .slice(0, limit);
     }
 
     // ── 管理員建立帳號 ────────────────────────────────────────
@@ -519,6 +622,10 @@ const Auth = (() => {
         recordBattle,
         getBattleHistory,
         getLeaderboardData,
-        verifyPassword
+        verifyPassword,
+        // ELO 系統
+        calcElo,
+        recordGameResult,
+        getLeaderboard,
     };
 })();

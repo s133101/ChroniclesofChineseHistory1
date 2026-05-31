@@ -97,6 +97,11 @@
 
     const _layerStatus  = { L1: 'ok', L2: 'ok', L3: 'ok', L4: 'ok', L5: 'ok' };
     const _failedLogins = {};
+
+    // ── IP 封鎖 ──────────────────────────────────────────────
+    const _IP_BLOCK_THRESHOLD = 3;          // 同 IP 入侵次數上限
+    const _IP_BLOCK_DURATION  = 24 * 3600000; // 封鎖時長 24 小時
+    const _ipIntrusionCount   = {};          // 本 session IP 入侵計數
     const _behaviorTrack = {};
     let   _l3Healthy    = true;
     let   _sessionFp    = null;
@@ -243,6 +248,57 @@
         _log(LEVEL.CRITICAL, CAT.INTRUSION, detail, true);
         _triggerIntrusionAlert(detail);
         _addThreat(30);
+        // IP 封鎖計數
+        if (_clientIp) {
+            _ipIntrusionCount[_clientIp] = (_ipIntrusionCount[_clientIp] || 0) + 1;
+            if (_ipIntrusionCount[_clientIp] >= _IP_BLOCK_THRESHOLD) {
+                _blockCurrentIp(detail);
+            }
+        }
+    }
+
+    // ── 封鎖目前 IP ──────────────────────────────────────────
+    async function _blockCurrentIp(reason) {
+        if (!_clientIp) return;
+        const key = _clientIp.replace(/[.:]/g, '_');
+        const existing = await _fbGet(`/ip_blacklist/${key}`);
+        if (existing && Date.now() < existing.until) return; // 已封鎖
+        await _fbPatch(`/ip_blacklist/${key}`, {
+            ip:        _clientIp,
+            reason:    reason.slice(0, 100),
+            blockedAt: Date.now(),
+            until:     Date.now() + _IP_BLOCK_DURATION,
+            count:     _ipIntrusionCount[_clientIp]
+        });
+        _log(LEVEL.CRITICAL, CAT.INTRUSION,
+            `🚫 IP ${_clientIp} 已自動封鎖 24 小時（入侵 ${_ipIntrusionCount[_clientIp]} 次）`, true);
+    }
+
+    // ── 啟動時檢查 IP 是否在黑名單 ───────────────────────────
+    async function _checkIpBlacklist() {
+        if (!_clientIp) return;
+        const key = _clientIp.replace(/[.:]/g, '_');
+        const data = await _fbGet(`/ip_blacklist/${key}`);
+        if (!data) return;
+        if (Date.now() > data.until) {
+            // 封鎖已過期，移除
+            fetch(_FB + `/ip_blacklist/${key}.json`, { method: 'DELETE' }).catch(() => {});
+            return;
+        }
+        // 封鎖中 → 顯示封鎖頁面
+        const remaining = Math.ceil((data.until - Date.now()) / 3600000);
+        const wall = document.createElement('div');
+        wall.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0a0000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Noto Serif TC",serif;color:#ff4444;text-align:center;padding:40px;';
+        wall.innerHTML = `
+            <div style="font-size:64px;margin-bottom:16px;">🚫</div>
+            <div style="font-size:22px;font-weight:900;margin-bottom:8px;">存取遭封鎖</div>
+            <div style="font-size:13px;color:#aa4444;margin-bottom:20px;">Access Blocked</div>
+            <div style="background:rgba(255,0,0,0.08);border:1px solid rgba(255,68,68,0.25);border-radius:12px;padding:20px 32px;max-width:420px;line-height:2;">
+                <div style="color:#ff6666;">您的 IP（${_clientIp}）因多次入侵行為已被系統封鎖</div>
+                <div style="color:#884444;font-size:12px;margin-top:8px;">剩餘封鎖時間：約 ${remaining} 小時</div>
+            </div>`;
+        document.body.appendChild(wall);
+        _log(LEVEL.CRITICAL, CAT.INTRUSION, `IP ${_clientIp} 嘗試存取但在黑名單中（剩 ${remaining}h）`);
     }
 
     // ════════════════════════════════════════════════════════
@@ -1001,8 +1057,9 @@
         _startTime   = Date.now(); // 在 init() 設定，確保掃描寬限期計算正確
 
         _resolveIp().then(ip => {
+            _checkIpBlacklist(); // IP 黑名單檢查
             const now = new Date().toLocaleString('zh-TW');
-            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260528d`);
+            _log(LEVEL.INFO, CAT.SYSTEM, `🛡 防火牆安全系統啟動 v20260531a`);
             _log(LEVEL.INFO, CAT.SYSTEM, `客戶端 IP：${ip} ｜ 啟動時間：${now}`);
             _log(LEVEL.INFO, CAT.SYSTEM, `防火牆層級：L1(+URL解碼/CRLF) · L2(記憶體雙鎖) · L3(無頭偵測) · L4 資料完整性 · L5 會話驗證`);
             _log(LEVEL.INFO, CAT.OPS,    `瀏覽器資訊：${navigator.userAgent.slice(0, 80)}`);
@@ -1054,5 +1111,6 @@
         getLocalLogs,
         getRemoteLogs,
         runScan,
+        checkIpBlacklist: _checkIpBlacklist,  // IP 封鎖
     };
 })();

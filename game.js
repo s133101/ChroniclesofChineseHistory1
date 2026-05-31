@@ -2425,6 +2425,20 @@ function triggerGameOver(win) {
                 // 對戰記錄寫入後，立即檢查成就
                 if (typeof window._checkAchievements === 'function') window._checkAchievements();
             });
+
+            // ELO 更新（僅 PvP 且 Host 端執行，避免雙重計算）
+            if (isPvP && window.GAME_MODE === 'host' && window.opponentUsername) {
+                const myUser = Auth.current().username;
+                const oppUser = window.opponentUsername;
+                const winner = win ? myUser : oppUser;
+                const loser  = win ? oppUser : myUser;
+                Auth.recordGameResult(winner, loser).then(result => {
+                    if (result) {
+                        const myDelta = win ? result.delta : -result.delta;
+                        toast(`📊 ELO ${myDelta >= 0 ? '+' : ''}${myDelta}（${win ? result.winnerNew : result.loserNew}分）`, win ? 'gold' : 'info', 3000);
+                    }
+                });
+            }
         }
         // ----------------
 
