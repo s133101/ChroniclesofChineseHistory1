@@ -47,6 +47,17 @@ const Auth = (() => {
             return r.ok;
         } catch { return false; }
     }
+    // Bug Fix：auth.js 缺少 PATCH，ELO 更新 / 地理記錄需要它
+    async function _fbPatch(path, data) {
+        try {
+            const r = await fetch(FB + path + '.json', {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(data)
+            });
+            return r.ok;
+        } catch { return false; }
+    }
 
     // ── sessionStorage 安全存取（Bug Fix #4：private mode 下會 throw）──
     function _saveSession(obj) {
@@ -110,7 +121,7 @@ const Auth = (() => {
             if (lastGeo && lastGeo.country && lastGeo.country !== country) {
                 // 國家不同 → 異常告警
                 const msg = `帳號 ${uname} 從新地點登入：${city}, ${country}（上次：${lastGeo.city || ''}, ${lastGeo.country}）`;
-                _fw?.logIntrusion ? _fw.logIntrusion(msg) : null;
+                window.HuaXiaSecurity?.logIntrusion(msg); // Bug Fix #3：_fw 不在此 scope
                 _sendEmail(EJ_NOTIFY, {
                     action:     `🌍 地理異常登入\n\n${msg}\n\nIP：${geo.query || '?'}`,
                     event_time: new Date().toLocaleString('zh-TW'),

@@ -2434,8 +2434,12 @@ function triggerGameOver(win) {
                 const loser  = win ? oppUser : myUser;
                 Auth.recordGameResult(winner, loser).then(result => {
                     if (result) {
-                        const myDelta = win ? result.delta : -result.delta;
-                        toast(`📊 ELO ${myDelta >= 0 ? '+' : ''}${myDelta}（${win ? result.winnerNew : result.loserNew}分）`, win ? 'gold' : 'info', 3000);
+                        const myDelta  = win ? result.delta : -result.delta;
+                        const myNewElo = win ? result.winnerNew : result.loserNew;
+                        toast(`📊 ELO ${myDelta >= 0 ? '+' : ''}${myDelta}（${myNewElo}分）`, win ? 'gold' : 'info', 3000);
+                        // Bug Fix #8：更新記憶體中的 ELO，成就系統才能正確判斷
+                        const cur = Auth.current();
+                        if (cur) cur.elo = myNewElo;
                     }
                 });
             }

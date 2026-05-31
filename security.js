@@ -252,7 +252,7 @@
         if (_clientIp) {
             _ipIntrusionCount[_clientIp] = (_ipIntrusionCount[_clientIp] || 0) + 1;
             if (_ipIntrusionCount[_clientIp] >= _IP_BLOCK_THRESHOLD) {
-                _blockCurrentIp(detail);
+                _blockCurrentIp(detail).catch(() => {}); // Bug Fix #6：明確 fire-and-forget
             }
         }
     }

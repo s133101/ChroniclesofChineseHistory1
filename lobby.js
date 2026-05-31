@@ -2249,9 +2249,13 @@
             document.getElementById('btn-cancel-wait').style.display = 'none';
             const cd = document.getElementById('wait-countdown-wrap');
             if (cd) cd.style.display = 'none';
-            // 互傳暱稱
+            // 互傳暱稱與帳號（Bug Fix #4：host 需要 opponentUsername 才能更新 ELO）
             setTimeout(() => {
-                Network.send('player_info', { nickname: window.playerNickname || '無名英雄' });
+                const _meAuth = typeof Auth !== 'undefined' ? Auth.current() : null;
+                Network.send('player_info', {
+                    nickname: window.playerNickname || '無名英雄',
+                    username: _meAuth ? _meAuth.username : ''
+                });
             }, 300);
             // 若遊戲已在進行（重連成功），主機重發狀態同步
             if (window.gameActive && isHost && typeof syncStateToGuest === 'function') {
@@ -2261,8 +2265,9 @@
             setTimeout(_launchGame, 1800);
         });
 
-        Network.on('player_info', ({ nickname }) => {
+        Network.on('player_info', ({ nickname, username }) => {
             window.opponentNickname = nickname || '未知對手';
+            if (username) window.opponentUsername = username; // Bug Fix #4：記錄對手帳號供 ELO 使用
         });
 
         Network.on('reconnecting', ({ attempt, max }) => {
