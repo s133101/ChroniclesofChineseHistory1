@@ -230,7 +230,7 @@ function initGame() {
     // 取得在點將臺選擇的君主，若無則隨機給一個
     let targetMonarch = cardDatabase.find(c => c.id === window.selectedMonarchId);
     if (!targetMonarch) targetMonarch = cardDatabase.find(c => c.type === '君王');
-    const myMonarch = { ...targetMonarch, uid: 'init_M_' + Math.random().toString(36).substr(2,9) };
+    const myMonarch = { ...targetMonarch, uid: 'init_M_' + Math.random().toString(36).slice(2,11) };
 
     // 保底一張大將軍
     const myGeneral = extract('大將軍');
@@ -1394,6 +1394,7 @@ function handleHandClick(handIndex) {
                 oppBoard[tgt.zone][tgt.i] = null;
                 oppBoard.discard.push(tgt.c);
                 renderOppBoard(); updateHUDs();
+                if (checkWinCondition()) { _maybeSyncHost(); return; } // C-5 Fix：棄置場上武將後立即判斷勝負
             } else if (oppHandData.length > 0) {
                 const discarded = oppHandData.splice(Math.floor(Math.random() * oppHandData.length), 1)[0];
                 toast(`🌉 <b>過河拆橋</b> — 棄置對手手中 <b>${discarded.name}</b>！`, 'attack');
@@ -2104,7 +2105,7 @@ function handleOppCardClick(card, zone, idx) {
         const wb = wineBuff; wineBuff = 0;
         const wineBonus = Math.floor(baseAtk * 0.30 * wb);
         baseDmg += wineBonus;
-        toast(`🍷 <b>酒勁爆發</b>（${attacker ? attacker.name : ''}）— 額外 ${wineBonus} 傷！`, 'skill');
+        toast(`🍷 <b>酒勁爆發</b>（${attacker?.name || '未知武將'}）— 額外 ${wineBonus} 傷！`, 'skill'); // H-7 Fix
     }
     // 火殺：完全無視防禦，不減 DEF
     let dmg = isFire ? baseDmg : Math.max(1, baseDmg - (card.def || 0));
@@ -2163,7 +2164,7 @@ function handleOppCardClick(card, zone, idx) {
             toast(`🐺 <b>霍去病 · 封狼居胥</b> — 飲馬瀚海，斬殺弱敵！`, 'skill');
             _SFX.skill();
         } else {
-            card.hp -= dmg;
+            card.hp = Math.max(0, card.hp - dmg); // H-3 Fix：防止 HP 出現負數
         }
 
         spawnSkillFx('⚔', getSlotEl('opp-' + zone + '-zone', idx));

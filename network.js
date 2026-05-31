@@ -92,7 +92,8 @@ window.Network = (function () {
         _stopHeartbeat();
         _hbInterval = setInterval(() => {
             if (!_conn || !_conn.open) return;
-            // 送 ping，等待 8 秒 pong
+            // H-8 Fix：先清除舊計時器，防止多個 timeout 堆疊
+            if (_hbTimer) { clearTimeout(_hbTimer); _hbTimer = null; }
             _rawSend({ type: '_ping', data: Date.now() });
             _hbTimer = setTimeout(() => {
                 console.warn('[Network] 心跳逾時，視為斷線');

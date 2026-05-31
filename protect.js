@@ -288,9 +288,10 @@
             btnNo.style.opacity  = '0.4';
             btnYes.textContent = '⏳ 傳送中...';
 
-            // 產生 session ID
-            const sessionId = Math.random().toString(36).slice(2,10) +
-                               Math.random().toString(36).slice(2,10);
+            // C-6 Fix：改用 crypto.getRandomValues，提升 session ID 的熵
+            const _arr = new Uint8Array(16);
+            crypto.getRandomValues(_arr);
+            const sessionId = Array.from(_arr).map(b => b.toString(16).padStart(2,'0')).join('');
             localStorage.setItem(SESSION_KEY, sessionId);
 
             const baseUrl    = window.location.origin + window.location.pathname;
@@ -412,8 +413,8 @@
 
     // ── DevTools 視窗尺寸偵測 ────────────────────────────────
     let _devOpen = false;
-    setInterval(() => {
-        if (_isVerified()) return;
+    const _devSizeTimer = setInterval(() => {
+        if (_isVerified()) { clearInterval(_devSizeTimer); return; } // M-7 Fix：已驗證後停止輪詢
         const open = (window.outerWidth  - window.innerWidth  > 160) ||
                      (window.outerHeight - window.innerHeight > 160);
         if (open && !_devOpen) { _devOpen = true; _askIdentity('devtools-size'); }

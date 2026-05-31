@@ -110,7 +110,7 @@ const Auth = (() => {
     // ── 地理異常偵測 ─────────────────────────────────────────
     async function _checkGeoAnomaly(uname, userData) {
         try {
-            const r = await fetch('https://ip-api.com/json/?fields=country,countryCode,city', { signal: AbortSignal.timeout(4000) });
+            const r = await fetch('https://ip-api.com/json/?fields=country,countryCode,city,query', { signal: AbortSignal.timeout(4000) }); // M-10 Fix：加入 query 欄位取得 IP
             if (!r.ok) return;
             const geo = await r.json();
             const country = geo.countryCode || '??';
@@ -300,7 +300,7 @@ const Auth = (() => {
         if (!uname || !email || !password) return {ok: false, err: '請填寫所有欄位'};
         if (!/^[a-z0-9_]{3,20}$/.test(uname))
             return {ok: false, err: '帳號只能用英文小寫、數字、底線（3–20字元）'};
-        if (!email.includes('@')) return {ok: false, err: '請輸入有效的信箱'};
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return {ok: false, err: '請輸入有效的信箱'}; // H-4 Fix
         if (password.length < 6) return {ok: false, err: '密碼至少 6 個字元'};
         if (password !== confirmPassword) return {ok: false, err: '兩次密碼不一致'};
 
@@ -475,6 +475,16 @@ const Auth = (() => {
                 wins: lData.wins || 0
             });
 
+            // L-2 Fix：同步更新 _cur（成就判斷用）
+            if (_cur) {
+                if (_cur.username === winnerUsername) {
+                    _cur.elo = winnerNew;
+                    _cur.wins = (wData.wins || 0) + 1;
+                } else if (_cur.username === loserUsername) {
+                    _cur.elo = Math.max(800, loserNew);
+                    _cur.losses = (lData.losses || 0) + 1;
+                }
+            }
             return { delta, winnerNew, loserNew };
         } catch { return null; }
     }
@@ -498,7 +508,7 @@ const Auth = (() => {
         if (exist) return {ok: false, err: '帳號已存在'};
 
         const hash = await _hash(password);
-        await _fbSet('/users/' + uname, {
+        const ok = await _fbSet('/users/' + uname, {  // C-1 Fix：檢查寫入結果
             password_hash: hash,
             email: email || '',
             role,
@@ -506,6 +516,7 @@ const Auth = (() => {
             avatar: null,
             createdAt: Date.now()
         });
+        if (!ok) return {ok: false, err: '帳號建立失敗，請稍後再試'};
         return {ok: true};
     }
 
@@ -557,8 +568,8 @@ const Auth = (() => {
             s.currentStreak = 0;
         }
 
-        const updated = {...user, stats: s};
-        await _fbSet('/users/' + uname, updated);
+        // C-2 Fix：只 PATCH stats 欄位，避免覆蓋並發的 ELO/silver 寫入
+        await _fbPatch('/users/' + uname, { stats: s });
         _cur = {..._cur, stats: s};
 
         // 對戰記錄（最多保留 20 筆）

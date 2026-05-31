@@ -1070,7 +1070,7 @@
                 const matches = Object.entries(users)
                     .filter(([uname, udata]) =>
                         uname.toLowerCase().includes(query) ||
-                        (udata && udata.nickname || '').toLowerCase().includes(query))
+                        (udata?.nickname || '').toLowerCase().includes(query)) // M-4 Fix：運算子優先度
                     .filter(([uname]) => !me || uname !== me.username)
                     .slice(0, 5);
 

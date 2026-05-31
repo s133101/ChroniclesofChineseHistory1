@@ -111,7 +111,8 @@
 
     // ── 日誌斷層追蹤 ────────────────────────────────────────
     let _lastLogTime  = Date.now();  // 上次寫入日誌的時間戳
-    let _gapAlertSent = false;       // 避免重複發相同斷層警報
+    let _gapWarnSent  = false;       // C-4 Fix：分開 warn/critical 旗標
+    let _gapCritSent  = false;       // 避免 5min warn 壓制 10min critical
 
     // ── P1：L2 記憶體雙重速率鎖（清除 localStorage 無法繞過）────
     const _memRateLimit = {};
@@ -201,8 +202,9 @@
         const entry = { t: Date.now(), lv: level, cat: category, msg: detail, ip, user, ua: navigator.userAgent.slice(0, 60) };
 
         // 更新最後日誌時間（斷層偵測用）
-        _lastLogTime  = Date.now();
-        _gapAlertSent = false;  // 有新日誌 → 重置斷層警報旗標
+        _lastLogTime = Date.now();
+        _gapWarnSent = false;  // C-4 Fix：有新日誌 → 重置兩個斷層旗標
+        _gapCritSent = false;
 
         // 分類本地快取
         const bucket = _logs[category] || _logs.security;
@@ -364,10 +366,10 @@
         const gapMs  = Date.now() - _lastLogTime;
         const gapMin = Math.floor(gapMs / 60000);
 
-        if (gapMs > 10 * 60000 && !_gapAlertSent) {
-            _gapAlertSent = true;
+        // C-4 Fix：分開 warn/critical 旗標，10min critical 不被 5min warn 壓制
+        if (gapMs > 10 * 60000 && !_gapCritSent) {
+            _gapCritSent = true;
             _addThreat(25);
-            // 直接操作 bucket（不呼叫 _log 避免時序問題）
             const alertEntry = {
                 t: Date.now(), lv: LEVEL.CRITICAL,
                 cat: CAT.INTRUSION,
@@ -385,8 +387,8 @@
             _updateLight();
             console.warn(`[🛡 FW] 🚨 日誌斷層：${gapMin} 分鐘無日誌！`);
 
-        } else if (gapMs > 5 * 60000 && !_gapAlertSent) {
-            _gapAlertSent = true;  // ← 修正：防止每 60s 重複觸發 WARN
+        } else if (gapMs > 5 * 60000 && !_gapWarnSent) {
+            _gapWarnSent = true;
             _addThreat(15);
             const warnEntry = {
                 t: Date.now(), lv: LEVEL.WARN,
@@ -978,7 +980,7 @@
                         <span style="color:${COL[lv]||COL.info};font-weight:700;font-size:11px;">${IC[lv]||'📝'} ${e.cat || ''}</span>
                         <span style="color:#6ab88a;font-size:10px;font-family:monospace;letter-spacing:0.5px;">🕐 ${ts}</span>
                     </div>
-                    <div style="color:#7aaa8a;font-size:12px;margin-bottom:${(ipEl||userEl)?'3':'0'}px;">${e.msg}</div>
+                    <div style="color:#7aaa8a;font-size:12px;margin-bottom:${(ipEl||userEl)?'3':'0'}px;">${(e.msg||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><!-- H-9 Fix: XSS escape -->
                     ${(ipEl || userEl) ? `<div style="font-size:9px;margin-top:2px;">${ipEl}${userEl}</div>` : ''}
                 </div>`;
             }).join('');
