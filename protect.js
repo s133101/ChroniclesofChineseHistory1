@@ -414,12 +414,14 @@
     // ── DevTools 視窗尺寸偵測 ────────────────────────────────
     let _devOpen = false;
     const _devSizeTimer = setInterval(() => {
-        if (_isVerified()) { clearInterval(_devSizeTimer); return; } // M-7 Fix：已驗證後停止輪詢
+        if (_isVerified()) { clearInterval(_devSizeTimer); return; }
         const open = (window.outerWidth  - window.innerWidth  > 160) ||
                      (window.outerHeight - window.innerHeight > 160);
         if (open && !_devOpen) { _devOpen = true; _askIdentity('devtools-size'); }
         if (!open)              { _devOpen = false; }
     }, 1000);
+    // M-1 Fix：頁面卸載時清除 interval
+    window.addEventListener('beforeunload', () => clearInterval(_devSizeTimer));
 
     // ── Console 水印 ─────────────────────────────────────────
     const _origCE  = console.error.bind(console);

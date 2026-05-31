@@ -403,7 +403,7 @@ const Auth = (() => {
     // ── 更新信箱 ──────────────────────────────────────────────
     async function updateEmail(newEmail) {
         if (!_cur) return {ok: false, err: '尚未登入'};
-        if (!newEmail || !newEmail.includes('@')) return {ok: false, err: '請輸入有效的信箱'};
+        if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return {ok: false, err: '請輸入有效的信箱'}; // C-1 Fix
 
         const updated = {..._cur};
         delete updated.username;
@@ -573,7 +573,10 @@ const Auth = (() => {
         _cur = {..._cur, stats: s};
 
         // 對戰記錄（最多保留 20 筆）
-        const history = await _fbGet('/battle_records/' + uname) || [];
+        // H-8 Fix：Firebase REST 可能回傳 object 而非 array
+        const rawHistory = await _fbGet('/battle_records/' + uname);
+        const history = Array.isArray(rawHistory) ? rawHistory
+                      : (rawHistory ? Object.values(rawHistory) : []);
         history.unshift({
             result:   win ? 'win' : 'lose',
             mode:     isPvP ? 'pvp' : 'ai',

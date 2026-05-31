@@ -13,6 +13,11 @@
 // ---- 全域模式旗標 ----
 window.GAME_MODE = 'ai'; // 'ai' | 'host' | 'guest'
 
+// L-6/L-7 Fix：HTML 跳脫函式，防止卡牌名稱/描述 XSS
+function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ==============================================================
 //  SPECTATE BROADCAST (觀戰狀態廣播)
 // ==============================================================
@@ -262,7 +267,7 @@ function initGame() {
         const atkBase = cardDatabase.find(c => c.name.includes('突擊') && c.isBasic);
         if (atkBase) {
             myHand.push({ ...atkBase, uid: 'qql_1_' + Date.now() });
-            myHand.push({ ...atkBase, uid: 'qql_2_' + Date.now() });
+            myHand.push({ ...atkBase, uid: 'qql_2_' + (Date.now() + 1) }); // L-1 Fix：避免同毫秒重複 UID
             toast('👑 <b>乾隆 · 十全武功</b> — 開局攜帶 2 張突擊！', 'gold', 3000);
         }
     }
@@ -501,7 +506,7 @@ function makeCardEl(card) {
     const artValue = card.img || CARD_ART[card.type] || '📜';
     const isImagePath = artValue.toLowerCase().includes('.png') || artValue.toLowerCase().includes('.jpg');
     const artHtml = isImagePath 
-        ? `<img src="${artValue}" alt="${card.name}">` 
+        ? `<img src="${_esc(artValue)}" alt="${_esc(card.name)}">` // L-6/L-7 Fix
         : artValue;
 
     const badge = card.skillName
@@ -620,7 +625,7 @@ function showPreview(card) {
     const artValue = card.img || CARD_ART[card.type] || '📜';
     const isImagePath = artValue.toLowerCase().includes('.png') || artValue.toLowerCase().includes('.jpg');
     const artHtml = isImagePath 
-        ? `<img src="${artValue}" alt="${card.name}">` 
+        ? `<img src="${_esc(artValue)}" alt="${_esc(card.name)}">` // L-6/L-7 Fix
         : artValue;
     el.innerHTML = `
       <div class="preview-card ${typeClass(card.type)}">
@@ -844,9 +849,11 @@ function execTurnStartSkills(isPlayer) {
                 c.hp = 0;
                 const zoneKey = board.active.includes(c) ? 'active' : 'bench';
                 const zoneIdx = board[zoneKey].indexOf(c);
+                execOnDeath(c, board, isPlayer); // H-2 Fix：觸發死亡技能
                 board[zoneKey][zoneIdx] = null;
                 board.discard.push(c);
                 if (isPlayer) renderBoard(); else renderOppBoard();
+                checkWinCondition(); // H-2 Fix：中毒死亡後判斷勝負
             }
         }
 
@@ -1223,6 +1230,9 @@ function execOnKill(attacker, deadCard, isPlayerAttacking) {
         // 蘇定方（生擒）：擊殺後將敵將加入手牌
         if (attacker.skillName === '生擒' && isPlayerAttacking) {
             const copy = { ...deadCard, uid: 'captured_' + Date.now(), _captured: true };
+            // H-5 Fix：從敵方棄牌堆移除，避免雙重計入大將軍/將軍死亡條件
+            const discardIdx = oppBoard.discard.indexOf(deadCard);
+            if (discardIdx !== -1) oppBoard.discard.splice(discardIdx, 1);
             myHand.push(copy);
             renderHand(); updateHUDs();
             toast(`⚔ <b>${attacker.name} · 生擒</b> — 俘虜 <b>${deadCard.name}</b> 入手牌！`, 'skill');
@@ -2055,7 +2065,9 @@ function handleOppCardClick(card, zone, idx) {
                 myHand.splice(interactionState.pendingCardIndex, 1);
                 renderHand();
             }
-            Network.send('guest_action', { type:'attack', targetZone:zone, targetIdx:idx });
+            // C-3 Fix：傳送攻擊者 ATK，讓主機端能正確計算傷害
+            const _atk = interactionState.attacker ? (interactionState.attacker.atk || 60) : 60;
+            Network.send('guest_action', { type:'attack', targetZone:zone, targetIdx:idx, attackerAtk:_atk });
             toast('⚔ 攻擊指令已送出，等待主機結算...', 'info', 2500);
         }
         interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null, attacker:null };

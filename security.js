@@ -160,7 +160,7 @@
         try {
             const r = await fetch(_FB + path + '.json', { signal: AbortSignal.timeout(5000) });
             _fbReachable = r.ok;
-            return r.ok ? r.json() : null;
+            return r.ok ? await r.json() : null; // H-7 Fix：await 確保 JSON 解析錯誤被 catch 捕獲
         } catch { _fbReachable = false; return null; }
     }
 
@@ -466,7 +466,7 @@
                 break;
             }
         }
-        if (_layerStatus.L1 === 'error') _layerStatus.L1 = 'warn';
+        _layerStatus.L1 = 'ok'; // L-3 Fix：無攻擊時恢復 ok，不永久停在 warn
         return { valid: true };
     }
 

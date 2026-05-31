@@ -122,9 +122,12 @@ window.Network = (function () {
 
     function randomCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        // L-4 Fix：改用 CSPRNG 防止房間碼被枚舉
+        const arr = new Uint8Array(5);
+        crypto.getRandomValues(arr);
         let result = '';
         for (let i = 0; i < 5; i++) {
-            result += chars[Math.floor(Math.random() * chars.length)];
+            result += chars[arr[i] % chars.length];
         }
         return result;
     }

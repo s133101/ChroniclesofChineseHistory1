@@ -460,10 +460,10 @@
         }
         const _achBtn = document.getElementById('btn-achievements');
         if (_achBtn) _achBtn.classList.remove('hidden');
-        // 監控面板按鈕：僅 claude 帳號顯示
+        // M-9 Fix：監控面板顯示給 admin / developer 帳號
         const _monBtn = document.getElementById('btn-monitor');
         if (_monBtn) {
-            if (user.username === 'claude') {
+            if (['linus0622', 'wang', 'claude'].includes(user.username)) {
                 _monBtn.classList.remove('hidden');
             } else {
                 _monBtn.classList.add('hidden');
@@ -505,11 +505,10 @@
         const iconEl  = document.getElementById('player-avatar-icon');
         if (nameEl) nameEl.textContent = user.nickname || user.username;
         if (user.avatar) {
-            imgEl.src = user.avatar;
-            imgEl.classList.remove('hidden');
+            if (imgEl) { imgEl.src = user.avatar; imgEl.classList.remove('hidden'); } // H-6 Fix：null check
             if (iconEl) iconEl.style.display = 'none';
         } else {
-            imgEl.classList.add('hidden');
+            if (imgEl) imgEl.classList.add('hidden'); // H-6 Fix
             if (iconEl) iconEl.style.display = '';
         }
     }
@@ -2574,7 +2573,9 @@
 
         const mods = execAttackMods(oppBoard);
         const { unDodgeable, ignoreFirstDodge, extraDmg, hasAoE, hasFireLianYing, hasFengLang } = mods;
-        let dmg = 1 + extraDmg;
+        // C-3 Fix：使用 guest 傳來的 attackerAtk，fallback 60（而非硬碼 1）
+        const guestAtk = action.attackerAtk || 60;
+        let dmg = Math.floor(guestAtk) + extraDmg;
         if (unDodgeable)     toast('⚔ 對手鎖定技發動！此次攻擊無法閃避！', 'skill');
         if (ignoreFirstDodge) toast('⚔ 對手【水戰】— 您的第一張固守被無視！', 'skill');
         if (hasFengLang)      toast('🐺 對手【風狼】— 攻擊附帶額外效果！', 'skill');
@@ -2585,7 +2586,7 @@
             [-1, 1].forEach(offset => {
                 const adj = myBoard.active[tIdx + offset];
                 if (adj && adj.hp > 0) {
-                    adj.hp = Math.max(0, adj.hp - 1);
+                    adj.hp = Math.max(0, adj.hp - 25); // C-2 Fix：AoE 傷害應為 25，非 1
                     toast(`🔥 【火燒赤壁】波及 <b>${adj.name}</b>！`, 'danger', 1800);
                     if (adj.hp <= 0) {
                         myBoard.active[tIdx + offset] = null;
@@ -2655,9 +2656,11 @@
         const { targetZone, targetIdx } = action;
         const t = oppBoard[targetZone] && oppBoard[targetZone][targetIdx];
         if (t && t.hp < t.maxHp) {
-            t.hp++;
-            spawnDmgPopup(1, getSlotEl('opp-' + targetZone + '-zone', targetIdx), true);
-            toast(`💚 對手的 <b>${t.name}</b> 恢復 1 HP！`, 'info', 2000);
+            // M-7 Fix：與客端相同的 20% 治療公式，避免狀態不同步
+            const healAmt = Math.max(1, Math.floor(t.maxHp * 0.20));
+            t.hp = Math.min(t.maxHp, t.hp + healAmt);
+            spawnDmgPopup(healAmt, getSlotEl('opp-' + targetZone + '-zone', targetIdx), true);
+            toast(`💚 對手的 <b>${t.name}</b> 恢復 ${healAmt} HP！`, 'info', 2000);
             renderOppBoard();
         }
         _sync();
@@ -2693,6 +2696,7 @@
                 card.hp = 0;
                 toast(`💀 對手 <b>${card.name}</b> 陣亡！`, 'danger', 3000);
                 spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
+                execOnDeath(card, oppBoard, false); // L-10 Fix：觸發死亡技能
                 oppBoard[zone][idx] = null;
                 oppBoard.discard.push(card);
                 const attacker = myBoard.active.find(c => c !== null);
