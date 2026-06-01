@@ -471,14 +471,16 @@ function renderLogs() {
 
     el.innerHTML = list.map(e => {
         const lv = e.lv || 'info';
-        const ipEl   = (e.ip   && e.ip   !== '?' && e.ip   !== '無法取得') ? ` ｜ 🌐 ${e.ip}`   : '';
-        const userEl = (e.user && e.user !== '?' && e.user !== '未登入')  ? ` ｜ 👤 ${e.user}` : '';
+        // R3 Fix：e.ip / e.user / e.cat 來自 Firebase，需 XSS 轉義後才能插入 innerHTML
+        const _escM = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const ipEl   = (e.ip   && e.ip   !== '?' && e.ip   !== '無法取得') ? ` ｜ 🌐 ${_escM(e.ip)}`   : '';
+        const userEl = (e.user && e.user !== '?' && e.user !== '未登入')  ? ` ｜ 👤 ${_escM(e.user)}` : '';
         return `<div class="log-entry" style="background:${LV_BG[lv]||LV_BG.info};border:1px solid ${LV_BD[lv]||LV_BD.info};">
             <div class="log-top">
-                <span class="log-cat" style="color:${LV_COL[lv]||LV_COL.info};">${LV_IC[lv]||'📝'} ${e.cat||''}</span>
+                <span class="log-cat" style="color:${LV_COL[lv]||LV_COL.info};">${LV_IC[lv]||'📝'} ${_escM(e.cat||'')}</span>
                 <span class="log-ts">🕐 ${fmtTs(e.t)}</span>
             </div>
-            <div class="log-msg">${(e.msg||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            <div class="log-msg">${(e.msg||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
             ${(ipEl||userEl) ? `<div class="log-meta">${ipEl}${userEl}</div>` : ''}
         </div>`;
     }).join('');

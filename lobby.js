@@ -1115,7 +1115,9 @@
                 const data = JSON.parse(e.newValue);
                 if (data && data.to === window.playerNickname) {
                     window._appendChatMessage(data.text, 'other', 'friend', data.from);
-                    toast(`收到來自 ${data.from} 的私訊`, 'info');
+                    // R3 Fix：data.from 來自 localStorage（任何分頁可寫），toast 使用 innerHTML 需轉義
+                    const _fromEsc = String(data.from||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    toast(`收到來自 ${_fromEsc} 的私訊`, 'info');
                     // Show notification if not currently on chat/friend tab
                     const chatTab = document.getElementById('tab-chat');
                     const isChatVisible = chatTab && !chatTab.classList.contains('hidden');
@@ -2225,10 +2227,12 @@
         const panel = document.createElement('div');
         panel.id = 'super-admin-panel';
         panel.className = 'admin-edict-style';
+        // R3 Fix：email 雖已通過 admins 白名單驗證，仍做 XSS 轉義（深度防禦）
+        const _safeEmail = String(email||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         panel.innerHTML = `
             <div class="edict-header">📜 華夏風雲 · 超級管理員</div>
             <div class="edict-body">
-                <p>👤 權限授權：<b>${email}</b></p>
+                <p>👤 權限授權：<b>${_safeEmail}</b></p>
                 <div class="admin-controls">
                     <button onclick="_adminAction('debug_mode')">🛠 開啟除錯模式</button>
                     <button onclick="_adminAction('all_cards')">🃏 解鎖全牌庫</button>
@@ -2692,7 +2696,9 @@
             const healAmt = Math.max(1, Math.floor(t.maxHp * 0.20));
             t.hp = Math.min(t.maxHp, t.hp + healAmt);
             spawnDmgPopup(healAmt, getSlotEl('opp-' + targetZone + '-zone', targetIdx), true);
-            toast(`💚 對手的 <b>${t.name}</b> 恢復 ${healAmt} HP！`, 'info', 2000);
+            // R3 Fix：t.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
+            const _tn = typeof _esc === 'function' ? _esc(t.name) : (t.name || '');
+            toast(`💚 對手的 <b>${_tn}</b> 恢復 ${healAmt} HP！`, 'info', 2000);
             renderOppBoard();
         }
         _sync();
@@ -2717,16 +2723,20 @@
                 oppBoard.discard.push(dc);
             }
             spawnSkillFx('🛡', getSlotEl('opp-' + zone + '-zone', idx));
-            toast(`🛡 對手成功閃避！<b>${card.name}</b> 毫髮無傷`, 'info');
+            // R3 Fix：card.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
+            const _cn0 = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
+            toast(`🛡 對手成功閃避！<b>${_cn0}</b> 毫髮無傷`, 'info');
         } else {
             const actualDmg = execDefenseMods(card, dmg);
             card.hp -= actualDmg;
             spawnDmgPopup(actualDmg, getSlotEl('opp-' + zone + '-zone', idx));
+            // R3 Fix：card.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
+            const _cn = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
             if (card.hp > 0) {
-                toast(`🎯 命中！<b>${card.name}</b> 受到 ${actualDmg} 傷害！`, 'attack');
+                toast(`🎯 命中！<b>${_cn}</b> 受到 ${actualDmg} 傷害！`, 'attack');
             } else {
                 card.hp = 0;
-                toast(`💀 對手 <b>${card.name}</b> 陣亡！`, 'danger', 3000);
+                toast(`💀 對手 <b>${_cn}</b> 陣亡！`, 'danger', 3000);
                 spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
                 const attacker = myBoard.active.find(c => c !== null);
                 execOnKill(attacker, card, true); // Fix：execOnKill 內部已呼叫 execOnDeath，移除重複呼叫
@@ -2788,8 +2798,10 @@
             else if (zhaoIdx !== -1)  { realIdx = zhaoIdx;  dodgeLabel = '🐉 龍膽'; }
         }
 
+        // R3 Fix：targetName 來自 host_attacking 網路訊息，openDefenseModal 使用 innerHTML，需轉義
+        const _safeTN = typeof _esc === 'function' ? _esc(targetName || '您的武將') : (targetName || '您的武將');
         openDefenseModal(
-            `主機突擊 <b>${targetName || '您的武將'}</b>！（傷害 ${dmg}）\n${unDodgeable ? '⚠️ 此次攻擊無法閃避！' : ''}`,
+            `主機突擊 <b>${_safeTN}</b>！（傷害 ${dmg}）\n${unDodgeable ? '⚠️ 此次攻擊無法閃避！' : ''}`,
             dodgeLabel, '💥 硬扛',
             hasDodge ? () => {
                 consumeHandCard(realIdx, myHand[realIdx]);
