@@ -592,7 +592,10 @@ const Auth = (() => {
     // ── 取得對戰記錄 ─────────────────────────────────────────────
     async function getBattleHistory() {
         if (!_cur) return [];
-        return await _fbGet('/battle_records/' + _cur.username) || [];
+        // H-8 Fix：Firebase REST 可能回傳 object 而非 array，需正規化
+        const raw = await _fbGet('/battle_records/' + _cur.username);
+        if (!raw) return [];
+        return Array.isArray(raw) ? raw : Object.values(raw);
     }
 
     // ── 密碼驗證（不觸發驗證碼流程，供管理員密碼核對用）──────────

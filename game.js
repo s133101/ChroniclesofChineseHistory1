@@ -1254,8 +1254,8 @@ function execOnKill(attacker, deadCard, isPlayerAttacking) {
                 deadBoard.bench[bi] = null;
                 deadBoard.discard.push(benchTarget);
                 toast(`🗡 <b>${killerMonarch.name} · 削藩</b> — 強制裁撤 ${benchTarget.name}！`, 'skill');
-                // Fix R3-9：削藩裁撤需呼叫 execOnDeath 觸發被裁撤武將的死亡技能
-                execOnDeath(benchTarget, deadBoard, !isPlayerAttacking);
+                // Fix：削藩裁撤需呼叫 execOnKill（含 on-kill 加成 + on-death），攻擊方為 null
+                execOnKill(null, benchTarget, isPlayerAttacking);
                 if (isPlayerAttacking) renderOppBoard(); else renderBoard();
             }
         }
@@ -1307,8 +1307,8 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
             enemyBoard.active[vi] = null;
             enemyBoard.discard.push(v);
             toast(`💀 <b>${deadCard.name} · 死諫</b> — 臨終拉下 <b>${v.name}</b>！`, 'danger', 3500);
-            // Fix R3-10：死諫拉走的武將也需觸發其死亡技能（非 execOnKill，無攻擊方）
-            execOnDeath(v, enemyBoard, !isOwnerPlayer);
+            // Fix：死諫拉走的武將需呼叫 execOnKill（無攻擊方），確保所有死亡鏈正確觸發
+            execOnKill(null, v, !isOwnerPlayer);
             if (!isOwnerPlayer) renderOppBoard(); else renderBoard();
             _SFX.death();
         }

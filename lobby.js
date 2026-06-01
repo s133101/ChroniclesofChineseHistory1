@@ -2073,7 +2073,14 @@
         };
 
         window._triggerStartingGift = () => {
-            _showError('📜 檢測到新主公駕到，特賜「1000銀兩」祝您大展宏圖！招募天下英雄吧！');
+            // Fix：開局大禮應使用正向提示，而非 _showError（錯誤樣式）
+            const el = document.getElementById('lobby-error');
+            if (el) {
+                el.textContent = '📜 新主公駕到，特賜「1000銀兩」祝大展宏圖！招募天下英雄吧！';
+                el.style.color = '#d4af37';
+                el.classList.remove('hidden');
+                setTimeout(() => { el.classList.add('hidden'); el.style.color = ''; }, 5000);
+            }
             window.playerSilver = 1000;
             _saveCollection();
             _updateHUD();
@@ -2541,7 +2548,10 @@
         }
 
         if (!placed) { oppHandData.push(card); }
-        else         { toast(`🃏 對手部署 <b>${card.name}</b>！`, 'danger', 2000); }
+        else {
+            const _sn = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
+            toast(`🃏 對手部署 <b>${_sn}</b>！`, 'danger', 2000);
+        }
 
         renderOppBoard();
         renderOppHandUI();
@@ -2576,7 +2586,9 @@
             toast('🏹 對手【草船借箭】抽了 2 張！', 'danger');
             renderOppHandUI();
         } else if (spellType === 'generic') {
-            toast(`✨ 對手使用了 <b>${action.cardName || '計策'}</b>！`, 'danger');
+            // Fix：action.cardName 來自 P2P 網路，需 XSS 轉義
+            const _safeName = typeof _esc === 'function' ? _esc(action.cardName || '計策') : (action.cardName || '計策');
+            toast(`✨ 對手使用了 <b>${_safeName}</b>！`, 'danger');
         }
 
         _sync();
@@ -2741,7 +2753,9 @@
         });
 
         Network.on('game_over', ({ winnerMsg, hostWon }) => {
-            if (typeof toast === 'function') toast(winnerMsg, 'gold', 5000);
+            // Fix：winnerMsg 來自 P2P 網路，需 XSS 轉義後再傳給 toast（使用 innerHTML）
+            const _safeMsg = typeof _esc === 'function' ? _esc(winnerMsg || '') : (winnerMsg || '');
+            if (typeof toast === 'function') toast(_safeMsg, 'gold', 5000);
             // H-2/H-10 Fix：使用 hostWon 布林值，不再解析訊息文字
             const guestWon = hostWon === false || (!hostWon && winnerMsg && winnerMsg.includes('客方'));
             setTimeout(() => {
