@@ -2598,6 +2598,9 @@
                     adj.hp = Math.max(0, adj.hp - 25); // C-2 Fix：AoE 傷害應為 25，非 1
                     toast(`🔥 【火燒赤壁】波及 <b>${adj.name}</b>！`, 'danger', 1800);
                     if (adj.hp <= 0) {
+                        adj.hp = 0;
+                        const aoeAttacker = oppBoard.active.find(c => c !== null);
+                        if (typeof execOnKill === 'function') execOnKill(aoeAttacker, adj, false); // Fix R3-2：AoE 致命傷需呼叫 execOnKill 觸發死亡技能，isPlayerAttacking=false（敵方AoE）
                         myBoard.active[tIdx + offset] = null;
                         myBoard.discard.push(adj);
                     }

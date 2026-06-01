@@ -1169,9 +1169,13 @@ function execDefenseMods(defender, dmg) {
             if (isMyMonarch) renderBoard(); else renderOppBoard();
             if (yuQian.hp <= 0) {
                 yuQian.hp = 0;
+                toast(`💀 <b>${yuQian.name}</b> 為國捐軀！`, 'danger', 3000);
+                _SFX.death();
+                // Fix R3-8：保衛犧牲時需呼叫 execOnKill 觸發死亡技能
+                // isPlayerAttacking 依據誰擁有 yuQian 來判斷：isMyMonarch=true 代表玩家的于謙護玩家君主，敵方攻擊，isPlayerAttacking=false
+                execOnKill(null, yuQian, !isMyMonarch);
                 allyBoard2[yqZone][yqIdx] = null;
                 allyBoard2.discard.push(yuQian);
-                toast(`💀 <b>${yuQian.name}</b> 為國捐軀！`, 'danger', 3000);
                 if (isMyMonarch) renderBoard(); else renderOppBoard();
             }
             return 0; // 君主免受傷害
@@ -1237,6 +1241,8 @@ function execOnKill(attacker, deadCard, isPlayerAttacking) {
                 deadBoard.bench[bi] = null;
                 deadBoard.discard.push(benchTarget);
                 toast(`🗡 <b>${killerMonarch.name} · 削藩</b> — 強制裁撤 ${benchTarget.name}！`, 'skill');
+                // Fix R3-9：削藩裁撤需呼叫 execOnDeath 觸發被裁撤武將的死亡技能
+                execOnDeath(benchTarget, deadBoard, !isPlayerAttacking);
                 if (isPlayerAttacking) renderOppBoard(); else renderBoard();
             }
         }
@@ -1286,6 +1292,8 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
             enemyBoard.active[vi] = null;
             enemyBoard.discard.push(v);
             toast(`💀 <b>${deadCard.name} · 死諫</b> — 臨終拉下 <b>${v.name}</b>！`, 'danger', 3500);
+            // Fix R3-10：死諫拉走的武將也需觸發其死亡技能（非 execOnKill，無攻擊方）
+            execOnDeath(v, enemyBoard, !isOwnerPlayer);
             if (!isOwnerPlayer) renderOppBoard(); else renderBoard();
             _SFX.death();
         }
@@ -2246,10 +2254,24 @@ function handleOppCardClick(card, zone, idx) {
                 const extras = [...oppBoard.active, ...oppBoard.bench].filter(u => u && u !== card && u.hp > 0);
                 if (extras.length > 0) {
                     const extraTgt = extras[Math.floor(Math.random() * extras.length)];
-                    const ei = oppBoard.active.indexOf(extraTgt) !== -1 ? oppBoard.active.indexOf(extraTgt) : 0;
+                    // Fix R3-7a：正確判斷被波及單位所在的 zone 與 idx
+                    const exZone = oppBoard.active.indexOf(extraTgt) !== -1 ? 'active' : 'bench';
+                    const ei = exZone === 'active' ? oppBoard.active.indexOf(extraTgt) : oppBoard.bench.indexOf(extraTgt);
                     extraTgt.hp = Math.max(0, extraTgt.hp - 25);
-                    spawnDmgPopup(25, getSlotEl('opp-active-zone', ei));
+                    spawnDmgPopup(25, getSlotEl(`opp-${exZone}-zone`, ei));
                     toast(`🔥 <b>火燒連營</b> — 連環引燃，波及 ${extraTgt.name}！`, 'danger', 2000);
+                    // Fix R3-7b：火燒連營連鎖致命傷時，需呼叫 execOnKill 並移除被波及武將
+                    if (extraTgt.hp <= 0) {
+                        extraTgt.hp = 0;
+                        toast(`💀 <b>${extraTgt.name}</b> 在火燒連營中陣亡！`, 'danger', 3000);
+                        _SFX.death();
+                        const fireAttacker = attacker || myBoard.active.find(c => c !== null);
+                        execOnKill(fireAttacker, extraTgt, true); // 玩家側火燒連營，isPlayerAttacking=true
+                        oppBoard[exZone][ei] = null;
+                        oppBoard.discard.push(extraTgt);
+                        renderOppBoard(); updateHUDs();
+                        checkWinCondition();
+                    }
                 }
             }
         } else {
@@ -3047,7 +3069,17 @@ function _resolveDefenseDodge() {
             dodgeAttacker.hp = Math.max(0, dodgeAttacker.hp - 25);
             spawnDmgPopup(25, getSlotEl('opp-active-zone', ai));
             toast(`🗡 <b>${wtg.name} · 奪槊</b> — 反奪兵器，刺傷 ${dodgeAttacker.name}！`, 'skill', 2500);
+            // Fix R3-5：奪槊反奪致命傷時，需呼叫 execOnKill 並移除敵將，檢查勝負
+            if (dodgeAttacker.hp <= 0) {
+                dodgeAttacker.hp = 0;
+                toast(`💀 <b>${dodgeAttacker.name}</b> 被奪槊擊殺！`, 'danger', 3000);
+                _SFX.death();
+                execOnKill(wtg, dodgeAttacker, true); // 尉遲恭（player側）反擊，isPlayerAttacking=true
+                oppBoard.active[ai] = null;
+                oppBoard.discard.push(dodgeAttacker);
+            }
             renderOppBoard(); updateHUDs();
+            if (checkWinCondition()) return;
         }
     }
 
@@ -3073,6 +3105,15 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 spawnSkillFx('⚔', getSlotEl('opp-active-zone', oi));
                 spawnDmgPopup(25, getSlotEl('opp-active-zone', oi));
                 toast(`⚔ <b>${liWZ.name} · 驍勇</b> — 護主反擊，刺傷 ${oppAtk.name}！`, 'skill', 2500);
+                // Fix R3-4：驍勇反擊致命傷時，需呼叫 execOnKill 並移除敵將
+                if (oppAtk.hp <= 0) {
+                    oppAtk.hp = 0;
+                    toast(`💀 <b>${oppAtk.name}</b> 被驍勇擊殺！`, 'danger', 3000);
+                    _SFX.death();
+                    execOnKill(liWZ, oppAtk, true); // 李文忠（player側）反擊，isPlayerAttacking=true
+                    oppBoard.active[oi] = null;
+                    oppBoard.discard.push(oppAtk);
+                }
                 renderOppBoard(); updateHUDs();
                 if (checkWinCondition()) return;
             }
@@ -3094,6 +3135,15 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 spawnDmgPopup(25, getSlotEl('opp-active-zone', ei));
                 toast(`⚔ <b>${targetCard.name} · 靖難</b> — 以攻代守，反擊 <b>${enemy.name}</b>！`, 'skill');
                 _SFX.attack();
+                // Fix R3-3：靖難反擊致命傷時，需呼叫 execOnKill 並移除敵將
+                if (enemy.hp <= 0) {
+                    enemy.hp = 0;
+                    toast(`💀 <b>${enemy.name}</b> 被靖難反擊擊殺！`, 'danger', 3000);
+                    _SFX.death();
+                    execOnKill(targetCard, enemy, true); // 君主（player）反擊，isPlayerAttacking=true
+                    oppBoard.active[ei] = null;
+                    oppBoard.discard.push(enemy);
+                }
                 renderOppBoard(); updateHUDs();
                 if (checkWinCondition()) return;
             }
@@ -3112,6 +3162,17 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 exTgt.hp = Math.max(0, exTgt.hp - 25);
                 spawnDmgPopup(25, getSlotEl(`my-${exZone}-zone`, exIdx));
                 toast(`🔥 <b>${luXun.name} · 火燒連營</b> — 連環引燃，波及 ${exTgt.name}！`, 'danger', 2500);
+                // Fix R3-6：火燒連營連鎖致命傷時，需呼叫 execOnKill 並移除被波及武將
+                if (exTgt.hp <= 0) {
+                    exTgt.hp = 0;
+                    toast(`💀 <b>${exTgt.name}</b> 在火燒連營中陣亡！`, 'danger', 3000);
+                    _SFX.death();
+                    execOnKill(luXun, exTgt, false); // 陸遜（AI側）造成傷害，isPlayerAttacking=false
+                    myBoard[exZone][exIdx] = null;
+                    myBoard.discard.push(exTgt);
+                    renderBoard(); updateHUDs();
+                    checkWinCondition();
+                }
             }
         }
     }
@@ -3182,7 +3243,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 toast(`🩸 <b>${oppBaiqiBA.name} · 坑殺</b> — 波及我方主公！`, 'skill');
                 if (myBoard.active[2].hp <= 0) {
                     const _deadMonarch = myBoard.active[2];
-                    execOnDeath(_deadMonarch, myBoard, true); // Fix：觸發君主死亡技能
+                    execOnKill(oppBaiqiBA, _deadMonarch, false); // Fix R3-1：坑殺致命傷應呼叫 execOnKill（含 on-kill 加成），isPlayerAttacking=false（敵方坑殺）
                     myBoard.active[2] = null;
                     myBoard.discard.push(_deadMonarch);
                     triggerGameOver(false); return;
