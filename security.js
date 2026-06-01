@@ -973,11 +973,12 @@
                 // 完整時間戳：月/日 時:分:秒
                 const ts   = dt.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const lv   = e.lv || 'info';
-                const ipEl   = (e.ip   && e.ip   !== '?' && e.ip   !== '無法取得') ? `<span style="color:#5aaa7a;"> ｜ 🌐 ${e.ip}</span>`     : '';
-                const userEl = (e.user && e.user !== '未登入' && e.user !== '?')   ? `<span style="color:#7acc9a;"> ｜ 👤 ${e.user}</span>` : '';
+                const _escL  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const ipEl   = (e.ip   && e.ip   !== '?' && e.ip   !== '無法取得') ? `<span style="color:#5aaa7a;"> ｜ 🌐 ${_escL(e.ip)}</span>`     : '';
+                const userEl = (e.user && e.user !== '未登入' && e.user !== '?')   ? `<span style="color:#7acc9a;"> ｜ 👤 ${_escL(e.user)}</span>` : '';
                 return `<div style="background:${BG[lv]||BG.info};border:1px solid ${BD[lv]||BD.info};border-radius:6px;padding:8px 10px;font-size:11px;line-height:1.5;margin-bottom:4px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;flex-wrap:wrap;gap:4px;">
-                        <span style="color:${COL[lv]||COL.info};font-weight:700;font-size:11px;">${IC[lv]||'📝'} ${e.cat || ''}</span>
+                        <span style="color:${COL[lv]||COL.info};font-weight:700;font-size:11px;">${IC[lv]||'📝'} ${_escL(e.cat || '')}</span>
                         <span style="color:#6ab88a;font-size:10px;font-family:monospace;letter-spacing:0.5px;">🕐 ${ts}</span>
                     </div>
                     <div style="color:#7aaa8a;font-size:12px;margin-bottom:${(ipEl||userEl)?'3':'0'}px;">${(e.msg||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><!-- H-9 Fix: XSS escape -->

@@ -849,7 +849,7 @@ function execTurnStartSkills(isPlayer) {
                 c.hp = 0;
                 const zoneKey = board.active.includes(c) ? 'active' : 'bench';
                 const zoneIdx = board[zoneKey].indexOf(c);
-                execOnDeath(c, board, isPlayer); // H-2 Fix：觸發死亡技能
+                execOnKill(null, c, !isPlayer); // Fix：中毒死亡，execOnKill(null,...) 內部呼叫 execOnDeath 並觸發 on-kill 技能
                 board[zoneKey][zoneIdx] = null;
                 board.discard.push(c);
                 if (isPlayer) renderBoard(); else renderOppBoard();
@@ -997,6 +997,16 @@ function execTurnStartSkills(isPlayer) {
                 spawnDmgPopup(25, getSlotEl('my-active-zone', pi));
                 toast(`🖤 <b>${c.name} · 黑衣</b> — 暗中刺傷 ${pTarget.name}！`, 'danger', 2500);
                 _SFX.skill();
+                // Fix：黑衣造成致命傷時需處理死亡
+                if (pTarget.hp <= 0) {
+                    pTarget.hp = 0;
+                    toast(`💀 <b>${pTarget.name}</b> 被黑衣刺殺！`, 'danger', 3000);
+                    execOnKill(c, pTarget, false); // AI 黑衣，isPlayerAttacking=false
+                    myBoard.active[pi] = null;
+                    myBoard.discard.push(pTarget);
+                    renderBoard(); updateHUDs();
+                    checkWinCondition();
+                }
             }
         }
     });
@@ -1114,9 +1124,8 @@ function execAoEDamage(targetIdx, targetZone, isPlayerAttacking) {
             arr[i].hp = 0;
             toast(`💀 <b>${arr[i].name}</b> 在大火中陣亡！`, 'danger', 3000);
             _SFX.death();
-            execOnDeath(arr[i], board, !isPlayerAttacking); // C-1 Fix
             const attacker = isPlayerAttacking ? myBoard.active.find(c=>c) : oppBoard.active.find(c=>c);
-            execOnKill(attacker, arr[i], isPlayerAttacking); // C-1 Fix
+            execOnKill(attacker, arr[i], isPlayerAttacking); // C-1 Fix（execOnKill 內部已呼叫 execOnDeath）
             board.discard.push(arr[i]);
             arr[i] = null;
         }
@@ -1404,9 +1413,8 @@ function handleHandClick(handIndex) {
                 const tgt = allOppUnits[Math.floor(Math.random() * allOppUnits.length)];
                 toast(`🌉 <b>過河拆橋</b> — 強制棄置 <b>${tgt.c.name}</b>！`, 'attack');
                 _SFX.attack();
-                execOnDeath(tgt.c, oppBoard, false);
                 const qhqAttacker = myBoard.active.find(u => u !== null);
-                execOnKill(qhqAttacker, tgt.c, true); // Fix：玩家發動過河拆橋，isPlayerAttacking=true
+                execOnKill(qhqAttacker, tgt.c, true); // Fix：玩家發動過河拆橋，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
                 oppBoard[tgt.zone][tgt.i] = null;
                 oppBoard.discard.push(tgt.c);
                 renderOppBoard(); updateHUDs();
@@ -1481,8 +1489,7 @@ function handleHandClick(handIndex) {
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`⚔ <b>${tgt.name}</b> 無法應對，受 25 點傷害！`, 'danger', 1500);
                         if (tgt.hp <= 0) {
-                            execOnDeath(tgt, oppBoard, false); // C-2 Fix
-                            execOnKill(null, tgt, true);
+                            execOnKill(null, tgt, true); // execOnKill 內部已呼叫 execOnDeath
                             oppBoard[tgtZone][tgtIdx] = null;
                             oppBoard.discard.push(tgt);
                             renderOppBoard(); updateHUDs();
@@ -1518,8 +1525,7 @@ function handleHandClick(handIndex) {
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`🏹 <b>${tgt.name}</b> 無法閃避，受 25 點傷害！`, 'danger', 1500);
                         if (tgt.hp <= 0) {
-                            execOnDeath(tgt, oppBoard, false); // C-2 Fix
-                            execOnKill(null, tgt, true);
+                            execOnKill(null, tgt, true); // execOnKill 內部已呼叫 execOnDeath
                             oppBoard[tgtZone][tgtIdx] = null;
                             oppBoard.discard.push(tgt);
                             renderOppBoard(); updateHUDs();
@@ -1570,9 +1576,8 @@ function handleHandClick(handIndex) {
                 const tgt = oppLogistics[Math.floor(Math.random() * oppLogistics.length)];
                 toast(`✂ <b>截斷糧道</b> — 截斷 <b>${tgt.c.name}</b> 的補給線，強制退場！`, 'attack');
                 _SFX.attack();
-                execOnDeath(tgt.c, oppBoard, false);
                 const jdAttacker = myBoard.active.find(u => u !== null);
-                execOnKill(jdAttacker, tgt.c, true); // Fix：玩家發動截斷糧道，isPlayerAttacking=true
+                execOnKill(jdAttacker, tgt.c, true); // Fix：玩家發動截斷糧道，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
                 oppBoard[tgt.z][tgt.i] = null; oppBoard.discard.push(tgt.c);
                 renderOppBoard(); updateHUDs();
             } else {
@@ -1586,9 +1591,8 @@ function handleHandClick(handIndex) {
                     if (c.hp <= 0) {
                         const zoneKey = i < 5 ? 'active' : 'bench';
                         const zoneIdx = i < 5 ? i : i - 5;
-                        execOnDeath(c, oppBoard, false); // Fix：觸發死亡技能
                         const attacker = myBoard.active.find(u => u !== null);
-                        execOnKill(attacker, c, true); // Fix：玩家使用截斷糧道，isPlayerAttacking=true
+                        execOnKill(attacker, c, true); // Fix：玩家使用截斷糧道，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
                         oppBoard[zoneKey][zoneIdx] = null;
                         oppBoard.discard.push(c);
                     }
@@ -1626,9 +1630,8 @@ function handleHandClick(handIndex) {
                 if (c.hp <= 0) {
                     const zoneKey2 = i < 5 ? 'active' : 'bench';
                     const zoneIdx2 = i < 5 ? i : i - 5;
-                    execOnDeath(c, oppBoard, false); // Fix：觸發死亡技能
                     const attacker2 = myBoard.active.find(u => u !== null);
-                    execOnKill(attacker2, c, true); // Fix：玩家使用橫徵暴斂，isPlayerAttacking=true
+                    execOnKill(attacker2, c, true); // Fix：玩家使用橫徵暴斂，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
                     oppBoard[zoneKey2][zoneIdx2] = null;
                     oppBoard.discard.push(c);
                 }
@@ -2128,9 +2131,8 @@ function handleOppCardClick(card, zone, idx) {
         const slotEl = getSlotEl('opp-bench-zone', idx);
         spawnSkillFx('🔥', slotEl);
         toast(`🔥 <b>釜底抽薪</b> — ${card.name} 遭到強制破壞！`, 'attack');
-        execOnDeath(card, oppBoard, false);
         const fudiAttacker = interactionState.attacker || myBoard.active.find(u => u !== null);
-        execOnKill(fudiAttacker, card, true); // Fix：玩家發動釜底抽薪，isPlayerAttacking=true
+        execOnKill(fudiAttacker, card, true); // Fix：玩家發動釜底抽薪，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
         oppBoard.bench[idx] = null;
         oppBoard.discard.push(card);
         if (interactionState.pendingCardIndex >= 0) _consumeHandCard(interactionState.pendingCardIndex, sel);
@@ -2733,8 +2735,7 @@ function aiAttackPhase() {
                     spawnDmgPopup(25, getSlotEl('my-' + tgtZone + '-zone', tgtIdx));
                     toast(`⚔ <b>${tgt.name}</b> 無法應對，受 25 點傷害！`, 'danger', 1500);
                     if (tgt.hp <= 0) {
-                        execOnDeath(tgt, myBoard, true); // Fix：觸發死亡技能
-                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）
+                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）（execOnKill 內部已呼叫 execOnDeath）
                         myBoard[tgtZone][tgtIdx] = null;
                         myBoard.discard.push(tgt);
                     }
@@ -2780,8 +2781,7 @@ function aiAttackPhase() {
                     spawnDmgPopup(25, getSlotEl('my-' + tgtZone + '-zone', tgtIdx));
                     toast(`🏹 <b>${tgt.name}</b> 無法閃避，受 25 點傷害！`, 'danger', 1500);
                     if (tgt.hp <= 0) {
-                        execOnDeath(tgt, myBoard, true); // Fix：觸發死亡技能
-                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）
+                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）（execOnKill 內部已呼叫 execOnDeath）
                         myBoard[tgtZone][tgtIdx] = null;
                         myBoard.discard.push(tgt);
                     }
@@ -2839,13 +2839,13 @@ function aiAttackPhase() {
             () => { setTimeout(aiAttackPhase, 800); },  // 抵消
             () => {
                 const pbi = myBoard.bench.indexOf(playerBenchTarget);
-                execOnDeath(playerBenchTarget, myBoard, true);
                 const fudiAiAttacker = oppBoard.active.find(u => u !== null);
-                execOnKill(fudiAiAttacker, playerBenchTarget, false); // Fix：AI 釜底抽薪，isPlayerAttacking=false
+                execOnKill(fudiAiAttacker, playerBenchTarget, false); // Fix：AI 釜底抽薪，isPlayerAttacking=false（execOnKill 內部已呼叫 execOnDeath）
                 myBoard.bench[pbi] = null;
                 myBoard.discard.push(playerBenchTarget);
                 toast(`🔥 對手發動<b>釜底抽薪</b>，摧毀了 <b>${playerBenchTarget.name}</b>！`, 'danger', 2500);
                 renderBoard(); updateHUDs();
+                if (checkWinCondition()) return; // Fix：釜底抽薪後檢查勝負
                 setTimeout(aiAttackPhase, 900);
             }
         );
@@ -3156,8 +3156,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                         spawnSkillFx('💀', slotEl);
                         _SFX.death();
                         const oppAttacker2 = oppBoard.active.find(c => c !== null);
-                        execOnDeath(targetCard, myBoard, true); // Fix：觸發死亡技能（酒放棄路徑）
-                        execOnKill(oppAttacker2, targetCard, false);
+                        execOnKill(oppAttacker2, targetCard, false); // Fix：execOnKill 內部已呼叫 execOnDeath（酒放棄路徑）
                         myBoard[zone][zoneIdx] = null;
                         myBoard.discard.push(targetCard);
                         renderBoard(); updateHUDs();
@@ -3172,8 +3171,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
             spawnSkillFx('💀', slotEl);
             _SFX.death();
             const oppAttacker = oppBoard.active.find(c => c !== null);
-            execOnDeath(targetCard, myBoard, true); // Fix：觸發死亡技能（一般防禦失敗路徑）
-            execOnKill(oppAttacker, targetCard, false);
+            execOnKill(oppAttacker, targetCard, false); // Fix：execOnKill 內部已呼叫 execOnDeath（一般防禦失敗路徑）
             myBoard[zone][zoneIdx] = null;
             myBoard.discard.push(targetCard);
 

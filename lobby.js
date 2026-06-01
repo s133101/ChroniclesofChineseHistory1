@@ -2554,10 +2554,9 @@
             if (t) {
                 spawnSkillFx('🔥', getSlotEl('my-' + targetZone + '-zone', targetIdx));
                 toast(`🔥 對手【釜底抽薪】！<b>${t.name}</b> 被破壞！`, 'danger');
-                if (typeof execOnDeath === 'function') execOnDeath(t, myBoard, true); // Fix：觸發死亡技能
                 if (typeof execOnKill === 'function') {
                     const oppAttacker = oppBoard.active.find(u => u !== null);
-                    execOnKill(oppAttacker, t, false); // Fix：對手發動，isPlayerAttacking=false
+                    execOnKill(oppAttacker, t, false); // Fix：對手發動，isPlayerAttacking=false（execOnKill 內部已呼叫 execOnDeath）
                 }
                 myBoard[targetZone][targetIdx] = null;
                 myBoard.discard.push(t);
@@ -2646,11 +2645,10 @@
                     target.hp = 0;
                     spawnSkillFx('💀', getSlotEl('my-' + zone + '-zone', idx));
                     toast(`💀 <b>${target.name}</b> 壯烈犧牲！`, 'danger', 3500);
-                    execOnDeath(target, myBoard, true); // C-3 Fix
+                    const attacker = oppBoard.active.find(c => c !== null);
+                    execOnKill(attacker, target, false); // Fix：execOnKill 內部已呼叫 execOnDeath，移除重複呼叫
                     myBoard[zone][idx] = null;
                     myBoard.discard.push(target);
-                    const attacker = oppBoard.active.find(c => c !== null);
-                    execOnKill(attacker, target, false);
                     renderBoard();
                     if (checkWinCondition()) return;
                 } else {
@@ -2707,11 +2705,10 @@
                 card.hp = 0;
                 toast(`💀 對手 <b>${card.name}</b> 陣亡！`, 'danger', 3000);
                 spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
-                execOnDeath(card, oppBoard, false); // L-10 Fix：觸發死亡技能
+                const attacker = myBoard.active.find(c => c !== null);
+                execOnKill(attacker, card, true); // Fix：execOnKill 內部已呼叫 execOnDeath，移除重複呼叫
                 oppBoard[zone][idx] = null;
                 oppBoard.discard.push(card);
-                const attacker = myBoard.active.find(c => c !== null);
-                execOnKill(attacker, card, true);
                 renderOppBoard();
                 if (checkWinCondition()) return;
             }
