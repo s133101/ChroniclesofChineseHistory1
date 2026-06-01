@@ -841,7 +841,10 @@ function execTurnStartSkills(isPlayer) {
         if (c.statusEffects && c.statusEffects.includes('poison')) {
             c.hp = Math.max(0, c.hp - 20);
             if (isPlayer) {
-                spawnDmgPopup(20, getSlotEl('my-active-zone', board.active.indexOf(c) !== -1 ? board.active.indexOf(c) : 0));
+                // Fix A：正確判斷中毒單位所在的 zone 與 index，避免後營單位顯示在前排插槽
+                const _poisZone = board.active.includes(c) ? 'active' : 'bench';
+                const _poisIdx  = board[_poisZone].indexOf(c);
+                spawnDmgPopup(20, getSlotEl(`my-${_poisZone}-zone`, _poisIdx));
                 toast(`☠ <b>${c.name}</b> 毒發傷血 20！`, 'danger', 2000);
                 _SFX.poison();
             }
@@ -1198,6 +1201,16 @@ function execDefenseMods(defender, dmg) {
             spawnDmgPopup(dmg, getSlotEl(`${zonePrefix}-${dZone}-zone`, dZoneIdx));
             toast(`🛡 <b>${dorgon.name} · 攝政</b> — 替主公承受 ${dmg} 傷害！`, 'skill');
             _SFX.skill();
+            // Fix C：攝政承傷致死時，需呼叫 execOnKill 並從場上移除多爾袞
+            if (dorgon.hp <= 0) {
+                dorgon.hp = 0;
+                toast(`💀 <b>${dorgon.name}</b> 攝政殉國！`, 'danger', 3000);
+                _SFX.death();
+                execOnKill(null, dorgon, !isMyMonarch); // 攝政為我方君主擋傷：isPlayerAttacking = !isMyMonarch
+                allyBoard[dZone][dZoneIdx] = null;
+                allyBoard.discard.push(dorgon);
+                checkWinCondition();
+            }
             if (isMyMonarch) renderBoard(); else renderOppBoard();
             return 0;
         }
@@ -1283,7 +1296,9 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
     }
 
     // 楊漣（死諫）：臨死帶走一名敵方武將
-    if (deadCard.skillName === '死諫') {
+    // Fix B：加入遞迴防護旗標，防止雙方均有死諫時無限遞迴
+    if (deadCard.skillName === '死諫' && !deadCard._siJianTriggered) {
+        deadCard._siJianTriggered = true; // 標記已觸發，防止連鎖遞迴
         const enemyBoard = isOwnerPlayer ? oppBoard : myBoard;
         const victims = enemyBoard.active.filter(c => c && c.type !== '君王');
         if (victims.length > 0) {
@@ -1307,7 +1322,9 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
     }
 
     // 遺計（郭嘉）on death：補抽 2 張（玩家陣亡）
-    if (deadCard.skillName === '遺計' && isOwnerPlayer) {
+    // Fix D：execDamageResponse 已在受傷時補抽 2 張；若郭嘉一擊斃命（未觸發 execDamageResponse）
+    // 則在此補抽，但使用旗標防止受傷+死亡路徑重複抽 4 張
+    if (deadCard.skillName === '遺計' && isOwnerPlayer && !deadCard._yijiDrawnOnHit) {
         setTimeout(() => { drawCard(true); drawCard(true); }, 400);
         toast(`📜 <b>郭嘉 · 遺計</b> — 魂歸遺計，補抽 2 張！`, 'skill');
     }
@@ -1328,6 +1345,7 @@ function execDamageResponse(injured, isPlayerInjured) {
         }
     }
     if (injured.skillName === '遺計' && isPlayerInjured) {
+        injured._yijiDrawnOnHit = true; // Fix D：標記已在受傷時抽牌，防止死亡時重複抽
         drawCard(true); drawCard(true);
         toast(`📜 <b>郭嘉 · 遺計</b> — 受傷連抽 2 張！`, 'skill');
     }
@@ -2213,6 +2231,23 @@ function handleOppCardClick(card, zone, idx) {
             card.hp = Math.max(0, card.hp - dmg);
             spawnDmgPopup(dmg, getSlotEl('opp-' + zone + '-zone', idx));
             toast(`🛡 <b>${card.name}</b> 固守減傷！（防禦削減至 ${dmg}）`, 'info');
+            // Fix G：固守減傷後若仍致死，需處理死亡邏輯
+            if (card.hp <= 0) {
+                card.hp = 0;
+                spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
+                toast(`💀 <b>${card.name}</b> 固守後仍不敵，戰死沙場！`, 'danger', 3000);
+                _SFX.death();
+                const dodgeKillAttacker = attacker || myBoard.active.find(c => c !== null);
+                if (card.skillName === '再造' && !card._reborn) {
+                    card._reborn = true; card.hp = card.maxHp;
+                    toast(`✨ <b>${card.name} · 再造</b> — 奇蹟復活！全場限一次`, 'gold', 3000);
+                    _SFX.heal();
+                } else {
+                    execOnKill(dodgeKillAttacker, card, true);
+                    oppBoard[zone][idx] = null;
+                    oppBoard.discard.push(card);
+                }
+            }
         } else {
             toast(`🛡 <b>${card.name}</b> 固守完全格擋！`, 'info');
             _SFX.dodge();
@@ -2374,6 +2409,7 @@ function checkWinCondition() {
     const myGenDeaths = myBoard.discard.filter(c => c.type === '大將軍' || c.type === '將軍').length;
     if (myGenDeaths >= 2) {
         toast('💀 我方兩位大將軍/將軍相繼陣亡，軍心崩潰！', 'danger', 3500);
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
     const oppGenDeaths = oppBoard.discard.filter(c => c.type === '大將軍' || c.type === '將軍').length;
@@ -2385,14 +2421,17 @@ function checkWinCondition() {
     // ── 我方系統崩潰 → 我方敗 ────────────────────────────────
     if (isSystemCritical(myBoard, '後勤')) {
         toast('🌾 後勤崩潰！糧草告急，<b>捉襟見肘</b>，軍隊無以為繼！', 'danger', 3500);
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
     if (isSystemCritical(myBoard, '內政')) {
         toast('🏛 民心盡失！<b>民怨四起</b>，王朝根基動搖！', 'danger', 3500);
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
     if (isSystemCritical(myBoard, '監察')) {
         toast('👁 忠誠崩潰！<b>人人自危</b>，臣心離散！', 'danger', 3500);
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
 
@@ -2538,8 +2577,9 @@ function triggerGameOver(win) {
             window._updateHUD();
         }
         
-        const streakMsg = win ? `🔥 連勝中：${currStreak}` : `💀 連勝中斷`;
-        toast(`💰 結算：${win ? '勝利' : '敗北'} 獲得 ${totalReward} 銀兩！ ${streakMsg}`, win ? 'success' : 'warn', 5000);
+        // Fix I：AI 模式不顯示 PvP 連勝計數，避免誤導
+        const streakMsg = isPvP ? (win ? `🔥 連勝中：${currStreak}` : `💀 連勝中斷`) : '';
+        toast(`💰 結算：${win ? '勝利' : '敗北'} 獲得 ${totalReward} 銀兩！${streakMsg ? ' ' + streakMsg : ''}`, win ? 'success' : 'warn', 5000);
     }
 
     setTimeout(() => {

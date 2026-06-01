@@ -1782,9 +1782,10 @@
                 const sec = document.createElement('div');
                 sec.id = 'detail-card-story-section';
                 sec.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);';
+                const _escH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 sec.innerHTML = `
                     <h4 style="color:#b8a060;margin-bottom:8px;font-size:13px;letter-spacing:1px;">${label}</h4>
-                    <p style="color:#999;font-size:13px;line-height:1.9;white-space:pre-wrap;">${storyContent}</p>
+                    <p style="color:#999;font-size:13px;line-height:1.9;white-space:pre-wrap;">${_escH(storyContent)}</p>
                 `;
                 descBlock.appendChild(sec);
             }
@@ -2191,11 +2192,18 @@
 
     /** 管理員登入邏輯 */
     function _handleAdminLogin() {
-        const email = prompt('⚔️ 請輸入超級管理員驗證信箱：');
+        let email;
+        try {
+            email = prompt('⚔️ 請輸入超級管理員驗證信箱：');
+        } catch(e) {
+            _showError('❌ 驗證對話框被瀏覽器封鎖，無法驗證。');
+            return;
+        }
+        if (!email) return; // Fix E：使用者取消 prompt
         const admins = ['linus622wang@gmail.com', 'yanbo970913@gmail.com'];
-        if (admins.includes(email)) {
+        if (admins.includes(email.trim())) {
             _showError('📜 聖旨到！超級管理員身分已驗證。');
-            _showSuperAdminEdict(email);
+            _showSuperAdminEdict(email.trim());
         } else {
             _showError('❌ 驗證失敗：您並非指定的超級管理員。');
         }
@@ -2746,6 +2754,11 @@
     function _guestShowDefense(data) {
         const { targetZone, targetIdx, dmg, unDodgeable, ignoreFirstDodge = false, targetName } = data;
         const target = myBoard[targetZone] && myBoard[targetZone][targetIdx];
+        // Fix F：目標不在場（已在狀態不同步時被移除），自動硬扛並通知主機
+        if (!target) {
+            Network.send('guest_action', { type: 'defense_result', result: 'take', targetZone, targetIdx });
+            return;
+        }
 
         const dodgeIdx = myHand.findIndex(c => c.name && c.name.includes('固守'));
         const spaceIdx = myHand.findIndex(c => c.name && c.name.includes('空城計'));
