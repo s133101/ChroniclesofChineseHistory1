@@ -211,6 +211,8 @@
         if (document.getElementById('_ask_wall')) return;
         if (document.getElementById('_pwall'))    return;
 
+        let _poll = null; // L-1 Fix：提升至 _askIdentity 作用域，使「否」按鈕的 onclick 也能清除
+
         const wall = document.createElement('div');
         wall.id = '_ask_wall';
         wall.style.cssText = [
@@ -309,7 +311,7 @@
             });
 
             // ── 備援輪詢：每秒檢查 localStorage，另一分頁點連結後自動解鎖 ──
-            const _poll = setInterval(() => {
+            _poll = setInterval(() => {
                 if (_isVerified()) {
                     clearInterval(_poll);
                     const aw = document.getElementById('_ask_wall');

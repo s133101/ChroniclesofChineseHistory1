@@ -2554,9 +2554,15 @@
             if (t) {
                 spawnSkillFx('🔥', getSlotEl('my-' + targetZone + '-zone', targetIdx));
                 toast(`🔥 對手【釜底抽薪】！<b>${t.name}</b> 被破壞！`, 'danger');
+                if (typeof execOnDeath === 'function') execOnDeath(t, myBoard, true); // Fix：觸發死亡技能
+                if (typeof execOnKill === 'function') {
+                    const oppAttacker = oppBoard.active.find(u => u !== null);
+                    execOnKill(oppAttacker, t, false); // Fix：對手發動，isPlayerAttacking=false
+                }
                 myBoard[targetZone][targetIdx] = null;
                 myBoard.discard.push(t);
                 renderBoard();
+                if (typeof checkWinCondition === 'function') checkWinCondition(); // Fix：檢查勝負
             }
         } else if (spellType === '草船借箭') {
             for (let i = 0; i < 2 && oppDeck.length > 0; i++) oppHandData.push(oppDeck.pop());
