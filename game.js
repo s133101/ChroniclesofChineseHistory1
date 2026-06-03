@@ -35,10 +35,12 @@ window._getInteractionMode = () => interactionState.mode;
 let wineBuff = 0; // 酒：下一張【殺】傷害 +1
 
 // ── 陣法狀態 ──────────────────────────────────────────
-// 結構: { id, name, turnsLeft, atkBuff, dmgReduce, atkDebuff,
-//         healPerTurn, dotDmgPerTurn, triggerReduce, skillBonus }
 let myFormation  = null;
 let oppFormation = null;
+
+// ── 裝備系統：裝備綁定在陣法上，槽位數由陣法卡的 slots 屬性決定 ──
+// 裝備狀態存放在 myFormation.equippedItems / oppFormation.equippedItems
+// 無陣法時無法裝備
 let _escListenerAdded = false; // M-9：防止 ESC 監聽器重複掛載
 
 const PHASES = ['抽牌階段','準備階段','主要階段','戰鬥階段','結束階段'];
@@ -326,24 +328,107 @@ function xiuweiDmgBonus(card) {
 //  陣法效果輔助函數
 // ══════════════════════════════════════════════════════
 
-/** 啟動陣法（己方） */
+// ══════════════════════════════════════════════════════
+//  裝備系統（槽位綁定在陣法上）
+// ══════════════════════════════════════════════════════
+
+/** 重新計算陣法效果（基礎值 × 已裝備物品加成） */
+function recomputeFormation(fm) {
+    if (!fm) return;
+    const base  = fm._base;
+    const items = fm.equippedItems || [];
+    const doubleMulti = (fm._firstTurnDouble && fm._firstTurn) ? 2 : 1;
+
+    const boost = (type) => items.reduce((s, e) => {
+        const all = e.allFormBoost || 0;
+        if (type === 'atk')    return s + all + (e.atkFormBoost    || 0);
+        if (type === 'def')    return s + all + (e.defFormBoost    || 0);
+        if (type === 'debuff') return s + all + (e.debuffFormBoost || 0);
+        if (type === 'heal')   return s + all + (e.defFormBoost    || 0) + (e.healFormBoost || 0);
+        return s + all;
+    }, 0);
+
+    fm.atkBuff       = (base.atkBuff       || 0) * (1 + boost('atk'))    * doubleMulti;
+    fm.dmgReduce     = (base.dmgReduce     || 0) * (1 + boost('def'))    * doubleMulti;
+    fm.atkDebuff     = (base.atkDebuff     || 0) * (1 + boost('debuff')) * doubleMulti;
+    fm.healPerTurn   = (base.healPerTurn   || 0) * (1 + boost('heal'))   * doubleMulti;
+    fm.dotDmgPerTurn = (base.dotDmgPerTurn || 0)                         * doubleMulti;
+    fm.triggerReduce = (base.triggerReduce || 0) * (1 + boost('debuff')) * doubleMulti;
+    fm.skillBonus    = (base.skillBonus    || 0);
+}
+
+/** 裝備法寶到當前陣法 */
+function equipItem(card, isPlayer) {
+    const fm = isPlayer ? myFormation : oppFormation;
+    if (!fm) {
+        if (isPlayer) toast('⚠ 尚未布下陣法！需先布陣才能裝備法寶。', 'warn', 3000);
+        return false;
+    }
+    const maxSlots = fm.slots || 0;
+    if (fm.equippedItems.length >= maxSlots) {
+        if (isPlayer) toast(`⚠ 陣法槽位已滿（${fm.equippedItems.length}/${maxSlots}）！`, 'warn', 2500);
+        return false;
+    }
+    const eq = { ...(card.equipment || {}), id: card.id, name: card.name };
+    fm.equippedItems.push(eq);
+    recomputeFormation(fm);
+
+    if (isPlayer) {
+        toast(`⚙ <b>${card.name}</b> 裝入 ${fm.name}（${fm.equippedItems.length}/${maxSlots} 槽）`, 'gold', 3000);
+        // 顯示被動效果
+        const hints = [];
+        if (eq.passiveAtkBoost)   hints.push(`攻擊+${Math.round(eq.passiveAtkBoost*100)}%`);
+        if (eq.passiveDmgReduce)  hints.push(`減傷+${Math.round(eq.passiveDmgReduce*100)}%`);
+        if (eq.passiveSkillBonus) hints.push(`技能觸發+${Math.round(eq.passiveSkillBonus*100)}%`);
+        if (eq.enemyFormDecay)    hints.push(`敵陣每回合-${eq.enemyFormDecay}回`);
+        if (hints.length) toast(`✨ 被動效果：${hints.join('・')}`, 'success', 2500);
+        // onDeployDmg 立即觸發
+        if (eq.onDeployDmg) {
+            const oppM = [...oppBoard.active, ...oppBoard.bench].find(c => c && c.type === '聖人');
+            if (oppM) {
+                oppM.hp = Math.max(0, oppM.hp - eq.onDeployDmg * 100);
+                toast(`💥 <b>${card.name}</b> 震懾 — 敵方主公受到 ${eq.onDeployDmg} 點傷害！`, 'skill', 2500);
+            }
+        }
+    }
+    renderFormationUI();
+    return true;
+}
+
+/** 取得陣法裝備的持久被動加成 */
+function getEquipPassive(isPlayer, prop) {
+    const fm = isPlayer ? myFormation : oppFormation;
+    const hasFormation = !!fm;
+    const items = fm?.equippedItems || [];
+    return items.reduce((sum, eq) => {
+        let val = eq[prop] || 0;
+        if (hasFormation && eq.id === 'eq10') val *= 2;   // 開天珠：有陣法時加倍
+        if (hasFormation && eq.id === 'eq08' && prop === 'passiveDmgReduce') val += 0.08; // 玲瓏寶塔
+        return sum + val;
+    }, 0);
+}
+
+/** 啟動陣法（無裝備，裝備後再 recompute） */
 function activateFormation(card, isPlayer) {
-    const fm = card.formation || {};
-    const state = {
-        id:            card.id,
-        name:          card.name,
-        turnsLeft:     fm.duration || 3,
-        atkBuff:       fm.atkBuff       || 0,
-        dmgReduce:     fm.dmgReduce     || 0,
-        atkDebuff:     fm.atkDebuff     || 0,
-        healPerTurn:   fm.healPerTurn   || 0,
+    const fm  = card.formation || {};
+    const base = {
+        atkBuff: fm.atkBuff || 0, dmgReduce: fm.dmgReduce || 0,
+        atkDebuff: fm.atkDebuff || 0, healPerTurn: fm.healPerTurn || 0,
         dotDmgPerTurn: fm.dotDmgPerTurn || 0,
-        triggerReduce: fm.triggerReduce || 0,
-        skillBonus:    fm.skillBonus    || 0,
+        triggerReduce: fm.triggerReduce || 0, skillBonus: fm.skillBonus || 0,
+    };
+    const state = {
+        id: card.id, name: card.name,
+        slots: fm.slots || 0,
+        turnsLeft: fm.duration || 3,
+        equippedItems: [],
+        _base: base, _firstTurn: true, _firstTurnDouble: false,
+        // 初始效果（無裝備）
+        ...base,
     };
     if (isPlayer) {
         myFormation = state;
-        toast(`🔱 <b>${card.name}</b> 布陣完成！持續 ${state.turnsLeft} 回合`, 'gold', 3000);
+        toast(`🔱 <b>${card.name}</b> 布陣完成！持續 ${state.turnsLeft} 回合${state.slots > 0 ? `・法寶槽 ${state.slots} 個` : ''}`, 'gold', 3500);
     } else {
         oppFormation = state;
     }
@@ -410,49 +495,98 @@ function tickFormation(isPlayerTurn) {
     }
 }
 
-/** 回合末陣法倒計時 */
+/** 回合末陣法倒計時（含裝備：落魂燈加速敵方陣法消耗、firstTurn重置） */
 function tickdownFormation(isPlayerTurn) {
     if (isPlayerTurn && myFormation) {
+        // 結束第一回合標記（混元金斗首回翻倍效果）
+        if (myFormation._firstTurn) {
+            myFormation._firstTurn = false;
+            if (myFormation._firstTurnDouble) recomputeFormation(myFormation);
+        }
         myFormation.turnsLeft--;
+        // 落魂燈：玩家裝備可加速敵方陣法消耗
+        const decay = (myFormation.equippedItems || []).reduce((s, e) => s + (e.enemyFormDecay || 0), 0);
+        if (decay > 0 && oppFormation) {
+            oppFormation.turnsLeft -= decay;
+            toast(`🕯 <b>落魂燈</b> 侵蝕 — 敵方陣法消耗加速！`, 'warn', 2000);
+        }
         if (myFormation.turnsLeft <= 0) {
             toast(`💨 <b>${myFormation.name}</b> 效果結束`, 'info', 2000);
             myFormation = null;
         }
     }
     if (!isPlayerTurn && oppFormation) {
+        if (oppFormation._firstTurn) {
+            oppFormation._firstTurn = false;
+            if (oppFormation._firstTurnDouble) recomputeFormation(oppFormation);
+        }
         oppFormation.turnsLeft--;
-        if (oppFormation.turnsLeft <= 0) oppFormation = null;
+        // 對手落魂燈加速我方陣法消耗
+        const decay = (oppFormation?.equippedItems || []).reduce((s, e) => s + (e.enemyFormDecay || 0), 0);
+        if (decay > 0 && myFormation) myFormation.turnsLeft -= decay;
+        if (oppFormation && oppFormation.turnsLeft <= 0) oppFormation = null;
     }
     renderFormationUI();
 }
 
-/** 渲染戰場上的陣法顯示 */
+/** 渲染戰場陣法顯示（含裝備槽位） */
 function renderFormationUI() {
     const myEl  = document.getElementById('my-formation-display');
     const oppEl = document.getElementById('opp-formation-display');
 
-    function renderFm(el, fm) {
+    function renderFm(el, fm, isPlayer) {
         if (!el) return;
-        if (!fm) { el.style.display = 'none'; el.innerHTML = ''; return; }
+        if (!fm) {
+            el.style.display = 'none';
+            el.innerHTML = '';
+            return;
+        }
         el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+        el.style.gap = '3px';
+
+        // 效果標籤
         const effects = [];
         if (fm.atkBuff > 0)       effects.push(`⚔+${Math.round(fm.atkBuff*100)}%`);
         if (fm.dmgReduce > 0)     effects.push(`🛡-${Math.round(fm.dmgReduce*100)}%`);
-        if (fm.atkDebuff > 0)     effects.push(`💀敵-${Math.round(fm.atkDebuff*100)}%`);
+        if (fm.atkDebuff > 0)     effects.push(`💀敵攻-${Math.round(fm.atkDebuff*100)}%`);
         if (fm.healPerTurn > 0)   effects.push(`💚+${Math.round(fm.healPerTurn*100)}%/回`);
-        if (fm.dotDmgPerTurn > 0) effects.push(`☠️${fm.dotDmgPerTurn}/回`);
-        if (fm.triggerReduce > 0) effects.push(`🚫技-${Math.round(fm.triggerReduce*100)}%`);
-        if (fm.skillBonus > 0)    effects.push(`✨技+${Math.round(fm.skillBonus*100)}%`);
+        if (fm.dotDmgPerTurn > 0) effects.push(`☠️傷${fm.dotDmgPerTurn}/回`);
+        if (fm.triggerReduce > 0) effects.push(`🚫技能-${Math.round(fm.triggerReduce*100)}%`);
+        if (fm.skillBonus > 0)    effects.push(`✨技能+${Math.round(fm.skillBonus*100)}%`);
+
+        // 裝備槽位
+        const slotTotal = fm.slots || 0;
+        const equipped  = fm.equippedItems || [];
+        let slotsHTML = '';
+        if (slotTotal > 0) {
+            const slotEls = [];
+            for (let i = 0; i < slotTotal; i++) {
+                const eq = equipped[i];
+                if (eq) {
+                    slotEls.push(`<span title="${eq.name}" style="padding:1px 5px;border-radius:3px;background:rgba(232,197,71,0.2);border:1px solid rgba(232,197,71,0.5);font-size:9px;color:#e8c547;white-space:nowrap;">⚙${eq.name}</span>`);
+                } else {
+                    slotEls.push(`<span style="padding:1px 5px;border-radius:3px;border:1px dashed #333;font-size:9px;color:#333;white-space:nowrap;">空槽</span>`);
+                }
+            }
+            slotsHTML = `<div style="display:flex;gap:3px;flex-wrap:wrap;">${slotEls.join('')}</div>`;
+        }
+
         el.innerHTML = `
-            <span style="font-size:11px;color:#e8c547;font-weight:900;">🔱${fm.name}</span>
-            <span style="font-size:10px;color:#a07aff;">${effects.join(' ')}</span>
-            <span style="font-size:10px;color:#555;">${fm.turnsLeft}回</span>`;
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span style="font-size:11px;color:#e8c547;font-weight:900;">🔱 ${_esc(fm.name)}</span>
+                <span style="font-size:10px;color:#a07aff;">${effects.join(' ')}</span>
+                <span style="font-size:10px;color:#555;margin-left:auto;">${fm.turnsLeft}回合</span>
+            </div>
+            ${slotsHTML}`;
     }
 
-    renderFm(myEl, myFormation);
-    renderFm(oppEl, oppFormation);
+    renderFm(myEl,  myFormation,  true);
+    renderFm(oppEl, oppFormation, false);
     renderAll();
 }
+
+function renderEquipmentUI() { renderFormationUI(); }
 
 // 將修為常數暴露為全域，供 lobby.js 使用
 window.XIUWEI_NAMES         = XIUWEI_NAMES;
@@ -517,10 +651,6 @@ function runLoadingScreen() {
 //  INIT GAME
 // ==============================================================
 function initGame() {
-    // 對戰開始：隱藏左上角頭像 / 防火牆 / 成就等按鈕
-    const _topBtns = document.getElementById('top-left-btns');
-    if (_topBtns) _topBtns.style.display = 'none';
-
     // 重置狀態
     myBoard  = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
     oppBoard = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
@@ -560,7 +690,7 @@ function initGame() {
     // ── 教學模式：給予固定手牌（確保教學步驟可正確引導）──
     if (window.TUTORIAL_MODE) {
         const tutKill = cardDatabase.find(c => c.name === '道術 (殺)' && c.isBasic)
-                     || cardDatabase.find(c => c.name.includes('殺') || name.includes('道術') || name.includes('三昧真火') || name.includes('天雷劈') || name.includes('水遁'));
+                     || cardDatabase.find(c => c.name && (c.name.includes('殺') || c.name.includes('道術') || c.name.includes('三昧真火') || c.name.includes('天雷劈') || c.name.includes('水遁')));
         myHand = [
             myMonarch,
             myGeneral,
@@ -882,7 +1012,7 @@ function typeClass(type) {
     const m = {
         '聖人':'theme-monarch','大神':'theme-commander','天仙':'theme-general',
         '金仙':'theme-tactician','靈獸':'theme-logistics','巫族':'theme-domestic',
-        '妖族':'theme-inspector','陣法':'theme-formation',
+        '妖族':'theme-inspector','陣法':'theme-formation','裝備':'theme-equipment',
         '計策':'theme-spell','突發事件':'theme-trap'
     };
     return m[type] || 'theme-default';
@@ -1704,6 +1834,17 @@ function handleHandClick(handIndex) {
         return;
     }
 
+    // ─── 裝備卡 ────────────────────────────────────
+    if (card.type === '裝備') {
+        if (!myFormation) {
+            toast('⚠ 需先布下陣法，才能裝備法寶！', 'warn', 3000);
+            return;
+        }
+        const success = equipItem(card, true);
+        if (success) _consumeHandCard(handIndex, card);
+        return;
+    }
+
     // ─── ACTION CARDS ───────────────────────────────
     if (card.type === '計策' || card.type === '突發事件' || card.isBasic) {
         // 所有「殺」類攻擊牌：先選攻擊武將，再選目標
@@ -1839,7 +1980,7 @@ function handleHandClick(handIndex) {
             let nanDelay = 400;
             nanTargets.forEach(tgt => {
                 setTimeout(() => {
-                    const killIdx = oppHandData.findIndex(c => c.name && c.name.includes('殺') || name.includes('道術') || name.includes('三昧真火') || name.includes('天雷劈') || name.includes('水遁'));
+                    const killIdx = oppHandData.findIndex(c => c.name && (c.name.includes('殺') || c.name.includes('道術') || c.name.includes('三昧真火') || c.name.includes('天雷劈') || c.name.includes('水遁')));
                     if (killIdx !== -1) {
                         const kc = oppHandData.splice(killIdx, 1)[0];
                         oppBoard.discard.push(kc);
@@ -2305,7 +2446,7 @@ function aiExecuteFreeAttack() {
 
 /** 客方出牌處理（發送意圖給主機） */
 function _guestHandCardAction(handIndex, card) {
-    const isAction = card.type === '計策' || card.type === '突發事件' || card.type === '陣法' || card.isBasic;
+    const isAction = card.type === '計策' || card.type === '突發事件' || card.type === '陣法' || card.type === '裝備' || card.isBasic;
 
     if (isAction) {
         // 客方殺牌：自動選取第一個可用武將作為攻擊者，直接進入目標選擇
@@ -2514,21 +2655,23 @@ function handleOppCardClick(card, zone, idx) {
     const isThunder = sel && sel.name && sel.name.includes('天雷劈');
     const isWater   = sel && sel.name && sel.name.includes('水遁');
     if (isFire) unDodgeable = true;
-    // 計算基礎傷害（使用攻擊者 ATK + 陣法加成）
-    const baseAtk   = attacker ? attacker.atk : 60;
-    const mult      = isThunder ? 1.5 : 1.0;
-    const fmAtkMult = getFormationAtkMult(true)    * getFormationDebuffMult(true);
-    let baseDmg     = Math.floor(baseAtk * mult * fmAtkMult) + extraDmg;
+    // 計算基礎傷害（攻擊者 ATK × 陣法加成 × 裝備被動加成）
+    const baseAtk        = attacker ? attacker.atk : 60;
+    const mult           = isThunder ? 1.5 : 1.0;
+    const eqAtkPassive   = 1 + getEquipPassive(true, 'passiveAtkBoost');
+    const fmAtkMult      = getFormationAtkMult(true) * getFormationDebuffMult(true) * eqAtkPassive;
+    let baseDmg          = Math.floor(baseAtk * mult * fmAtkMult) + extraDmg;
     // 酒 buff
-    if (wineBuff > 0 && sel && sel.name && (sel.name.includes('殺') || name.includes('道術') || name.includes('三昧真火') || name.includes('天雷劈') || name.includes('水遁') || sel.name.includes('道術'))) {
+    if (wineBuff > 0 && sel && sel.name && (sel.name.includes('殺') || sel.name.includes('道術') || sel.name.includes('三昧真火') || sel.name.includes('天雷劈') || sel.name.includes('水遁'))) {
         const wb = wineBuff; wineBuff = 0;
         const wineBonus = Math.floor(baseAtk * 0.30 * wb);
         baseDmg += wineBonus;
         toast(`🍷 <b>酒勁爆發</b>（${attacker?.name || '未知武將'}）— 額外 ${wineBonus} 傷！`, 'skill'); // H-7 Fix
     }
-    // 火殺：完全無視防禦，不減 DEF；套用防守方陣法減傷
-    const rawDmg = isFire ? baseDmg : Math.max(1, baseDmg - (card.def || 0));
-    let dmg = Math.max(1, Math.round(rawDmg * getFormationDmgReduce(false)));
+    // 火殺：完全無視防禦；套用防守方陣法+裝備減傷
+    const rawDmg        = isFire ? baseDmg : Math.max(1, baseDmg - (card.def || 0));
+    const eqDmgReduce   = 1 - getEquipPassive(false, 'passiveDmgReduce');
+    let dmg             = Math.max(1, Math.round(rawDmg * getFormationDmgReduce(false) * eqDmgReduce));
     if (unDodgeable) toast(`⚔ <b>${isFire ? '火殺' : '霸王'}</b> — 攻擊無法閃避！`, 'skill');
     if (ignoreFirstDodge) toast('⚔ <b>水戰</b> — 無視對手第一張固守！', 'skill');
 
@@ -2835,10 +2978,6 @@ function triggerGameOver(win) {
     if (!gameActive) return; // L-8 Fix：防止雙重觸發
     gameActive = false;
     window.gameActive = false;
-
-    // 遊戲結束：還原左上角按鈕群
-    const _topBtns = document.getElementById('top-left-btns');
-    if (_topBtns) _topBtns.style.display = '';
 
     // 清除觀戰廣播狀態
     _clearSpectateState();

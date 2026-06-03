@@ -540,6 +540,23 @@ const Auth = (() => {
         try { sessionStorage.removeItem('hua_session'); } catch {}
     }
 
+    /** 清除瀏覽器本地所有 hua_* 快取（sessionStorage + localStorage），不影響 Firebase 雲端資料 */
+    function clearLocalCache() {
+        // 1. 清除登入 session
+        _cur = null;
+        try { sessionStorage.removeItem('hua_session'); } catch {}
+
+        // 2. 清除所有 hua_* 前綴的 localStorage 項目
+        try {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith('hua_')) keys.push(k);
+            }
+            keys.forEach(k => localStorage.removeItem(k));
+        } catch {}
+    }
+
     function current() { return _cur; }
 
     // ── 記錄一場對戰結果（同步 Firebase stats + battle_records）────
@@ -646,6 +663,7 @@ const Auth = (() => {
         getSession,
         restoreSession,
         logout,
+        clearLocalCache,
         current,
         recordBattle,
         getBattleHistory,
