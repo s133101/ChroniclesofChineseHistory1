@@ -625,6 +625,157 @@
     // 初始化顯示
     _updateCurModeDisplay();
 
+    // ══════════════════════════════════════════
+    //  新大廳：社交 / 郵件 / 通訊 Overlay
+    // ══════════════════════════════════════════
+
+    // 通用關閉
+    window._closeOverlay = function(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    };
+
+    // ── 社交（好友列表）──────────────────────
+    window._openSocialPanel = function() {
+        document.getElementById('lby-social-panel')?.classList.remove('hidden');
+        _renderSocialFriends();
+    };
+
+    function _renderSocialFriends() {
+        const list = document.getElementById('lby-friend-list');
+        if (!list) return;
+        // 從舊系統取好友資料
+        const friends = JSON.parse(localStorage.getItem('hua_friends') || '[]');
+        const onlineMap = {};
+        if (!friends.length) {
+            list.innerHTML = '<div style="color:#444;text-align:center;padding:40px;font-size:13px;">暫無好友<br><br>在聊天室中右鍵玩家可添加好友</div>';
+            return;
+        }
+        list.innerHTML = friends.map(f => {
+            const uname = f.username || f;
+            const nick  = f.nickname || uname;
+            const online = !!onlineMap[uname];
+            return `<div class="lby-friend-row" onclick="window._openFriendDM('${uname}')">
+                <div class="lby-friend-avatar">
+                    👤
+                    <div class="lby-friend-online" style="background:${online?'#2ecc71':'#555'};"></div>
+                </div>
+                <div class="lby-friend-info">
+                    <div class="lby-friend-name">${nick}</div>
+                    <div class="lby-friend-status">${online?'在線':'離線'}</div>
+                </div>
+                <button class="lby-friend-invite" onclick="event.stopPropagation();window._sendBattleInviteByName?.('${uname}')">邀請</button>
+            </div>`;
+        }).join('');
+    }
+    window._renderSocialFriends = _renderSocialFriends;
+
+    window._doAddFriend = function() {
+        const search = document.getElementById('lby-social-search');
+        const name = search?.value?.trim();
+        if (!name) { search?.focus(); return; }
+        if (typeof window.addFriend === 'function') {
+            window.addFriend(name, name);
+            _renderSocialFriends();
+            if (search) search.value = '';
+        }
+    };
+
+    window._openFriendDM = function(uname) {
+        window._closeOverlay('lby-social-panel');
+        window._openCommPanel('friend', uname);
+    };
+
+    // ── 郵件 ────────────────────────────────
+    const _MAIL_DATA = [
+        { id:'sys1', from:'系統', title:'歡迎來到華夏風雲錄', date:'2026-06-02', body:'歡迎加入華夏風雲錄！在這裡，千古英雄與你並肩作戰。完成新手教學可獲得額外銀兩獎勵。', read: false },
+        { id:'sys2', from:'系統', title:'每日登入獎勵', date:'2026-06-05', body:'感謝您每日登入華夏風雲錄。持續登入可累積連勝獎勵，祝您征戰順利！', read: false },
+    ];
+    let _selectedMail = null;
+
+    window._openMailPanel = function() {
+        document.getElementById('lby-mail-panel')?.classList.remove('hidden');
+        _renderMailList();
+        // 有未讀時不顯示 badge
+        const badge = document.getElementById('lby-mail-badge');
+        if (badge) badge.classList.add('hidden');
+    };
+
+    function _renderMailList() {
+        const listEl = document.getElementById('lby-mail-list');
+        if (!listEl) return;
+        listEl.innerHTML = _MAIL_DATA.map(m => `
+            <div class="lby-mail-item ${_selectedMail?.id===m.id?'active':''}" onclick="window._openMail('${m.id}')">
+                <div class="lby-mail-item-title" style="color:${m.read?'#555':'#ccc'};">${m.read?'':' ● '}${m.title}</div>
+                <div class="lby-mail-item-from">✉ ${m.from} <span class="lby-mail-item-date">${m.date}</span></div>
+            </div>`).join('');
+    }
+
+    window._openMail = function(id) {
+        const mail = _MAIL_DATA.find(m => m.id === id);
+        if (!mail) return;
+        mail.read = true;
+        _selectedMail = mail;
+        _renderMailList();
+        const detail = document.getElementById('lby-mail-detail');
+        if (detail) detail.innerHTML = `
+            <div class="lby-mail-detail-title">${mail.title}</div>
+            <div class="lby-mail-detail-meta">發件人：${mail.from} &nbsp;·&nbsp; ${mail.date}</div>
+            <div class="lby-mail-detail-body">${mail.body}</div>`;
+    };
+
+    window._switchMailTab = function(tab, btn) {
+        document.querySelectorAll('#lby-mail-panel .lby-ovl-tab').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+    };
+
+    // ── 通訊（世界頻道）────────────────────
+    window._openCommPanel = function(mode, friendName) {
+        const panel = document.getElementById('lby-comm-panel');
+        if (panel) panel.classList.remove('hidden');
+        const m = mode || 'global';
+        const btn = document.querySelector(`#lby-comm-panel .lby-ovl-tab[data-comm="${m}"]`);
+        window._switchCommTab(m, btn, friendName);
+        // 把底部預覽更新
+        _updateCommPreview();
+    };
+
+    window._switchCommTab = function(mode, btn, friendName) {
+        document.querySelectorAll('#lby-comm-panel .lby-ovl-tab').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const title = document.getElementById('lby-comm-title');
+        const titles = { global:'世界頻道', room:'房間頻道', friend:'好友私聊' };
+        if (title) title.textContent = titles[mode] || '頻道';
+        // 更新頻道標籤
+        const tags = { global:'[全域]', room:'[房間]', friend:'[好友]' };
+        const tag = document.getElementById('lby-channel-tag');
+        if (tag) tag.textContent = tags[mode] || '[全域]';
+        // 渲染訊息到 lby-comm-messages
+        if (typeof window._renderChatHistory === 'function') window._renderChatHistory(mode);
+        // 切換好友列表
+        const friendArea = document.getElementById('friend-list-area');
+        const commMsgs   = document.getElementById('lby-comm-messages');
+        if (mode === 'friend' && friendArea) {
+            friendArea.classList.remove('hidden');
+            if (commMsgs) commMsgs.style.display = 'none';
+        } else {
+            if (friendArea) friendArea.classList.add('hidden');
+            if (commMsgs) commMsgs.style.display = '';
+        }
+        // 舊系統同步
+        if (typeof window.switchChatMode === 'function') window.switchChatMode(mode);
+    };
+
+    function _updateCommPreview() {
+        const prev = document.getElementById('lby-comm-preview');
+        const msgs = document.getElementById('chat-messages');
+        if (prev && msgs) {
+            const last = msgs.querySelector('.chat-msg:last-child, .sys-msg:last-child');
+            if (last) prev.textContent = last.textContent.slice(0, 40) + (last.textContent.length > 40 ? '...' : '');
+        }
+    }
+    window._updateCommPreview = _updateCommPreview;
+
     // 展開/收合聊天面板
     window._toggleChatPanel = function() {
         const panel  = document.getElementById('lby-chat-panel');

@@ -375,30 +375,31 @@
     <!-- ① 頂部導覽列 -->
     <div class="lby-topbar">
         <div class="lby-top-left">
-            <div id="player-avatar-btn" class="player-avatar-btn hidden" onclick="window._openProfileModal()" style="position:static;">
-                <img id="player-avatar-img" src="" alt="" class="player-avatar-img hidden">
-                <span id="player-avatar-icon" class="player-avatar-icon">👤</span>
-                <span id="player-avatar-name" class="player-avatar-name">玩家</span>
-            </div>
-            <div id="fw-indicator" onclick="window._openSecurityDashboard?.()" style="cursor:pointer;">
-                <div id="fw-status-light" style="width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);"></div>
-                <span id="fw-status-label" style="font-size:11px;color:#00ff88;font-weight:700;letter-spacing:1px;">安全</span>
+            <!-- 安全監控 -->
+            <div id="fw-indicator" onclick="window._openSecurityDashboard?.()" style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;transition:background .18s;" onmouseover="this.style.background='rgba(0,255,136,0.07)'" onmouseout="this.style.background='none'">
+                <div id="fw-status-light" style="width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);flex-shrink:0;"></div>
+                <span id="fw-status-label" style="font-size:11px;color:#00ff88;font-weight:700;letter-spacing:1px;">安全監控</span>
             </div>
         </div>
         <nav class="lby-top-nav">
-            <button id="btn-gacha-open"  class="lby-nav-btn">⛩️ 點將臺</button>
-            <button onclick="window._openLibrary()" class="lby-nav-btn">📚 牌庫</button>
-            <button onclick="window._openSecurityDashboard?.()" id="btn-monitor" class="lby-nav-btn hidden">🛡 監控</button>
+            <button id="btn-gacha-open" class="lby-nav-btn">⛩️ 點將臺</button>
         </nav>
         <div class="lby-top-right">
-            <div id="lobby-silver-display" class="lby-silver">💰 <span id="lby-silver-val">0</span> 兩</div>
+            <button class="lby-top-icon-btn" onclick="window._openSocialPanel()">
+                <span>👥</span><span>社交</span>
+            </button>
+            <button class="lby-top-icon-btn" onclick="window._openMailPanel()">
+                <span>✉️</span><span>郵件</span>
+                <span id="lby-mail-badge" class="lby-badge hidden">!</span>
+            </button>
+            <div class="lby-silver">💰 <span id="lby-silver-val">0</span> 兩</div>
         </div>
     </div>
 
     <!-- ② 主體 -->
     <div class="lby-body">
 
-        <!-- 左側欄：只剩玩家卡片 -->
+        <!-- 左側欄 -->
         <aside class="lby-left">
             <div class="lby-player-card">
                 <div class="lby-player-avatar" onclick="window._openProfileModal()">
@@ -411,6 +412,13 @@
                     <div class="lby-stat-sep"></div>
                     <div class="lby-stat"><span class="lby-stat-val" id="lby-silver-left">0</span><span class="lby-stat-lbl">銀兩</span></div>
                 </div>
+            </div>
+            <!-- 左欄快捷：教學 -->
+            <div style="padding:0 10px;display:flex;flex-direction:column;gap:6px;">
+                <button id="btn-tutorial" class="lby-quick-btn" onclick="window._startTutorial()">
+                    <span class="lby-qb-icon">🎓</span>
+                    <span class="lby-qb-label">新手教學</span>
+                </button>
             </div>
         </aside>
 
@@ -445,50 +453,33 @@
 
     </div><!-- end lby-body -->
 
-    <!-- ③ 底部列（三角洲風格）-->
+    <!-- ③ 底部列 -->
     <div class="lby-bottombar">
-        <!-- 左：快捷功能按鈕 -->
+        <!-- 左：通訊入口（點開全螢幕通訊）-->
+        <button class="lby-bb-comm-btn" onclick="window._openCommPanel()">
+            <span class="lby-bb-channel-tag" id="lby-channel-tag">[全域]</span>
+            <span class="lby-bb-comm-preview" id="lby-comm-preview">點擊查看聊天...</span>
+            <span class="lby-bb-expand-arrow">▲</span>
+        </button>
+
+        <!-- 右：快捷功能 -->
         <div class="lby-bb-btns">
-            <button id="btn-gacha-open" class="lby-bb-btn">
-                <span class="lby-bb-icon">⛩️</span>
-                <span class="lby-bb-lbl">點將臺</span>
-            </button>
             <button onclick="window._openLibrary()" class="lby-bb-btn">
                 <span class="lby-bb-icon">📚</span>
                 <span class="lby-bb-lbl">牌庫</span>
-            </button>
-            <button id="btn-tutorial" class="lby-bb-btn" onclick="window._startTutorial()">
-                <span class="lby-bb-icon">🎓</span>
-                <span class="lby-bb-lbl">新手教學</span>
             </button>
             <button id="btn-spectate" class="lby-bb-btn hidden" onclick="window._openSpectateModal()">
                 <span class="lby-bb-icon">🔭</span>
                 <span class="lby-bb-lbl">觀戰</span>
             </button>
         </div>
-
-        <!-- 中：聊天輸入 + Tab 切換 -->
-        <div class="lby-bb-chat">
-            <!-- 聊天 Tab -->
-            <div class="lby-bb-tabs">
-                <button class="lby-bb-tab active" onclick="window._switchLobbyTab?.('global',this)">🌏 全域</button>
-                <button class="lby-bb-tab" onclick="window._switchLobbyTab?.('room',this)">⚔️ 房間</button>
-                <button class="lby-bb-tab" onclick="window._switchLobbyTab?.('friend',this)">👤 好友</button>
-                <!-- 展開/收合聊天面板 -->
-                <button class="lby-bb-expand" id="lby-chat-expand-btn" onclick="window._toggleChatPanel()">▲</button>
-            </div>
-            <!-- 聊天輸入列 -->
-            <div class="lby-bb-input-row">
-                <span class="lby-bb-channel-tag" id="lby-channel-tag">[全域]</span>
-                <input id="chat-input" class="lby-bb-input" placeholder="運籌帷幄...">
-                <button id="btn-chat-send" class="lby-bb-send">發送</button>
-            </div>
-        </div>
     </div>
 
-    <!-- 聊天訊息面板（可展開，懸浮在底部列上方）-->
-    <div id="lby-chat-panel" class="lby-chat-panel hidden">
-        <div id="chat-messages" class="lby-chat-messages"></div>
+    <!-- 隱藏的原始聊天輸入（供 lobby.js 用）-->
+    <div style="display:none;">
+        <input id="chat-input">
+        <button id="btn-chat-send"></button>
+        <div id="chat-messages"></div>
     </div>
 
     <!-- ══ 模式選擇 Overlay（像三角洲第三張圖）══ -->
@@ -546,6 +537,90 @@
         </aside>
 
     </div><!-- end lby-body -->
+
+    <!-- ══ 社交 Overlay ══ -->
+    <div id="lby-social-panel" class="lby-ovl hidden">
+        <div class="lby-ovl-wrap lby-social-wrap">
+            <div class="lby-ovl-header">
+                <button class="lby-mo-back" onclick="window._closeOverlay('lby-social-panel')">← 返回</button>
+                <span class="lby-mo-title">社交</span>
+            </div>
+            <div class="lby-ovl-body">
+                <!-- 左 tab -->
+                <nav class="lby-ovl-nav">
+                    <button class="lby-ovl-tab active" data-social="game" onclick="window._switchSocialTab('game',this)">
+                        <span>👥</span><span>遊戲好友</span>
+                    </button>
+                    <button class="lby-ovl-tab" data-social="recent" onclick="window._switchSocialTab('recent',this)">
+                        <span>🕐</span><span>最近</span>
+                    </button>
+                </nav>
+                <!-- 內容 -->
+                <div class="lby-social-content">
+                    <input class="lby-social-search" placeholder="請輸入玩家暱稱" id="lby-social-search">
+                    <div class="lby-friend-list" id="lby-friend-list">
+                        <div style="color:#444;text-align:center;padding:40px;font-size:13px;">暫無好友</div>
+                    </div>
+                    <div class="lby-social-footer">
+                        <button class="lby-social-btn-dark" onclick="window._openBlacklist?.()">黑名單</button>
+                        <button class="lby-social-btn-green" onclick="window._doAddFriend()">添加好友</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 郵件 Overlay ══ -->
+    <div id="lby-mail-panel" class="lby-ovl hidden">
+        <div class="lby-ovl-wrap lby-mail-wrap">
+            <div class="lby-ovl-header">
+                <button class="lby-mo-back" onclick="window._closeOverlay('lby-mail-panel')">← 返回</button>
+                <span class="lby-mo-title">郵件</span>
+            </div>
+            <div class="lby-ovl-body">
+                <nav class="lby-ovl-nav">
+                    <button class="lby-ovl-tab active" onclick="window._switchMailTab('system',this)"><span>🔔</span><span>系統</span></button>
+                    <button class="lby-ovl-tab" onclick="window._switchMailTab('announce',this)"><span>📢</span><span>公告</span></button>
+                </nav>
+                <div class="lby-mail-content">
+                    <div class="lby-mail-list" id="lby-mail-list"></div>
+                    <div class="lby-mail-detail" id="lby-mail-detail">
+                        <div style="color:#333;text-align:center;padding:60px;font-size:13px;">點擊左側信件查看內容</div>
+                    </div>
+                </div>
+            </div>
+            <div class="lby-mail-footer">
+                <button class="lby-social-btn-dark" onclick="window._deleteReadMails?.()">刪除已讀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ 通訊 Overlay（全螢幕，第三張圖風格）══ -->
+    <div id="lby-comm-panel" class="lby-ovl hidden">
+        <div class="lby-ovl-wrap lby-comm-wrap">
+            <div class="lby-ovl-header">
+                <button class="lby-mo-back" onclick="window._closeOverlay('lby-comm-panel')">← 返回</button>
+                <span class="lby-mo-title" id="lby-comm-title">世界頻道</span>
+            </div>
+            <div class="lby-ovl-body">
+                <!-- 左 tab -->
+                <nav class="lby-ovl-nav">
+                    <button class="lby-ovl-tab active" onclick="window._switchCommTab('global',this)"><span>🌏</span><span>世界</span></button>
+                    <button class="lby-ovl-tab" onclick="window._switchCommTab('room',this)"><span>⚔️</span><span>房間</span></button>
+                    <button class="lby-ovl-tab" onclick="window._switchCommTab('friend',this)"><span>👤</span><span>好友</span></button>
+                </nav>
+                <!-- 聊天區 -->
+                <div class="lby-comm-main">
+                    <div class="lby-comm-messages" id="lby-comm-messages"></div>
+                    <div id="friend-list-area" class="hidden" style="flex:1;overflow-y:auto;padding:8px;"></div>
+                    <div class="lby-comm-input-row">
+                        <input id="chat-input" class="lby-comm-input" placeholder="請輸入內容">
+                        <button id="btn-chat-send" class="lby-comm-send">發送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ③ 等待室（隱藏） -->
 </div><!-- end lobby-screen -->
