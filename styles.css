@@ -4155,12 +4155,132 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
 .lby-mode-row, .lby-room-row,
 .lby-mode-btn, .lby-room-btn, .lby-join-input, .lby-join-btn { display: none; }
 
+/* 右欄只剩行動面板 */
+.lby-right {
+    width: 260px; flex-shrink: 0;
+    background: rgba(5,8,14,0.85);
+    border-left: 1px solid rgba(212,175,55,0.08);
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+}
+.lby-right .lby-right-social { display: none; }
+
+/* ── 底部列 ─────────────────────────────────── */
+.lby-bottombar {
+    height: 68px; flex-shrink: 0;
+    background: rgba(4,6,10,0.96);
+    border-top: 1px solid rgba(212,175,55,0.1);
+    display: flex; align-items: stretch;
+    padding: 0 12px;
+    gap: 0;
+    z-index: 20;
+}
+
+/* 左：快捷按鈕 */
+.lby-bb-btns {
+    display: flex; align-items: center;
+    gap: 2px; padding-right: 12px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.lby-bb-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; width: 60px; height: 100%;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: #555; cursor: pointer; font-family: inherit;
+    transition: all .18s; padding: 4px 0;
+}
+.lby-bb-btn:hover { color: #d4af37; border-bottom-color: rgba(212,175,55,0.4); background: rgba(212,175,55,0.04); }
+.lby-bb-icon { font-size: 20px; }
+.lby-bb-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+
+/* 中：聊天 */
+.lby-bb-chat {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; padding: 6px 12px;
+    gap: 5px;
+}
+.lby-bb-tabs {
+    display: flex; align-items: center; gap: 2px;
+}
+.lby-bb-tab {
+    background: none; border: none;
+    color: #444; font-size: 11px; font-weight: 700;
+    padding: 3px 8px; border-radius: 4px;
+    cursor: pointer; font-family: inherit;
+    transition: all .18s; letter-spacing: 1px;
+    border-bottom: 1px solid transparent;
+}
+.lby-bb-tab:hover { color: #aaa; }
+.lby-bb-tab.active { color: #d4af37; border-bottom-color: #d4af37; }
+.lby-bb-expand {
+    margin-left: auto;
+    background: none; border: none;
+    color: #444; font-size: 11px; cursor: pointer;
+    padding: 2px 6px; border-radius: 3px;
+    transition: all .18s;
+}
+.lby-bb-expand:hover { color: #d4af37; background: rgba(212,175,55,0.08); }
+.lby-bb-expand.open { transform: rotate(180deg); color: #d4af37; }
+
+.lby-bb-input-row {
+    display: flex; align-items: center; gap: 6px;
+}
+.lby-bb-channel-tag {
+    font-size: 11px; color: #555; font-weight: 700;
+    letter-spacing: 1px; flex-shrink: 0;
+}
+.lby-bb-input {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px; padding: 6px 10px;
+    color: #ccc; font-size: 12px; font-family: inherit;
+    outline: none; transition: border-color .2s;
+}
+.lby-bb-input:focus { border-color: rgba(212,175,55,0.25); }
+.lby-bb-input::placeholder { color: #333; }
+.lby-bb-send {
+    padding: 6px 14px; border-radius: 4px;
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.2);
+    color: #d4af37; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    flex-shrink: 0; transition: background .2s;
+}
+.lby-bb-send:hover { background: rgba(212,175,55,0.2); }
+
+/* ── 聊天訊息面板（懸浮展開）────────────────── */
+.lby-chat-panel {
+    position: absolute;
+    bottom: 68px; left: 0; right: 0;
+    height: 260px;
+    background: rgba(4,6,10,0.94);
+    border-top: 1px solid rgba(212,175,55,0.12);
+    z-index: 19;
+    animation: chatPanelSlide .2s ease both;
+    overflow: hidden;
+}
+.lby-chat-panel.hidden { display: none; }
+@keyframes chatPanelSlide {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.lby-chat-messages {
+    height: 100%; overflow-y: auto;
+    padding: 10px 16px;
+    font-size: 12px; line-height: 1.7;
+    scrollbar-width: thin; scrollbar-color: #1a1a1a transparent;
+}
+
 /* 手機版 */
 @media (max-width: 768px) {
     .lby-left { display: none; }
-    .lby-right { width: 100%; border-left: none; }
+    .lby-right { width: 220px; }
     .lby-center { display: none; }
     #lobby-screen { flex-direction: column; }
+    .lby-bb-lbl { display: none; }
+    .lby-bb-btn { width: 44px; }
 }
 
 /* ============================================================

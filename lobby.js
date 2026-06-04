@@ -625,11 +625,32 @@
     // 初始化顯示
     _updateCurModeDisplay();
 
-    // 新大廳右欄 tab 切換（直接操作，不依賴舊側欄 DOM）
+    // 展開/收合聊天面板
+    window._toggleChatPanel = function() {
+        const panel  = document.getElementById('lby-chat-panel');
+        const expBtn = document.getElementById('lby-chat-expand-btn');
+        if (!panel) return;
+        const isOpen = !panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', isOpen);
+        if (expBtn) expBtn.classList.toggle('open', !isOpen);
+        // 展開時滾到底
+        if (!isOpen) {
+            const msgs = document.getElementById('chat-messages');
+            if (msgs) setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
+        }
+    };
+
+    // 頻道標籤對應
+    const _channelTags = { global: '[全域]', room: '[房間]', friend: '[好友]' };
+
+    // 新大廳底部 tab 切換
     window._switchLobbyTab = function(mode, btn) {
-        // 更新 tab 視覺
-        document.querySelectorAll('.lby-stab').forEach(b => b.classList.remove('active'));
+        // 更新 tab 視覺（底部列的 .lby-bb-tab）
+        document.querySelectorAll('.lby-bb-tab,.lby-stab').forEach(b => b.classList.remove('active'));
         if (btn) btn.classList.add('active');
+        // 更新頻道標籤
+        const tag = document.getElementById('lby-channel-tag');
+        if (tag) tag.textContent = _channelTags[mode] || '[全域]';
 
         const msgArea    = document.getElementById('chat-messages');
         const friendArea = document.getElementById('friend-list-area');
@@ -2640,9 +2661,14 @@
         // 返回大廳時確保戰鬥 Modal 已關閉
         const bm = document.getElementById('battle-modal');
         if (bm) bm.classList.add('hidden');
-        // 新大廳：隱藏舊玻璃側欄（已整合進右欄）
+        // 新大廳：隱藏舊玻璃側欄
         const sidebar = document.getElementById('social-sidebar');
         if (sidebar) sidebar.style.display = 'none';
+        // 聊天面板預設收合
+        const chatPanel = document.getElementById('lby-chat-panel');
+        if (chatPanel) chatPanel.classList.add('hidden');
+        const expBtn = document.getElementById('lby-chat-expand-btn');
+        if (expBtn) expBtn.classList.remove('open');
         // 房間頻道：每場結束返回大廳時清除（下次切換到房間頻道會自動刷新）
         localStorage.removeItem('hua_chat_room');
         // 🛡 返回大廳時刷新防火牆指示燈 + 記錄操作

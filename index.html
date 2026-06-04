@@ -398,7 +398,7 @@
     <!-- ② 主體 -->
     <div class="lby-body">
 
-        <!-- 左側欄 -->
+        <!-- 左側欄：只剩玩家卡片 -->
         <aside class="lby-left">
             <div class="lby-player-card">
                 <div class="lby-player-avatar" onclick="window._openProfileModal()">
@@ -412,17 +412,6 @@
                     <div class="lby-stat"><span class="lby-stat-val" id="lby-silver-left">0</span><span class="lby-stat-lbl">銀兩</span></div>
                 </div>
             </div>
-
-            <div class="lby-quick-btns">
-                <button id="btn-tutorial" class="lby-quick-btn" onclick="window._startTutorial()">
-                    <span class="lby-qb-icon">🎓</span>
-                    <span class="lby-qb-label">新手教學</span>
-                </button>
-                <button id="btn-spectate" class="lby-quick-btn hidden" onclick="window._openSpectateModal()">
-                    <span class="lby-qb-icon">🔭</span>
-                    <span class="lby-qb-label">觀戰</span>
-                </button>
-            </div>
         </aside>
 
         <!-- 中央展示區 -->
@@ -434,25 +423,9 @@
             </div>
         </div>
 
-        <!-- 右側欄 -->
+        <!-- 右側欄：只剩模式 + 開始 -->
         <aside class="lby-right">
-            <!-- 聊天/社交側欄縮小版 -->
-            <div class="lby-right-social">
-                <div class="lby-social-tabs">
-                    <button class="lby-stab active" onclick="window._switchLobbyTab?.('global',this)">🏠 全域</button>
-                    <button class="lby-stab" onclick="window._switchLobbyTab?.('room',this)">⚔️ 房間</button>
-                    <button class="lby-stab" onclick="window._switchLobbyTab?.('friend',this)">👤 好友</button>
-                </div>
-                <div id="chat-messages" class="lby-chat-messages"></div>
-                <div class="lby-chat-input-row">
-                    <input id="chat-input" class="lby-chat-input" placeholder="運籌帷幄...">
-                    <button id="btn-chat-send" class="lby-chat-send">發送</button>
-                </div>
-            </div>
-
-            <!-- 底部：選模式 + 開戰 -->
             <div class="lby-action-panel">
-                <!-- 目前選定模式（點擊開啟模式選擇） -->
                 <button class="lby-cur-mode" id="lby-cur-mode-btn" onclick="window._openModeSelect()">
                     <div class="lby-cur-mode-left">
                         <span class="lby-cur-mode-icon" id="lby-mode-icon">🤖</span>
@@ -463,7 +436,6 @@
                     </div>
                     <span class="lby-cur-mode-arrow">⇅</span>
                 </button>
-                <!-- 開始征途 -->
                 <button class="lby-start-btn" id="lby-start-btn" onclick="window._startSelectedMode()">
                     開 始 征 途
                 </button>
@@ -472,6 +444,52 @@
         </aside>
 
     </div><!-- end lby-body -->
+
+    <!-- ③ 底部列（三角洲風格）-->
+    <div class="lby-bottombar">
+        <!-- 左：快捷功能按鈕 -->
+        <div class="lby-bb-btns">
+            <button id="btn-gacha-open" class="lby-bb-btn">
+                <span class="lby-bb-icon">⛩️</span>
+                <span class="lby-bb-lbl">點將臺</span>
+            </button>
+            <button onclick="window._openLibrary()" class="lby-bb-btn">
+                <span class="lby-bb-icon">📚</span>
+                <span class="lby-bb-lbl">牌庫</span>
+            </button>
+            <button id="btn-tutorial" class="lby-bb-btn" onclick="window._startTutorial()">
+                <span class="lby-bb-icon">🎓</span>
+                <span class="lby-bb-lbl">新手教學</span>
+            </button>
+            <button id="btn-spectate" class="lby-bb-btn hidden" onclick="window._openSpectateModal()">
+                <span class="lby-bb-icon">🔭</span>
+                <span class="lby-bb-lbl">觀戰</span>
+            </button>
+        </div>
+
+        <!-- 中：聊天輸入 + Tab 切換 -->
+        <div class="lby-bb-chat">
+            <!-- 聊天 Tab -->
+            <div class="lby-bb-tabs">
+                <button class="lby-bb-tab active" onclick="window._switchLobbyTab?.('global',this)">🌏 全域</button>
+                <button class="lby-bb-tab" onclick="window._switchLobbyTab?.('room',this)">⚔️ 房間</button>
+                <button class="lby-bb-tab" onclick="window._switchLobbyTab?.('friend',this)">👤 好友</button>
+                <!-- 展開/收合聊天面板 -->
+                <button class="lby-bb-expand" id="lby-chat-expand-btn" onclick="window._toggleChatPanel()">▲</button>
+            </div>
+            <!-- 聊天輸入列 -->
+            <div class="lby-bb-input-row">
+                <span class="lby-bb-channel-tag" id="lby-channel-tag">[全域]</span>
+                <input id="chat-input" class="lby-bb-input" placeholder="運籌帷幄...">
+                <button id="btn-chat-send" class="lby-bb-send">發送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天訊息面板（可展開，懸浮在底部列上方）-->
+    <div id="lby-chat-panel" class="lby-chat-panel hidden">
+        <div id="chat-messages" class="lby-chat-messages"></div>
+    </div>
 
     <!-- ══ 模式選擇 Overlay（像三角洲第三張圖）══ -->
     <div id="lby-mode-overlay" class="lby-mode-overlay hidden">
