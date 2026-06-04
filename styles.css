@@ -3265,10 +3265,10 @@ body {
    ============================================================ */
 .profile-modal {
     position: fixed; inset: 0; z-index: 200001;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.75);
     display: flex; justify-content: flex-start; align-items: flex-start;
     padding: 72px 0 0 16px;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
     animation: profileFadeIn .2s ease both;
 }
 .profile-modal.hidden { display: none; }
@@ -3279,14 +3279,15 @@ body {
 }
 
 .profile-modal-box {
-    width: 340px;
-    background: rgba(10,14,22,0.97);
-    border: 1px solid rgba(212,175,55,0.3);
-    border-radius: 16px;
+    width: min(480px, calc(100vw - 32px));
+    background: rgba(8,12,20,0.98);
+    border: 1px solid rgba(212,175,55,0.35);
+    border-radius: 20px;
     overflow: hidden;
     animation: profileSlideDown .25s ease both;
     max-height: calc(100vh - 90px);
     overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(212,175,55,0.08);
 }
 @keyframes profileSlideDown {
     from { opacity:0; transform:translateY(-16px); }
@@ -3295,10 +3296,10 @@ body {
 
 .profile-modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 20px;
+    padding: 20px 26px;
     background: rgba(212,175,55,0.08);
     border-bottom: 1px solid rgba(212,175,55,0.15);
-    font-size: 15px; font-weight: 900; color: var(--gold);
+    font-size: 16px; font-weight: 900; color: var(--gold);
     letter-spacing: 2px;
 }
 .profile-close-btn {
@@ -3310,7 +3311,7 @@ body {
 .profile-close-btn:hover { color: #fff; }
 
 .profile-section {
-    padding: 18px 20px;
+    padding: 20px 26px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .profile-section:last-child { border-bottom: none; }
@@ -3326,12 +3327,13 @@ body {
     margin-bottom: 12px;
 }
 .profile-avatar-preview {
-    width: 80px; height: 80px;
+    width: 110px; height: 110px;
     border-radius: 50%;
     border: 2px solid rgba(212,175,55,0.4);
     background: #1a1a2e;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
+    box-shadow: 0 0 20px rgba(212,175,55,0.15);
 }
 .profile-upload-btn {
     background: rgba(212,175,55,0.1);
@@ -3454,12 +3456,13 @@ body {
     .login-box { padding: 20px 16px; }
     .login-logo-area h1 { font-size: 22px; }
 
-    /* 個人資料 Modal */
+    /* 個人資料 Modal — 手機版置中顯示 */
     .profile-modal {
-        width: 94vw !important;
+        padding: 60px 16px 0;
+    }
+    .profile-modal-box {
+        width: 100% !important;
         max-height: 88vh;
-        left: 3vw; top: 6vh;
-        transform: none !important;
     }
 
     /* 卡片尺寸微縮 */
