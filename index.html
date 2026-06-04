@@ -217,8 +217,8 @@
     </div>
 </div>
 
-<!-- 左上角按鈕群（頭像 + 防火牆）-->
-<div id="top-left-btns" style="position:fixed;top:16px;left:16px;z-index:200001;display:flex;align-items:center;gap:8px;">
+<!-- 左上角按鈕群（遊戲中使用；大廳時隱藏）-->
+<div id="top-left-btns" style="position:fixed;top:16px;left:16px;z-index:200001;display:none;align-items:center;gap:8px;">
     <!-- 玩家頭像按鈕 -->
     <div id="player-avatar-btn" class="player-avatar-btn hidden" onclick="window._openProfileModal()">
         <img id="player-avatar-img" src="" alt="" class="player-avatar-img hidden">
@@ -237,8 +237,8 @@
 </div>
 <!-- 成就已移至頭像視圖「成就」分頁 -->
 
-<!-- 監控面板按鈕（頭像下方，僅管理員可見）-->
-<div id="btn-monitor" onclick="window.open('monitor.html','_blank')" class="hidden" style="
+<!-- 監控面板按鈕（遊戲中用；大廳用 topbar 的按鈕）-->
+<div id="btn-monitor-fixed" onclick="window.open('monitor.html','_blank')" class="hidden" style="
     position:fixed; top:76px; left:16px; z-index:199999;
     display:flex; align-items:center; gap:10px;
     background:rgba(10,14,22,0.85);

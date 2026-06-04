@@ -199,9 +199,9 @@ function runLoadingScreen() {
 //  INIT GAME
 // ==============================================================
 function initGame() {
-    // 對戰開始：隱藏左上角頭像/防火牆/成就等按鈕
+    // 對戰開始：顯示左上角頭像按鈕（大廳隱藏，遊戲中顯示）
     const _topBtns = document.getElementById('top-left-btns');
-    if (_topBtns) _topBtns.style.display = 'none';
+    if (_topBtns) _topBtns.style.display = 'flex';
 
     // 重置狀態
     myBoard  = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
@@ -2397,9 +2397,9 @@ function triggerGameOver(win) {
     gameActive = false;
     window.gameActive = false;
 
-    // 遊戲結束：還原左上角按鈕群
+    // 遊戲結束：隱藏左上角按鈕（回大廳後不需要）
     const _topBtns = document.getElementById('top-left-btns');
-    if (_topBtns) _topBtns.style.display = '';
+    if (_topBtns) _topBtns.style.display = 'none';
 
     // 清除觀戰廣播狀態
     _clearSpectateState();
