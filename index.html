@@ -450,23 +450,81 @@
                 </div>
             </div>
 
-            <!-- 模式選擇 + 開戰按鈕 -->
+            <!-- 底部：選模式 + 開戰 -->
             <div class="lby-action-panel">
-                <div class="lby-mode-row">
-                    <button id="btn-vs-ai" class="lby-mode-btn">
-                        <span>🤖</span> AI 對決
-                    </button>
-                    <button id="btn-matchmaking" class="lby-mode-btn lby-mode-pvp">
-                        <span>⚔️</span> 配對 PVP
-                    </button>
-                </div>
-                <div class="lby-room-row">
-                    <button id="btn-create-room" class="lby-room-btn">🌐 建立房間</button>
-                    <input id="join-code-input" maxlength="5" placeholder="5位代碼" class="lby-join-input">
-                    <button id="btn-join-room" class="lby-join-btn">加入</button>
-                </div>
+                <!-- 目前選定模式（點擊開啟模式選擇） -->
+                <button class="lby-cur-mode" id="lby-cur-mode-btn" onclick="window._openModeSelect()">
+                    <div class="lby-cur-mode-left">
+                        <span class="lby-cur-mode-icon" id="lby-mode-icon">🤖</span>
+                        <div>
+                            <div class="lby-cur-mode-name" id="lby-mode-name">AI 對決</div>
+                            <div class="lby-cur-mode-sub" id="lby-mode-sub">單機訓練</div>
+                        </div>
+                    </div>
+                    <span class="lby-cur-mode-arrow">⇅</span>
+                </button>
+                <!-- 開始征途 -->
+                <button class="lby-start-btn" id="lby-start-btn" onclick="window._startSelectedMode()">
+                    開 始 征 途
+                </button>
                 <div id="lobby-error" class="hidden" style="color:#e74c3c;font-size:12px;text-align:center;padding:4px 0;"></div>
             </div>
+        </aside>
+
+    </div><!-- end lby-body -->
+
+    <!-- ══ 模式選擇 Overlay（像三角洲第三張圖）══ -->
+    <div id="lby-mode-overlay" class="lby-mode-overlay hidden">
+        <div class="lby-mo-wrap">
+            <!-- 頂部 -->
+            <div class="lby-mo-header">
+                <button class="lby-mo-back" onclick="window._closeModeSelect()">← 返回</button>
+                <span class="lby-mo-title">選擇對戰模式</span>
+            </div>
+            <div class="lby-mo-body">
+                <!-- 左側分類 -->
+                <nav class="lby-mo-nav">
+                    <button class="lby-mo-cat active" data-cat="single" onclick="window._switchMoCat('single',this)">
+                        <span>🤖</span><span>單機</span>
+                    </button>
+                    <button class="lby-mo-cat" data-cat="pvp" onclick="window._switchMoCat('pvp',this)">
+                        <span>⚔️</span><span>對戰</span>
+                    </button>
+                    <button class="lby-mo-cat" data-cat="room" onclick="window._switchMoCat('room',this)">
+                        <span>🌐</span><span>房間</span>
+                    </button>
+                </nav>
+                <!-- 主展示區 -->
+                <div class="lby-mo-main">
+                    <div class="lby-mo-preview" id="lby-mo-preview">
+                        <div class="lby-mo-prev-bg" id="lby-mo-prev-bg"></div>
+                        <div class="lby-mo-prev-info">
+                            <div class="lby-mo-prev-name" id="lby-mo-prev-name">AI 對決</div>
+                            <div class="lby-mo-prev-tags" id="lby-mo-prev-tags"><span>單人</span><span>訓練</span></div>
+                            <div class="lby-mo-prev-desc" id="lby-mo-prev-desc">與智能 AI 展開歷史卡牌對決，適合新手練習或休閒遊玩。</div>
+                        </div>
+                    </div>
+                    <!-- 底部模式卡片列 -->
+                    <div class="lby-mo-cards" id="lby-mo-cards"></div>
+                </div>
+            </div>
+            <!-- 底部確認 -->
+            <div class="lby-mo-footer">
+                <button class="lby-mo-confirm" id="lby-mo-confirm-btn" onclick="window._confirmMode()">
+                    確認選擇
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隱藏的原始按鈕（供 lobby.js 事件監聽用） -->
+    <div style="display:none;">
+        <button id="btn-vs-ai"></button>
+        <button id="btn-matchmaking"></button>
+        <button id="btn-create-room"></button>
+        <input id="join-code-input">
+        <button id="btn-join-room"></button>
+    </div>
         </aside>
 
     </div><!-- end lby-body -->

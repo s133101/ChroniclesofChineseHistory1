@@ -523,6 +523,108 @@
     //  玩家設定 Modal（三角洲風格）
     // ══════════════════════════════════════════
 
+    // ══════════════════════════════════════════
+    //  新大廳：模式選擇系統
+    // ══════════════════════════════════════════
+
+    const LOBBY_MODES = {
+        single: [
+            { id:'ai',       icon:'🤖', name:'AI 對決',   sub:'單機訓練',   tags:['單人','訓練'],   desc:'與智能 AI 展開歷史卡牌對決，適合新手練習或休閒遊玩。',      bg:'linear-gradient(160deg,#0c1a2e,#163050,#0c1a2e)' },
+            { id:'tutorial', icon:'🎓', name:'新手教學',  sub:'互動入門',   tags:['單人','教學'],   desc:'5 步互動教學，快速掌握遊戲核心玩法。',                          bg:'linear-gradient(160deg,#1a2e1a,#163016,#1a2e1a)' },
+        ],
+        pvp: [
+            { id:'matchmaking', icon:'⚔️', name:'配對 PVP', sub:'積分天梯', tags:['多人','排名'],   desc:'自動匹配積分相近的對手，贏得 ELO 積分，爬上排行榜。',            bg:'linear-gradient(160deg,#1a0a0a,#3a1010,#1a0a0a)' },
+        ],
+        room: [
+            { id:'create',  icon:'🌐', name:'建立房間',  sub:'分享代碼',   tags:['多人','邀請'],   desc:'建立房間並分享 5 位代碼給朋友，邀請好友加入對決。',               bg:'linear-gradient(160deg,#0a1030,#122040,#0a1030)' },
+            { id:'join',    icon:'🚪', name:'加入房間',  sub:'輸入代碼',   tags:['多人','邀請'],   desc:'輸入朋友分享的 5 位房間代碼，直接進入對局。',                     bg:'linear-gradient(160deg,#1a1030,#2a1840,#1a1030)' },
+        ],
+    };
+
+    let _selectedMode = LOBBY_MODES.single[0]; // 預設 AI 對決
+    let _currentMoCat = 'single';
+
+    function _updateCurModeDisplay() {
+        const nameEl = document.getElementById('lby-mode-name');
+        const subEl  = document.getElementById('lby-mode-sub');
+        const iconEl = document.getElementById('lby-mode-icon');
+        if (nameEl) nameEl.textContent = _selectedMode.name;
+        if (subEl)  subEl.textContent  = _selectedMode.sub;
+        if (iconEl) iconEl.textContent = _selectedMode.icon;
+    }
+
+    window._openModeSelect = function() {
+        const ov = document.getElementById('lby-mode-overlay');
+        if (ov) ov.classList.remove('hidden');
+        window._switchMoCat(_currentMoCat, document.querySelector(`.lby-mo-cat[data-cat="${_currentMoCat}"]`));
+    };
+
+    window._closeModeSelect = function() {
+        const ov = document.getElementById('lby-mode-overlay');
+        if (ov) ov.classList.add('hidden');
+    };
+
+    window._switchMoCat = function(cat, btn) {
+        _currentMoCat = cat;
+        document.querySelectorAll('.lby-mo-cat').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const modes = LOBBY_MODES[cat] || [];
+        // 選第一個
+        if (modes.length) _selectMoCard(modes[0]);
+        // 渲染卡片
+        const cardsEl = document.getElementById('lby-mo-cards');
+        if (cardsEl) {
+            cardsEl.innerHTML = modes.map((m,i) => `
+                <div class="lby-mo-card ${i===0?'active':''}" data-id="${m.id}" onclick="window._selectMoCardById('${m.id}','${cat}')">
+                    <div class="lby-mo-card-bg" style="background:${m.bg};"></div>
+                    <div class="lby-mo-card-label">${m.icon} ${m.name}</div>
+                </div>`).join('');
+        }
+    };
+
+    window._selectMoCardById = function(id, cat) {
+        const modes = LOBBY_MODES[cat] || [];
+        const m = modes.find(x => x.id === id);
+        if (m) _selectMoCard(m);
+        document.querySelectorAll('.lby-mo-card').forEach(c => c.classList.toggle('active', c.dataset.id === id));
+    };
+
+    function _selectMoCard(m) {
+        _selectedMode = m;
+        const bg   = document.getElementById('lby-mo-prev-bg');
+        const name = document.getElementById('lby-mo-prev-name');
+        const tags = document.getElementById('lby-mo-prev-tags');
+        const desc = document.getElementById('lby-mo-prev-desc');
+        if (bg)   bg.style.background   = m.bg;
+        if (name) name.textContent = m.name;
+        if (tags) tags.innerHTML   = m.tags.map(t => `<span>${t}</span>`).join('');
+        if (desc) desc.textContent = m.desc;
+    }
+
+    window._confirmMode = function() {
+        window._closeModeSelect();
+        _updateCurModeDisplay();
+    };
+
+    window._startSelectedMode = function() {
+        const id = _selectedMode?.id;
+        if (!id) return;
+        if (id === 'ai')          { document.getElementById('btn-vs-ai')?.click(); }
+        else if (id === 'tutorial') { window._startTutorial?.(); }
+        else if (id === 'matchmaking') { document.getElementById('btn-matchmaking')?.click(); }
+        else if (id === 'create') { document.getElementById('btn-create-room')?.click(); }
+        else if (id === 'join') {
+            const code = prompt('請輸入 5 位房間代碼：','');
+            if (code && code.trim().length === 5) {
+                const inp = document.getElementById('join-code-input');
+                if (inp) { inp.value = code.trim().toUpperCase(); document.getElementById('btn-join-room')?.click(); }
+            }
+        }
+    };
+
+    // 初始化顯示
+    _updateCurModeDisplay();
+
     // Tab 切換
     window._pmTab = function(tabId, btn) {
         document.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
