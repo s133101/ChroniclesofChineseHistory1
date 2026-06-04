@@ -267,59 +267,121 @@
     <span style="font-size:13px;color:#00ff88;font-weight:700;white-space:nowrap;">監控面板</span>
 </div>
 
-<!-- 玩家設定 Modal -->
+<!-- 玩家設定 Modal（三角洲風格） -->
 <div id="profile-modal" class="profile-modal hidden">
-    <div class="profile-modal-box">
-        <div class="profile-modal-header">
-            <span>玩家設定</span>
-            <button class="profile-close-btn" onclick="window._closeProfileModal()">✕</button>
-        </div>
+<div class="pm-wrap">
 
-        <!-- ① 修改頭像 -->
-        <div class="profile-section">
-            <div class="profile-section-title">🖼 修改頭像</div>
-            <div class="profile-avatar-preview-wrap">
-                <div class="profile-avatar-preview" id="profile-avatar-preview">
-                    <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                    <span id="profile-avatar-preview-icon" style="font-size:40px;">👤</span>
-                </div>
-                <label class="profile-upload-btn" for="profile-avatar-upload">📁 選擇圖片</label>
-                <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
-            </div>
-            <div id="profile-avatar-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-avatar-save-btn">儲存頭像</button>
-        </div>
-
-        <!-- ② 名號 -->
-        <div class="profile-section">
-            <div class="profile-section-title">🏷️ 名號</div>
-            <input type="text" id="nickname-input" class="profile-input"
-                   maxlength="12" placeholder="請輸入名號">
-            <div id="profile-nickname-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-nickname-save-btn">儲存名號</button>
-        </div>
-
-        <!-- ③ 更改密碼 -->
-        <div class="profile-section">
-            <div class="profile-section-title">🔐 更改密碼</div>
-            <input type="password" id="profile-old-pwd" class="profile-input" placeholder="舊密碼">
-            <input type="password" id="profile-new-pwd" class="profile-input" placeholder="新密碼（至少 6 字元）">
-            <input type="password" id="profile-confirm-pwd" class="profile-input" placeholder="再次輸入新密碼">
-            <div id="profile-pwd-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-pwd-save-btn">更改密碼</button>
-        </div>
-
-        <!-- ③ 個人留言 -->
-        <div class="profile-section">
-            <div class="profile-section-title">💬 個人留言</div>
-            <p class="profile-msg-note">其他玩家可以看到你的留言</p>
-            <textarea id="profile-message" class="profile-textarea"
-                      placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
-            <div id="profile-message-msg" class="profile-msg hidden"></div>
-            <button class="profile-save-btn" id="profile-msg-save-btn">儲存留言</button>
-        </div>
+    <!-- ── 頂部列 ── -->
+    <div class="pm-topbar">
+        <button class="pm-back-btn" onclick="window._closeProfileModal()">← 返回</button>
+        <span class="pm-topbar-title">玩家設定</span>
+        <button class="pm-close-btn" onclick="window._closeProfileModal()">✕</button>
     </div>
-</div>
+
+    <div class="pm-body">
+        <!-- ── 左側導覽列 ── -->
+        <nav class="pm-nav">
+            <button class="pm-nav-item active" data-tab="mode" onclick="window._pmTab('mode',this)">模式切換</button>
+            <button class="pm-nav-item" data-tab="profile" onclick="window._pmTab('profile',this)">玩家資料</button>
+            <button class="pm-nav-item" data-tab="password" onclick="window._pmTab('password',this)">更改密碼</button>
+            <button class="pm-nav-item" data-tab="achievement" onclick="window._pmTab('achievement',this)">成就</button>
+            <div class="pm-nav-spacer"></div>
+            <button class="pm-nav-item pm-nav-danger" onclick="window._logoutConfirm()">登出</button>
+        </nav>
+
+        <!-- ── 右側內容區 ── -->
+        <div class="pm-content">
+
+            <!-- TAB：模式切換 -->
+            <div id="pm-tab-mode" class="pm-tab active">
+                <div class="pm-tab-title">選擇想要遊玩的模式</div>
+                <div class="pm-mode-cards">
+                    <!-- 華夏風雲錄 -->
+                    <div class="pm-mode-card pm-mode-huaxia active-mode" onclick="window._switchGameMode('huaxia')">
+                        <div class="pm-mode-bg pm-mode-bg-huaxia"></div>
+                        <div class="pm-mode-info">
+                            <div class="pm-mode-name">華夏風雲錄</div>
+                            <div class="pm-mode-desc">集結千古英雄，運籌帷幄，與全球玩家展開歷史卡牌對決。120 位歷史名將，策略為王。</div>
+                        </div>
+                        <div class="pm-mode-active-badge">▶ 目前模式</div>
+                    </div>
+                    <!-- 洪荒 -->
+                    <div class="pm-mode-card pm-mode-honghang" onclick="window._switchGameMode('honghang')">
+                        <div class="pm-mode-bg pm-mode-bg-honghang"></div>
+                        <div class="pm-mode-info">
+                            <div class="pm-mode-name">洪荒 — 萬仙爭霸</div>
+                            <div class="pm-mode-desc">踏入洪荒世界，召喚天仙神將，以神力征服萬界。仙道爭霸，誰主沉浮。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB：玩家資料 -->
+            <div id="pm-tab-profile" class="pm-tab">
+                <div class="pm-tab-title">玩家資料</div>
+                <!-- 頭像 -->
+                <div class="pm-field-group">
+                    <div class="pm-field-label">🖼 頭像</div>
+                    <div class="pm-avatar-row">
+                        <div class="pm-avatar-big" id="profile-avatar-preview">
+                            <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            <span id="profile-avatar-preview-icon" style="font-size:52px;">👤</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <label class="pm-btn-outline" for="profile-avatar-upload">📁 選擇圖片</label>
+                            <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
+                            <button class="pm-btn-primary" id="profile-avatar-save-btn">儲存頭像</button>
+                        </div>
+                    </div>
+                    <div id="profile-avatar-msg" class="profile-msg hidden"></div>
+                </div>
+                <!-- 名號 -->
+                <div class="pm-field-group">
+                    <div class="pm-field-label">🏷️ 名號</div>
+                    <input type="text" id="nickname-input" class="pm-input" maxlength="12" placeholder="請輸入名號">
+                    <div id="profile-nickname-msg" class="profile-msg hidden"></div>
+                    <button class="pm-btn-primary" id="profile-nickname-save-btn">儲存名號</button>
+                </div>
+                <!-- 個人留言 -->
+                <div class="pm-field-group">
+                    <div class="pm-field-label">💬 個人留言</div>
+                    <textarea id="profile-message" class="pm-textarea" placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
+                    <div id="profile-message-msg" class="profile-msg hidden"></div>
+                    <button class="pm-btn-primary" id="profile-msg-save-btn">儲存留言</button>
+                </div>
+            </div>
+
+            <!-- TAB：更改密碼 -->
+            <div id="pm-tab-password" class="pm-tab">
+                <div class="pm-tab-title">更改密碼</div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">🔐 舊密碼</div>
+                    <input type="password" id="profile-old-pwd" class="pm-input" placeholder="請輸入舊密碼">
+                </div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">新密碼</div>
+                    <input type="password" id="profile-new-pwd" class="pm-input" placeholder="新密碼（至少 6 字元）">
+                </div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">確認新密碼</div>
+                    <input type="password" id="profile-confirm-pwd" class="pm-input" placeholder="再次輸入新密碼">
+                </div>
+                <div id="profile-pwd-msg" class="profile-msg hidden"></div>
+                <button class="pm-btn-primary" id="profile-pwd-save-btn">更改密碼</button>
+            </div>
+
+            <!-- TAB：成就 -->
+            <div id="pm-tab-achievement" class="pm-tab">
+                <div class="pm-tab-title">成就</div>
+                <div id="pm-achievement-list" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+                    <div style="color:#444;text-align:center;padding:40px;grid-column:1/-1;">載入中...</div>
+                </div>
+            </div>
+
+        </div><!-- end pm-content -->
+    </div><!-- end pm-body -->
+</div><!-- end pm-wrap -->
+</div><!-- end profile-modal -->
 
 <!-- 大廳畫面 -->
 <div id="lobby-screen" class="hidden">

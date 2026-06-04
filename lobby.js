@@ -521,13 +521,50 @@
     }
 
     // ══════════════════════════════════════════
-    //  玩家設定 Modal
+    //  玩家設定 Modal（三角洲風格）
     // ══════════════════════════════════════════
+
+    // Tab 切換
+    window._pmTab = function(tabId, btn) {
+        document.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.pm-nav-item').forEach(b => b.classList.remove('active'));
+        const tab = document.getElementById('pm-tab-' + tabId);
+        if (tab) tab.classList.add('active');
+        if (btn) btn.classList.add('active');
+        if (tabId === 'achievement') _renderPmAchievements();
+    };
+
+    // 成就渲染
+    function _renderPmAchievements() {
+        const list = document.getElementById('pm-achievement-list');
+        if (!list) return;
+        const all = typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS : [];
+        const unlocked = window.playerAchievements || [];
+        if (all.length === 0) { list.innerHTML = '<div style="color:#333;grid-column:1/-1;text-align:center;padding:40px;">暫無成就資料</div>'; return; }
+        list.innerHTML = all.map(a => {
+            const done = unlocked.includes(a.id);
+            return `<div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;background:rgba(255,255,255,${done?'0.05':'0.02'});border:1px solid rgba(255,255,255,${done?'0.1':'0.04'});opacity:${done?1:0.4};">
+                <span style="font-size:24px;">${a.icon}</span>
+                <div><div style="font-size:13px;font-weight:900;color:${done?'#d4af37':'#555'};">${a.name}</div>
+                <div style="font-size:11px;color:#444;">${a.desc}</div></div>
+                ${done?'<span style="margin-left:auto;font-size:11px;color:#d4af37;">✓</span>':''}
+            </div>`;
+        }).join('');
+    }
+    window._renderPmAchievements = _renderPmAchievements;
+
+    // 模式切換（從天機閣大廳跳轉）
+    window._switchGameMode = function(mode) {
+        window.location.href = '../index.html';
+    };
+
     window._openProfileModal = function() {
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
-        modal.style.display = 'flex'; // 強制顯示
+        modal.style.display = 'flex';
+        // 預設顯示「模式切換」tab
+        window._pmTab('mode', document.querySelector('.pm-nav-item[data-tab="mode"]'));
 
         const user = Auth.current();
 
