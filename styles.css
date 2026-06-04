@@ -3723,6 +3723,22 @@ body {
 #lobby-screen:not(.hidden) ~ #social-sidebar,
 body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important; }
 
+/* ── 頂部導覽列放大 ──────────────────────── */
+.lby-topbar {
+    height: 64px !important;
+}
+.lby-nav-btn {
+    font-size: 14px !important;
+    padding: 10px 20px !important;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.lby-top-icon-btn {
+    padding: 6px 18px !important;
+    min-width: 64px !important;
+}
+.lby-top-icon-btn > span:first-child { font-size: 22px !important; }
+.lby-top-icon-btn > span:nth-child(2) { font-size: 12px !important; }
+
 /* 大廳根容器：全螢幕 */
 #lobby-screen {
     position: fixed; inset: 0;
@@ -4324,7 +4340,7 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
 }
 .lby-right .lby-right-social { display: none; }
 
-/* ── 底部列（兩行）────────────────────────── */
+/* ── 底部列 ────────────────────────────────── */
 .lby-bottombar {
     flex-shrink: 0;
     background: rgba(4,6,10,0.96);
@@ -4333,45 +4349,47 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
     z-index: 20;
 }
 
-/* 第一行：通訊入口 */
+/* 第一行：全域聊天預覽（細條，像三角洲底部聊天行）*/
 .lby-bb-row1 {
     display: flex; align-items: center;
-    height: 44px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    height: 30px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    padding: 0 2px;
 }
 
-/* 第二行：快捷按鈕 */
+/* 第二行：快捷功能大按鈕 */
 .lby-bb-row2 {
-    display: flex; align-items: center;
-    height: 40px; padding: 0 8px; gap: 4px;
+    display: flex; align-items: stretch;
+    height: 60px;
 }
 
 /* 快捷按鈕 */
 .lby-bb-btns {
-    display: flex; align-items: center; gap: 4px;
+    display: flex; align-items: stretch;
 }
 .lby-bb-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; padding: 4px 14px;
-    background: none; border: none; border-radius: 6px;
+    gap: 4px; padding: 6px 22px;
+    background: none; border: none; border-right: 1px solid rgba(255,255,255,0.04);
     color: #555; cursor: pointer; font-family: inherit;
     transition: all .18s;
 }
 .lby-bb-btn:hover { color: #d4af37; background: rgba(212,175,55,0.06); }
-.lby-bb-icon { font-size: 16px; }
-.lby-bb-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+.lby-bb-icon { font-size: 22px; }
+.lby-bb-lbl { font-size: 11px; font-weight: 700; letter-spacing: 1px; }
 
-/* ── 底部通訊入口按鈕 ─────────────────── */
+/* 通訊入口（細條版）*/
 .lby-bb-comm-btn {
-    flex: 1; display: flex; align-items: center; gap: 10px;
-    padding: 0 14px; height: 100%;
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 100%;
     background: none; border: none;
     cursor: pointer; font-family: inherit; transition: background .18s;
     text-align: left;
 }
 .lby-bb-comm-btn:hover { background: rgba(212,175,55,0.04); }
-.lby-bb-channel-tag { font-size: 12px; color: #d4af37; font-weight: 900; flex-shrink: 0; }
-.lby-bb-comm-preview { flex: 1; font-size: 12px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lby-bb-expand-arrow { font-size: 11px; color: #444; flex-shrink: 0; transition: color .18s; }
+.lby-bb-channel-tag { font-size: 11px; color: #d4af37; font-weight: 900; flex-shrink: 0; }
+.lby-bb-comm-preview { flex: 1; font-size: 11px; color: #3a3a3a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lby-bb-expand-arrow { font-size: 10px; color: #333; flex-shrink: 0; transition: color .18s; }
 .lby-bb-comm-btn:hover .lby-bb-expand-arrow { color: #d4af37; }
 
 /* 手機版 */
