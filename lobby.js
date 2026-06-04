@@ -1,4 +1,4 @@
-﻿﻿﻿/* ============================================================
+/* ============================================================
    華夏風雲錄 — lobby.js
 
    Copyright © 2026 linus622wang@gmail.com
@@ -23,8 +23,7 @@
 
     // ── 收集系統數據 ──
     window.playerOwnedCards    = JSON.parse(localStorage.getItem('hua_owned_cards')      || '[]');
-    window.playerSilver        = parseInt(localStorage.getItem('hua_player_silver')       || '100');
-    window.playerLingShi       = parseInt(localStorage.getItem('hua_player_lingshi')      || '0');
+    window.playerSilver        = parseInt(localStorage.getItem('hua_player_silver')       || '1000');
     window.playerCardStars     = JSON.parse(localStorage.getItem('hua_card_stars')        || '{}');
     window.playerCardFragments = JSON.parse(localStorage.getItem('hua_card_fragments')    || '{}');
     window.playerAchievements  = JSON.parse(localStorage.getItem('hua_achievements')      || '[]');
@@ -33,31 +32,15 @@
     const _defaultNames = ['無名大將','草莽英雄','天涯俠客','亂世豪傑','江湖遊俠','蕭何再世'];
     window.playerNickname = localStorage.getItem('hua_nickname') || _defaultNames[Math.floor(Math.random() * _defaultNames.length)];
     localStorage.setItem('hua_nickname', window.playerNickname);
-
+    
     function _saveCollection() {
-        localStorage.setItem('hua_owned_cards',      JSON.stringify(window.playerOwnedCards));
-        localStorage.setItem('hua_player_silver',    window.playerSilver.toString());
-        localStorage.setItem('hua_player_lingshi',   window.playerLingShi.toString());
-        localStorage.setItem('hua_card_stars',       JSON.stringify(window.playerCardStars));
-        localStorage.setItem('hua_card_fragments',   JSON.stringify(window.playerCardFragments));
-        localStorage.setItem('hua_achievements',     JSON.stringify(window.playerAchievements));
+        localStorage.setItem('hua_owned_cards',    JSON.stringify(window.playerOwnedCards));
+        localStorage.setItem('hua_player_silver',  window.playerSilver.toString());
+        localStorage.setItem('hua_card_stars',     JSON.stringify(window.playerCardStars));
+        localStorage.setItem('hua_card_fragments', JSON.stringify(window.playerCardFragments));
+        localStorage.setItem('hua_achievements',   JSON.stringify(window.playerAchievements));
     }
     window._saveCollection = _saveCollection;
-
-    /** 靈石兌換仙石（100 靈石 = 1 仙石） */
-    window._convertLingShi = function() {
-        const canConvert = Math.floor((window.playerLingShi || 0) / 100);
-        if (canConvert <= 0) {
-            if (typeof toast === 'function') toast('💎 靈石不足 100 枚，無法兌換', 'warn', 2500);
-            return;
-        }
-        window.playerLingShi -= canConvert * 100;
-        window.playerSilver  += canConvert;
-        _saveCollection();
-        _updateHUD();
-        if (typeof toast === 'function')
-            toast(`✨ 兌換成功！${canConvert * 100} 靈石 → ${canConvert} 仙石`, 'gold', 3000);
-    };
 
     // ══════════════════════════════════════════
     //  DOMContentLoaded
@@ -167,15 +150,17 @@
     }
 
         const historyData = [
-            { t: '第一劫 · 開天量劫', d: '盤古在混沌中孕育，手持開天斧劈開混沌，三千魔神圍攻，悉數被殺。盤古力竭身死，身化洪荒萬物，是一切因果的起點。', img: '' },
-            { t: '第二劫 · 凶獸量劫', d: '混沌魔神死後的怨氣與殘軀化為凶獸，破壞洪荒大地。鴻鈞聯合萬族剿滅凶獸，凶獸皇神逆隕落，洪荒進入太古時代。', img: '' },
-            { t: '第三劫 · 龍漢初劫', d: '飛禽、走獸、水族三大種族爭奪洪荒霸權，魔祖羅睺暗中推波助瀾。三族強者幾乎死傷殆盡，被迫退出歷史舞台。', img: '' },
-            { t: '第四劫 · 道魔量劫', d: '鴻鈞與魔祖羅睺展開道統之爭。羅睺戰敗身死，臨死立誓「道消魔長，魔消道長」。鴻鈞藉此悟道成聖，執掌造化玉碟。', img: '' },
-            { t: '第五劫 · 巫妖量劫', d: '妖族管天、巫族管地，兩族仇恨積累至極。不周山決戰，東皇太一、帝俊、十一祖巫悉數隕落，天地格局盡毀，人族正式崛起。', img: '' },
-            { t: '第六劫 · 人皇量劫', d: '巫妖量劫後人族成為天地主角，蚩尤率九黎部落爭奪人皇果位。闡截兩教紛紛下場，黃帝最終一統華夏，三皇五帝治世格局確立。', img: '' },
-            { t: '第七劫 · 封神量劫', d: '三教共商封神榜，借商周更替消磨仙人殺劫。截教幾乎滅教，洪荒大陸被打碎成四大部洲，聖人被鴻鈞禁足，西方教趁機大興。', img: '' },
-            { t: '第八劫 · 西遊量劫', d: '天道定數「佛門當興」，佛門聯合天庭演出九九八十一難。佛教迎來全盛時期，但也徹底耗盡了洪荒最後的先天靈氣。', img: '' },
-            { t: '第九劫 · 末法量劫', d: '歷經八劫消耗，洪荒先天靈氣徹底枯竭，進入末法時代。修仙成傳說，神佛斷絕信仰，此劫若渡不過，世界將歸於混沌。', img: '' },
+            { t: '商朝 · 鳴條之戰', d: '成湯伐桀，終結夏朝統治，開創六百年大商國祚。', img: 'assets/history/h01.jpg' },
+            { t: '周朝 · 禮樂文明', d: '武王克殷，周公制禮作樂，奠定華夏三千年文明基石。', img: 'assets/history/h02.jpg' },
+            { t: '秦朝 · 帝國統一', d: '始皇廢分封行郡縣，書同文車同軌，開啟大一統時代。', img: 'assets/history/h03.jpg' },
+            { t: '漢朝 · 封狼居胥', d: '大位定於漢，驃騎將軍北擊匈奴，漢威遠播四海。', img: 'assets/history/h04.jpg' },
+            { t: '三國 · 赤壁烽火', d: '曹操南征，孫劉聯軍一炬火紅，鼎立之勢自此而成。', img: 'assets/history/h05.jpg' },
+            { t: '隋朝 · 運河開鑿', d: '隋文帝開皇之治，大運河貫通南北，功在千秋。', img: 'assets/history/h06.jpg' },
+            { t: '唐朝 · 貞觀氣象', d: '太宗李世民開貞觀盛世，天可汗之名萬國來朝。', img: 'assets/history/h07.jpg' },
+            { t: '宋朝 · 繁華汴京', d: '清明上河盛景，文治達於極致，科技文化輝煌燦爛。', img: 'assets/history/h08.jpg' },
+            { t: '元朝 · 橫跨歐亞', d: '成吉思汗子孫版圖橫跨東西，開啟大航海前的大融合。', img: 'assets/history/h09.jpg' },
+            { t: '明朝 · 遠航西洋', d: '永樂大帝遣鄭和七下西洋，彰顯大明國威與航海實力。', img: 'assets/history/h10.jpg' },
+            { t: '清朝 · 康乾盛世', d: '鼎盛大清開疆拓土，確立近代版圖，華夏落日餘暉。', img: 'assets/history/h11.jpg' }
         ];
 
         
@@ -186,8 +171,8 @@
             </div>
         `).join('');
 
-        const monarchs = cardDatabase.filter(c => c.type === '聖人');
-        const CARD_ART_MAP = { '聖人':'☯️', '大神':'⚡', '天仙':'⚔️', '金仙':'📜', '計策':'✨', '靈獸':'🐉', '巫族':'🌿', '妖族':'👁️' };
+        const monarchs = cardDatabase.filter(c => c.type === '君王' && c.name !== '秦二世胡亥');
+        const CARD_ART_MAP = { '君王':'👑', '大將軍':'⚔️', '將軍':'🐎', '軍師':'📜', '計策':'✨', '後勤':'🏛️', '內政':'🏮', '監察':'⚖️' };
 
         const tokens = monarchs.map(m => {
             const el = document.createElement('div');
@@ -458,36 +443,9 @@
     }
 
     // ── 登入後進入大廳 ────────────────────────────────────────
-    /** 登入後從 Firebase 同步最新遊戲資料到 localStorage，以 Firebase 為準 */
-    async function _syncGameDataFromFirebase(username) {
-        try {
-            const _FB = 'https://chroniclesofchinesehistory1-default-rtdb.asia-southeast1.firebasedatabase.app';
-            const r = await fetch(_FB + '/users/' + username + '.json');
-            if (!r.ok) return;
-            const data = await r.json();
-            if (!data) return;
-
-            // 同步仙石（以 Firebase 為準）
-            if (typeof data.silver === 'number') {
-                window.playerSilver = data.silver;
-                localStorage.setItem('hua_player_silver', data.silver.toString());
-            }
-            // 清除成就快取（讓遊戲從 Firebase 重新拉取）
-            if (Array.isArray(data.achievements) ? data.achievements.length === 0 : !data.achievements) {
-                window.playerAchievements = [];
-                localStorage.setItem('hua_achievements', '[]');
-            }
-            // 更新 HUD 顯示
-            _updateHUD();
-        } catch (_e) {}
-    }
-
     function _enterLobbyAsUser(user) {
         // 🛡 初始化防火牆安全系統（僅首次觸發）
         if (window.HuaXiaSecurity) window.HuaXiaSecurity.init();
-
-        // 登入後從 Firebase 同步最新資料（覆蓋 localStorage 舊快取）
-        _syncGameDataFromFirebase(user.username);
 
         // 更新玩家暱稱
         window.playerNickname = user.nickname || user.username;
@@ -502,10 +460,10 @@
         }
         const _achBtn = document.getElementById('btn-achievements');
         if (_achBtn) _achBtn.classList.remove('hidden');
-        // M-9 Fix：監控面板顯示給 admin / developer 帳號
+        // 監控面板按鈕：僅 claude 帳號顯示
         const _monBtn = document.getElementById('btn-monitor');
         if (_monBtn) {
-            if (['linus0622', 'wang', 'claude'].includes(user.username)) {
+            if (user.username === 'claude') {
                 _monBtn.classList.remove('hidden');
             } else {
                 _monBtn.classList.add('hidden');
@@ -547,10 +505,11 @@
         const iconEl  = document.getElementById('player-avatar-icon');
         if (nameEl) nameEl.textContent = user.nickname || user.username;
         if (user.avatar) {
-            if (imgEl) { imgEl.src = user.avatar; imgEl.classList.remove('hidden'); } // H-6 Fix：null check
+            imgEl.src = user.avatar;
+            imgEl.classList.remove('hidden');
             if (iconEl) iconEl.style.display = 'none';
         } else {
-            if (imgEl) imgEl.classList.add('hidden'); // H-6 Fix
+            imgEl.classList.add('hidden');
             if (iconEl) iconEl.style.display = '';
         }
     }
@@ -679,17 +638,6 @@
                 const res = await Auth.updateMessage(text);
                 msgSave.disabled = false;
                 _showProfileMsg(msgMsg, res.ok, res.ok ? '留言已儲存' : res.err);
-            };
-        }
-
-        // 清除本地快取按鈕
-        const clearCacheBtn = document.getElementById('profile-clear-cache-btn');
-        if (clearCacheBtn) {
-            clearCacheBtn.onclick = function() {
-                if (!confirm('確定要清除本地快取並登出嗎？\n（雲端帳號資料不受影響，下次登入後自動同步）')) return;
-                if (typeof Auth !== 'undefined') Auth.clearLocalCache();
-                if (typeof toast === 'function') toast('🗑️ 快取已清除，即將登出…', 'info', 2000);
-                setTimeout(() => location.reload(), 2000);
             };
         }
 
@@ -1157,7 +1105,6 @@
         // 第二個 addFriend 已移除（重複定義，且呼叫未定義的 _renderFriends）
 
         window.addEventListener('storage', (e) => {
-            try { // H-6 Fix：JSON.parse 可能失敗
             if (e.key === 'hua_global_chat_sync') {
                 const data = JSON.parse(e.newValue);
                 if (data && data.from !== window.playerNickname) {
@@ -1168,9 +1115,7 @@
                 const data = JSON.parse(e.newValue);
                 if (data && data.to === window.playerNickname) {
                     window._appendChatMessage(data.text, 'other', 'friend', data.from);
-                    // R3 Fix：data.from 來自 localStorage（任何分頁可寫），toast 使用 innerHTML 需轉義
-                    const _fromEsc = String(data.from||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                    toast(`收到來自 ${_fromEsc} 的私訊`, 'info');
+                    toast(`收到來自 ${data.from} 的私訊`, 'info');
                     // Show notification if not currently on chat/friend tab
                     const chatTab = document.getElementById('tab-chat');
                     const isChatVisible = chatTab && !chatTab.classList.contains('hidden');
@@ -1179,7 +1124,6 @@
                     }
                 }
             }
-            } catch {} // H-6 Fix end
         });
 
         // 2. 廣播公告 (頂端置頂) - 新介面邏輯
@@ -1314,7 +1258,7 @@
                 if (tier1) tier1.classList.add('active');
                 selectedTier = 1;
                 selectedCost = 10;
-                annConfirm.textContent = `確認發布 (10 仙石)`;
+                annConfirm.textContent = `確認發布 (10 兩)`;
             });
         }
 
@@ -1326,7 +1270,7 @@
                 let isDev = (selectedTier === 9);
                 if (!isDev) {
                     if (window.playerSilver < selectedCost) {
-                        toast('仙石不足！目前當前餘額：' + window.playerSilver, 'danger');
+                        toast('銀兩不足！目前當前餘額：' + window.playerSilver, 'danger');
                         return;
                     }
                 }
@@ -1547,7 +1491,7 @@
                     <div style="font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">對手：${_escHtml(r.opponent)} · ${r.rounds} 回合</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:12px;color:var(--gold);">+${r.silver} 仙石</div>
+                    <div style="font-size:12px;color:var(--gold);">+${r.silver} 兩</div>
                     <div style="font-size:10px;color:#444;">${d}</div>
                 </div>
             </div>`;
@@ -1736,12 +1680,12 @@
                 // 更新進度條
                 _updateCollectionProgress();
                 
-                // 更新仙石顯示
+                // 更新銀兩顯示
                 const silverVal = document.getElementById('gacha-silver-val');
                 if (silverVal) silverVal.textContent = window.playerSilver;
                 
                 const lobbySilver = document.getElementById('lobby-silver-display');
-                if (lobbySilver) lobbySilver.textContent = `💰 當前餘額: ${window.playerSilver} 仙石`;
+                if (lobbySilver) lobbySilver.textContent = `💰 當前餘額: ${window.playerSilver} 兩`;
             }
         };
 
@@ -1761,7 +1705,7 @@
                 // 進入招募模式時，清空池子預覽或顯示簡單引導
                 if (pool) pool.innerHTML = '<div style="grid-column: span 5; color:#555; padding:40px;">招募英雄，助我華夏大業！<br>(點擊左側進行招募)</div>';
                 
-                // 修正：進入招募模式時也需要刷新仙石顯示
+                // 修正：進入招募模式時也需要刷新銀兩顯示
                 const gv = document.getElementById('gacha-silver-val');
                 if (gv) gv.textContent = window.playerSilver;
             } else {
@@ -1837,144 +1781,49 @@
                 const sec = document.createElement('div');
                 sec.id = 'detail-card-story-section';
                 sec.style.cssText = 'margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.08);';
-                const _escH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 sec.innerHTML = `
                     <h4 style="color:#b8a060;margin-bottom:8px;font-size:13px;letter-spacing:1px;">${label}</h4>
-                    <p style="color:#999;font-size:13px;line-height:1.9;white-space:pre-wrap;">${_escH(storyContent)}</p>
+                    <p style="color:#999;font-size:13px;line-height:1.9;white-space:pre-wrap;">${storyContent}</p>
                 `;
                 descBlock.appendChild(sec);
             }
 
-            // ── 修為境界升級區塊（僅限角色卡）────────────────────────
-            const _xwCharTypes = ['聖人','大神','天仙','金仙','靈獸','巫族','妖族'];
-            if (_xwCharTypes.includes(card.type)) {
-                // 直接引用 game.js 定義的全域常數
-                const _XN  = window.XIUWEI_NAMES  || ['炼气期','筑基期','金丹期','元婴期','化神期','合体期','大乘期','渡劫期','人仙','天仙','真仙','金仙','太乙金仙','大罗金仙','准圣','圣人','道级','大道级'];
-                const _XI  = window.XIUWEI_ICONS  || [];
-                const _XC  = window.XIUWEI_COLORS || [];
-                const _XST = window.XIUWEI_STAGE  || [];
-                const _XD  = window.XIUWEI_DESC   || [];
-                const _XCO = window.XIUWEI_COSTS  || [3,6,12,20,35,55,80,120,180,260,380,550,800,1200,1800,2800,5000];
-                const _XATK= window.XIUWEI_ATK    || [];
-                const _XDEF= window.XIUWEI_DEF    || [];
-                const _XMAX= _XN.length - 1;
-
-                // 修為下限（非人族 = 8，人族 = 0）
-                const _floor  = (window.getXiuweiFloor || (() => 0))(card.type);
-                const _stored = window.playerCardStars[cardId] || 0;
-                const _xw     = Math.min(Math.max(_stored, _floor), _XMAX);
-                const _frags  = window.playerCardFragments[cardId] || 0;
-                const _isMax  = _xw >= _XMAX;
-                const _nextCost = !_isMax ? _XCO[_xw] : null;
-                const _canUp  = !_isMax && _frags >= _nextCost;
-                const _isOwned= window.playerOwnedCards.includes(cardId);
-                const _color  = _XC[_xw] || '#aaa';
-                const _nextColor = !_isMax ? (_XC[_xw+1] || '#aaa') : '#aaa';
-                const _isNonHuman = _floor > 0;
-
+            // ── 升星 / 碎片區塊（僅限武將卡）────────────────────────
+            const _starCharTypes = ['君王','大將軍','將軍','軍師','後勤','內政','監察'];
+            if (_starCharTypes.includes(card.type)) {
+                const _starCosts = [3, 5, 8, 12, 20]; // 升至1★~5★所需碎片
+                const _stars = window.playerCardStars[cardId] || 0;
+                const _frags = window.playerCardFragments[cardId] || 0;
+                const _nextCost = _stars < 5 ? _starCosts[_stars] : null;
+                const _canUp = _nextCost !== null && _frags >= _nextCost;
+                const _isOwned = window.playerOwnedCards.includes(cardId);
                 const _modalBody = document.querySelector('#card-detail-modal .modal-body');
+
                 const _oldStar = document.getElementById('detail-card-star-section');
                 if (_oldStar) _oldStar.remove();
 
-                // 進度條（分六段）
-                const _stageGroups = [
-                    { label:'凡人境', range:[0,1,2] },
-                    { label:'超凡境', range:[3,4] },
-                    { label:'渡劫境', range:[5,6,7] },
-                    { label:'基础仙人', range:[8,9,10] },
-                    { label:'高阶仙人', range:[11,12,13] },
-                    { label:'至高主宰', range:[14,15,16,17] },
-                ];
-                const _progressHTML = _stageGroups.map(sg => {
-                    // 非人族前3段（0-7）為後天，特殊顯示
-                    const _isInnate = _isNonHuman && sg.range.every(i => i < _floor);
-                    const dots = sg.range.map(i => {
-                        const filled  = i <= _xw;
-                        const cur     = i === _xw;
-                        const innate  = _isNonHuman && i < _floor;
-                        const c       = _XC[i] || '#333';
-                        return `<div title="${_XN[i]}${innate ? ' (後天)' : ''}" style="
-                            flex:1; height:${cur?'10px':'6px'}; border-radius:3px;
-                            background:${innate ? '#2a1a0a' : (filled ? c : '#1a1a2e')};
-                            ${innate ? `border:1px solid #3a2810;` : ''}
-                            ${cur ? `box-shadow:0 0 6px ${c};` : ''}
-                            transition:all .3s;"></div>`;
-                    }).join('');
-                    const stageActive = sg.range.some(i => i <= _xw);
-                    return `
-                        <div style="margin-bottom:6px;">
-                            <div style="font-size:9px;letter-spacing:1px;margin-bottom:3px;
-                                color:${_isInnate ? '#3a2810' : (stageActive ? '#888' : '#333')};">
-                                ${sg.label}${_isInnate ? ' · 後天超越' : ''}
-                            </div>
-                            <div style="display:flex;gap:3px;">${dots}</div>
-                        </div>`;
-                }).join('');
-
-                // 數值加成說明
-                const _atkPct = _XATK[_xw] ? `×${_XATK[_xw].toFixed(2)}` : '×1.00';
-                const _defPct = _XDEF[_xw] ? `×${_XDEF[_xw].toFixed(2)}` : '×1.00';
-
                 const _starSec = document.createElement('div');
                 _starSec.id = 'detail-card-star-section';
-                _starSec.style.cssText = `margin-top:16px;padding:16px;border-radius:12px;text-align:center;
-                    background:rgba(0,0,0,0.3);border:1px solid ${_color}30;`;
-
+                _starSec.style.cssText = 'margin-top:16px;background:rgba(212,175,55,0.06);padding:16px;border-radius:12px;border:1px solid rgba(212,175,55,0.18);text-align:center;';
+                const _starFill = '★'.repeat(_stars);
+                const _starEmpty = '☆'.repeat(5 - _stars);
+                const _starColor = _stars === 5 ? '#f1c40f' : _stars >= 3 ? '#d4af37' : '#888';
                 _starSec.innerHTML = `
-                    <div style="color:#555;font-size:10px;letter-spacing:3px;margin-bottom:8px;">─── 修 為 境 界 ───</div>
-
-                    <!-- 大段標籤 -->
-                    <div style="font-size:10px;color:${_color};letter-spacing:2px;opacity:0.8;margin-bottom:4px;">${_XST[_xw] || ''}</div>
-
-                    <!-- 境界名稱 + 圖示 -->
-                    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px;">
-                        <span style="font-size:28px;">${_XI[_xw] || ''}</span>
-                        <span style="font-size:22px;font-weight:900;color:${_color};text-shadow:0 0 12px ${_color}88;">${_XN[_xw]}</span>
+                    <div style="font-size:22px;letter-spacing:5px;color:${_starColor};margin-bottom:8px;">${_starFill}<span style="color:#333;">${_starEmpty}</span></div>
+                    <div style="color:#666;font-size:12px;margin-bottom:${_isOwned && _nextCost ? '10px' : '0'};">
+                        碎片：<span style="color:#d4af37;font-weight:700;">${_frags}</span>
+                        ${_nextCost ? ` <span style="color:#555;">／ ${_nextCost} 可升 ${_stars+1}★</span>` : '<span style="color:#d4af37;"> · 滿星</span>'}
                     </div>
-
-                    <!-- 後天標示 -->
-                    ${_isNonHuman ? `<div style="font-size:10px;color:#4a2c10;letter-spacing:1px;margin-bottom:4px;">後天境界 · 凡人境～渡劫境已超越</div>` : ''}
-                    <!-- 境界描述 -->
-                    <div style="font-size:11px;color:#666;line-height:1.6;margin-bottom:10px;padding:0 4px;">${_XD[_xw] || ''}</div>
-
-                    <!-- 進度條 -->
-                    <div style="margin-bottom:10px;">${_progressHTML}</div>
-
-                    <!-- 數值加成 -->
-                    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;">
-                        <span style="background:#1a1a2e;border:1px solid #333;border-radius:4px;padding:2px 8px;font-size:10px;color:#e8c547;">⚔ 攻擊 ${_atkPct}</span>
-                        <span style="background:#1a1a2e;border:1px solid #333;border-radius:4px;padding:2px 8px;font-size:10px;color:#4fc3f7;">🛡 防禦 ${_defPct}</span>
-                        <span style="background:#1a1a2e;border:1px solid #333;border-radius:4px;padding:2px 8px;font-size:10px;color:#e57373;">❤ 血量 ${_defPct}</span>
-                        ${(window.XIUWEI_DMG_BONUS||[])[_xw] > 0 ? `<span style="background:#1a1a2e;border:1px solid #7b2fbe;border-radius:4px;padding:2px 8px;font-size:10px;color:#a07aff;">✦ 技能傷害+${(window.XIUWEI_DMG_BONUS||[])[_xw]}</span>` : ''}
-                        ${(window.XIUWEI_SKILL_BONUS||[])[_xw] > 0 ? `<span style="background:#1a1a2e;border:1px solid #2d6a2d;border-radius:4px;padding:2px 8px;font-size:10px;color:#66bb6a;">🎯 觸發率+${Math.round(((window.XIUWEI_SKILL_BONUS||[])[_xw]||0)*100)}%</span>` : ''}
-                    </div>
-
-                    <!-- 碎片 & 升境按鈕 -->
-                    <div style="color:#555;font-size:12px;margin-bottom:8px;">
-                        修為碎片：<span style="color:#e8c547;font-weight:700;">${_frags}</span>
-                        ${!_isMax
-                            ? ` <span style="color:#333;">／ 需 <span style="color:#aaa;">${_nextCost}</span> 片可晉升</span>`
-                            : ' <span style="color:#40c4ff;font-weight:700;"> · 大道圓滿</span>'}
-                    </div>
-
-                    ${_isOwned && !_isMax ? `
-                        <button onclick="window._upgradeCardStar('${cardId}')"
-                            style="padding:9px 28px;border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:700;
-                                   transition:all .2s;letter-spacing:1px;
-                                   background:${_canUp ? `linear-gradient(135deg,${_color}33,${_color}55)` : '#111'};
-                                   color:${_canUp ? _nextColor : '#333'};
-                                   border:1px solid ${_canUp ? _nextColor : '#222'};">
-                            ${_canUp
-                                ? `${_XI[_xw+1]||''} 晉升 ${_XN[_xw+1]}（${_nextCost} 碎片）`
-                                : `碎片不足（${_frags} / ${_nextCost}）`}
+                    ${_isOwned && _nextCost ? `
+                        <button id="btn-upgrade-star-${cardId}"
+                            onclick="window._upgradeCardStar('${cardId}')"
+                            style="margin-top:4px;padding:8px 26px;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;transition:all .2s;
+                                   background:${_canUp ? 'linear-gradient(135deg,#9a6f00,#d4af37)' : '#222'};
+                                   color:${_canUp ? '#000' : '#444'};border:1px solid ${_canUp ? '#d4af37' : '#333'};font-weight:700;">
+                            ${_canUp ? `✨ 升至 ${_stars+1}★ (${_nextCost} 碎片)` : `碎片不足 (${_frags}／${_nextCost})`}
                         </button>
-                        ${_canUp ? `<div style="font-size:10px;color:#555;margin-top:6px;">晉升後 攻擊×${(_XATK[_xw+1]||1).toFixed(2)} 防禦×${(_XDEF[_xw+1]||1).toFixed(2)}</div>` : ''}
-                    ` : (_isOwned && _isMax
-                        ? `<div style="color:#40c4ff;font-size:13px;font-weight:900;letter-spacing:2px;">🔱 大道级 · 超越一切存在</div>`
-                        : `<div style="color:#333;font-size:12px;">擁有此角色後方可晉升修為</div>`
-                    )}
-
-                    <div style="color:#2a2a3e;font-size:10px;margin-top:10px;">💡 抽到重複角色可獲得修為碎片</div>
+                    ` : (_isOwned && !_nextCost ? '<div style="color:#d4af37;font-size:13px;margin-top:4px;">🌟 滿星傳說武將</div>' : '')}
+                    <div style="color:#444;font-size:11px;margin-top:10px;">💡 抽到重複卡牌可獲得該武將碎片</div>
                 `;
                 if (_modalBody) _modalBody.appendChild(_starSec);
             }
@@ -2006,7 +1855,7 @@
         let _first10Done = localStorage.getItem('hua_first10_done') === '1';
         const doGacha = (times, cost, isFree = false, showWheel = true) => {
             if (!isFree && window.playerSilver < cost) {
-                toast('仙石不足！需要 ' + cost + ' 仙石。', 'danger');
+                toast('銀兩不足！需要 ' + cost + ' 兩。', 'danger');
                 _updateHUD();
                 return;
             }
@@ -2061,13 +1910,13 @@
                     // 保底邏輯：每10抽必得大將軍或以上
                     if (_pityCounter >= 10) {
                         _pityCounter = 0;
-                        pool = db.filter(c => c.type === '聖人' || c.type === '大神');
-                    } else if (rand < 0.05) { // 5% 聖人
-                        pool = db.filter(c => c.type === '聖人');
-                    } else if (rand < 0.25) { // 20% 大神
-                        pool = db.filter(c => c.type === '大神');
+                        pool = db.filter(c => c.type === '君王' || c.type === '大將軍');
+                    } else if (rand < 0.05) { // 5% 君王
+                        pool = db.filter(c => c.type === '君王');
+                    } else if (rand < 0.25) { // 20% 大將軍
+                        pool = db.filter(c => c.type === '大將軍');
                     } else { // 75% 其他
-                        pool = db.filter(c => c.type !== '聖人' && c.type !== '大神' && c.type !== '計策' && c.type !== '突發事件');
+                        pool = db.filter(c => c.type !== '君王' && c.type !== '大將軍' && c.type !== '計策' && c.type !== '突發事件');
                     }
 
                     if (pool.length === 0) pool = db;
@@ -2076,39 +1925,30 @@
                 localStorage.setItem('hua_pity', _pityCounter);
             }
 
-            // 更新收集庫與重複返還機制（重複卡給碎片 + 少量仙石）
+            // 更新收集庫與重複返還機制（重複卡給碎片 + 少量銀兩）
             let silverGained = 0;
             let fragsGainedCount = 0;
             resData.forEach(c => {
                 if (!window.playerOwnedCards.includes(c.id)) {
                     window.playerOwnedCards.push(c.id);
                     c.isDuplicate = false;
-                    // 非人族天生在人仙境（第8階），初始化修為下限
-                    const _floor = (window.getXiuweiFloor || (() => 0))(c.type);
-                    if (_floor > 0 && !(c.id in window.playerCardStars)) {
-                        window.playerCardStars[c.id] = _floor;
-                    }
                 } else {
                     c.isDuplicate = true;
-                    // 給修為碎片（依職業稀有度給予不同數量）
-                    let fragsGiven = 1;
-                    if (c.type === '聖人')      fragsGiven = 5;
-                    else if (c.type === '大神') fragsGiven = 3;
-                    else if (c.type === '天仙' || c.type === '金仙') fragsGiven = 2;
-                    window.playerCardFragments[c.id] = (window.playerCardFragments[c.id] || 0) + fragsGiven;
-                    fragsGainedCount += fragsGiven;
-                    // 仙石（仙石）回饋
-                    if (c.type === '聖人')      silverGained += 30;
-                    else if (c.type === '大神') silverGained += 15;
+                    // 給碎片（用於升星）
+                    window.playerCardFragments[c.id] = (window.playerCardFragments[c.id] || 0) + 1;
+                    fragsGainedCount++;
+                    // 降低銀兩回饋，因為碎片更有價值
+                    if (c.type === '君王') silverGained += 30;
+                    else if (c.type === '大將軍') silverGained += 15;
                     else silverGained += 5;
                 }
             });
 
             if (fragsGainedCount > 0 || silverGained > 0) {
                 window.playerSilver += silverGained;
-                const fragMsg = fragsGainedCount > 0 ? `，獲得 ${fragsGainedCount} 個修為碎片` : '';
-                const silMsg  = silverGained > 0      ? `+${silverGained} 仙石` : '';
-                setTimeout(() => toast(`重複角色轉化！${silMsg}${fragMsg}`, 'success', 3000), 500);
+                const fragMsg = fragsGainedCount > 0 ? `，獲得 ${fragsGainedCount} 個武將碎片` : '';
+                const silMsg  = silverGained > 0      ? `+${silverGained} 銀兩` : '';
+                setTimeout(() => toast(`重複卡牌轉化！${silMsg}${fragMsg}`, 'success', 3000), 500);
             }
             _saveCollection();
             _refreshGachaPool();
@@ -2164,7 +2004,7 @@
                                     <span class="ggc-lname" style="color:${col};">${c.name}</span>
                                     <span class="ggc-ltype">${_CE[c.type]||''} ${c.type}</span>
                                 </div>
-                                ${c.isDuplicate ? '<div class="ggc-dup">重複+仙石</div>' : ''}
+                                ${c.isDuplicate ? '<div class="ggc-dup">重複+銀兩</div>' : ''}
                             </div>
                         </div>
                     </div>`;
@@ -2231,14 +2071,7 @@
         };
 
         window._triggerStartingGift = () => {
-            // Fix：開局大禮應使用正向提示，而非 _showError（錯誤樣式）
-            const el = document.getElementById('lobby-error');
-            if (el) {
-                el.textContent = '📜 新主公駕到，特賜「1000仙石」祝大展宏圖！招募天下英雄吧！';
-                el.style.color = '#d4af37';
-                el.classList.remove('hidden');
-                setTimeout(() => { el.classList.add('hidden'); el.style.color = ''; }, 5000);
-            }
+            _showError('📜 檢測到新主公駕到，特賜「1000銀兩」祝您大展宏圖！招募天下英雄吧！');
             window.playerSilver = 1000;
             _saveCollection();
             _updateHUD();
@@ -2248,9 +2081,9 @@
         const btnTen = document.getElementById('btn-gacha-ten');
         const btnTwentyFive = document.getElementById('btn-gacha-twenty-five');
         
-        if (btnSingle) btnSingle.onclick = () => doGacha(1, 5);
-        if (btnTen) btnTen.onclick = () => doGacha(10, 50);
-        if (btnTwentyFive) btnTwentyFive.onclick = () => doGacha(25, 120);
+        if (btnSingle) btnSingle.onclick = () => doGacha(1, 50);
+        if (btnTen) btnTen.onclick = () => doGacha(10, 500);
+        if (btnTwentyFive) btnTwentyFive.onclick = () => doGacha(25, 1200);
 
         // 恢復遺漏的開關監聽器
         if (btnOpen) {
@@ -2272,26 +2105,13 @@
 
     function _updateHUD() {
         const HUD_ELS = {
-            'lobby-silver-display': '💰 仙石: ' + window.playerSilver,
-            'gacha-silver-val':     window.playerSilver,
-            'btn-publish-board':    '發布皇榜 - 仙石: ' + window.playerSilver
+            'lobby-silver-display': '💰 當前餘額: ' + window.playerSilver + ' 兩',
+            'gacha-silver-val': window.playerSilver,
+            'btn-publish-board': '發布皇榜 - 當前餘額: ' + window.playerSilver
         };
         for (const [id, val] of Object.entries(HUD_ELS)) {
             const el = document.getElementById(id);
             if (el) el.textContent = val;
-        }
-        // 更新靈石顯示
-        const lsEl = document.getElementById('lobby-lingshi-display');
-        if (lsEl) lsEl.textContent = '💎 靈石: ' + (window.playerLingShi || 0) + ' 枚';
-        // 更新兌換按鈕提示
-        const cvBtn = document.getElementById('btn-convert-lingshi');
-        if (cvBtn) {
-            const canConvert = Math.floor((window.playerLingShi || 0) / 100);
-            cvBtn.textContent = canConvert > 0
-                ? `兌換 ${canConvert} 仙石（${canConvert * 100} 靈石）`
-                : '兌換仙石（需100靈石）';
-            cvBtn.disabled = canConvert <= 0;
-            cvBtn.style.opacity = canConvert > 0 ? '1' : '0.4';
         }
     }
     window._updateHUD = _updateHUD;
@@ -2328,7 +2148,7 @@
                 _showError('網路不可用（請確認已連上網際網路）');
                 return;
             }
-            _mmCleanup(); // 若正在配對佇列中，先移除
+            _mmCleanup();
             _openMonarchSelect('create');
         });
 
@@ -2371,18 +2191,11 @@
 
     /** 管理員登入邏輯 */
     function _handleAdminLogin() {
-        let email;
-        try {
-            email = prompt('⚔️ 請輸入超級管理員驗證信箱：');
-        } catch(e) {
-            _showError('❌ 驗證對話框被瀏覽器封鎖，無法驗證。');
-            return;
-        }
-        if (!email) return; // Fix E：使用者取消 prompt
+        const email = prompt('⚔️ 請輸入超級管理員驗證信箱：');
         const admins = ['linus622wang@gmail.com', 'yanbo970913@gmail.com'];
-        if (admins.includes(email.trim())) {
+        if (admins.includes(email)) {
             _showError('📜 聖旨到！超級管理員身分已驗證。');
-            _showSuperAdminEdict(email.trim());
+            _showSuperAdminEdict(email);
         } else {
             _showError('❌ 驗證失敗：您並非指定的超級管理員。');
         }
@@ -2397,12 +2210,10 @@
         const panel = document.createElement('div');
         panel.id = 'super-admin-panel';
         panel.className = 'admin-edict-style';
-        // R3 Fix：email 雖已通過 admins 白名單驗證，仍做 XSS 轉義（深度防禦）
-        const _safeEmail = String(email||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         panel.innerHTML = `
             <div class="edict-header">📜 華夏風雲 · 超級管理員</div>
             <div class="edict-body">
-                <p>👤 權限授權：<b>${_safeEmail}</b></p>
+                <p>👤 權限授權：<b>${email}</b></p>
                 <div class="admin-controls">
                     <button onclick="_adminAction('debug_mode')">🛠 開啟除錯模式</button>
                     <button onclick="_adminAction('all_cards')">🃏 解鎖全牌庫</button>
@@ -2701,10 +2512,8 @@
     /** 客方部署人物牌 */
     function _guestDeployChar(action) {
         const { cardUid, cardData, target } = action;
-        const idx = oppHandData.findIndex(c => c.uid === cardUid);
-        // H-9 Fix：拒絕不在手牌的卡，不信任原始 cardData 避免繞過驗證
-        if (idx === -1) { _sync(); return; }
-        const card = oppHandData.splice(idx, 1)[0];
+        let idx  = oppHandData.findIndex(c => c.uid === cardUid);
+        let card = (idx !== -1) ? oppHandData.splice(idx, 1)[0] : cardData;
         if (!card) { _sync(); return; }
         if (typeof initCharCard === 'function') initCharCard(card); // HP×100 + ATK/DEF
 
@@ -2722,10 +2531,7 @@
         }
 
         if (!placed) { oppHandData.push(card); }
-        else {
-            const _sn = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
-            toast(`🃏 對手部署 <b>${_sn}</b>！`, 'danger', 2000);
-        }
+        else         { toast(`🃏 對手部署 <b>${card.name}</b>！`, 'danger', 2000); }
 
         renderOppBoard();
         renderOppHandUI();
@@ -2746,23 +2552,16 @@
             if (t) {
                 spawnSkillFx('🔥', getSlotEl('my-' + targetZone + '-zone', targetIdx));
                 toast(`🔥 對手【釜底抽薪】！<b>${t.name}</b> 被破壞！`, 'danger');
-                if (typeof execOnKill === 'function') {
-                    const oppAttacker = oppBoard.active.find(u => u !== null);
-                    execOnKill(oppAttacker, t, false); // Fix：對手發動，isPlayerAttacking=false（execOnKill 內部已呼叫 execOnDeath）
-                }
                 myBoard[targetZone][targetIdx] = null;
                 myBoard.discard.push(t);
                 renderBoard();
-                if (typeof checkWinCondition === 'function') checkWinCondition(); // Fix：檢查勝負
             }
         } else if (spellType === '草船借箭') {
             for (let i = 0; i < 2 && oppDeck.length > 0; i++) oppHandData.push(oppDeck.pop());
             toast('🏹 對手【草船借箭】抽了 2 張！', 'danger');
             renderOppHandUI();
         } else if (spellType === 'generic') {
-            // Fix：action.cardName 來自 P2P 網路，需 XSS 轉義
-            const _safeName = typeof _esc === 'function' ? _esc(action.cardName || '計策') : (action.cardName || '計策');
-            toast(`✨ 對手使用了 <b>${_safeName}</b>！`, 'danger');
+            toast(`✨ 對手使用了 <b>${action.cardName || '計策'}</b>！`, 'danger');
         }
 
         _sync();
@@ -2776,9 +2575,7 @@
 
         const mods = execAttackMods(oppBoard);
         const { unDodgeable, ignoreFirstDodge, extraDmg, hasAoE, hasFireLianYing, hasFengLang } = mods;
-        // C-3 Fix：使用 guest 傳來的 attackerAtk，H-4 Fix：扣除目標 DEF
-        const guestAtk = action.attackerAtk || 60;
-        let dmg = Math.max(1, Math.floor(guestAtk) - (target.def || 0)) + extraDmg;
+        let dmg = 1 + extraDmg;
         if (unDodgeable)     toast('⚔ 對手鎖定技發動！此次攻擊無法閃避！', 'skill');
         if (ignoreFirstDodge) toast('⚔ 對手【水戰】— 您的第一張固守被無視！', 'skill');
         if (hasFengLang)      toast('🐺 對手【風狼】— 攻擊附帶額外效果！', 'skill');
@@ -2789,12 +2586,9 @@
             [-1, 1].forEach(offset => {
                 const adj = myBoard.active[tIdx + offset];
                 if (adj && adj.hp > 0) {
-                    adj.hp = Math.max(0, adj.hp - 25); // C-2 Fix：AoE 傷害應為 25，非 1
+                    adj.hp = Math.max(0, adj.hp - 1);
                     toast(`🔥 【火燒赤壁】波及 <b>${adj.name}</b>！`, 'danger', 1800);
                     if (adj.hp <= 0) {
-                        adj.hp = 0;
-                        const aoeAttacker = oppBoard.active.find(c => c !== null);
-                        if (typeof execOnKill === 'function') execOnKill(aoeAttacker, adj, false); // Fix R3-2：AoE 致命傷需呼叫 execOnKill 觸發死亡技能，isPlayerAttacking=false（敵方AoE）
                         myBoard.active[tIdx + offset] = null;
                         myBoard.discard.push(adj);
                     }
@@ -2842,10 +2636,10 @@
                     target.hp = 0;
                     spawnSkillFx('💀', getSlotEl('my-' + zone + '-zone', idx));
                     toast(`💀 <b>${target.name}</b> 壯烈犧牲！`, 'danger', 3500);
-                    const attacker = oppBoard.active.find(c => c !== null);
-                    execOnKill(attacker, target, false); // Fix：execOnKill 內部已呼叫 execOnDeath，移除重複呼叫
                     myBoard[zone][idx] = null;
                     myBoard.discard.push(target);
+                    const attacker = oppBoard.active.find(c => c !== null);
+                    execOnKill(attacker, target, false);
                     renderBoard();
                     if (checkWinCondition()) return;
                 } else {
@@ -2862,13 +2656,9 @@
         const { targetZone, targetIdx } = action;
         const t = oppBoard[targetZone] && oppBoard[targetZone][targetIdx];
         if (t && t.hp < t.maxHp) {
-            // M-7 Fix：與客端相同的 20% 治療公式，避免狀態不同步
-            const healAmt = Math.max(1, Math.floor(t.maxHp * 0.20));
-            t.hp = Math.min(t.maxHp, t.hp + healAmt);
-            spawnDmgPopup(healAmt, getSlotEl('opp-' + targetZone + '-zone', targetIdx), true);
-            // R3 Fix：t.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
-            const _tn = typeof _esc === 'function' ? _esc(t.name) : (t.name || '');
-            toast(`💚 對手的 <b>${_tn}</b> 恢復 ${healAmt} HP！`, 'info', 2000);
+            t.hp++;
+            spawnDmgPopup(1, getSlotEl('opp-' + targetZone + '-zone', targetIdx), true);
+            toast(`💚 對手的 <b>${t.name}</b> 恢復 1 HP！`, 'info', 2000);
             renderOppBoard();
         }
         _sync();
@@ -2893,25 +2683,21 @@
                 oppBoard.discard.push(dc);
             }
             spawnSkillFx('🛡', getSlotEl('opp-' + zone + '-zone', idx));
-            // R3 Fix：card.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
-            const _cn0 = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
-            toast(`🛡 對手成功閃避！<b>${_cn0}</b> 毫髮無傷`, 'info');
+            toast(`🛡 對手成功閃避！<b>${card.name}</b> 毫髮無傷`, 'info');
         } else {
             const actualDmg = execDefenseMods(card, dmg);
             card.hp -= actualDmg;
             spawnDmgPopup(actualDmg, getSlotEl('opp-' + zone + '-zone', idx));
-            // R3 Fix：card.name 來自 oppBoard（網路同步），toast 使用 innerHTML 需轉義
-            const _cn = typeof _esc === 'function' ? _esc(card.name) : (card.name || '');
             if (card.hp > 0) {
-                toast(`🎯 命中！<b>${_cn}</b> 受到 ${actualDmg} 傷害！`, 'attack');
+                toast(`🎯 命中！<b>${card.name}</b> 受到 ${actualDmg} 傷害！`, 'attack');
             } else {
                 card.hp = 0;
-                toast(`💀 對手 <b>${_cn}</b> 陣亡！`, 'danger', 3000);
+                toast(`💀 對手 <b>${card.name}</b> 陣亡！`, 'danger', 3000);
                 spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
-                const attacker = myBoard.active.find(c => c !== null);
-                execOnKill(attacker, card, true); // Fix：execOnKill 內部已呼叫 execOnDeath，移除重複呼叫
                 oppBoard[zone][idx] = null;
                 oppBoard.discard.push(card);
+                const attacker = myBoard.active.find(c => c !== null);
+                execOnKill(attacker, card, true);
                 renderOppBoard();
                 if (checkWinCondition()) return;
             }
@@ -2932,14 +2718,10 @@
             _guestShowDefense(data);
         });
 
-        Network.on('game_over', ({ winnerMsg, hostWon }) => {
-            // Fix：winnerMsg 來自 P2P 網路，需 XSS 轉義後再傳給 toast（使用 innerHTML）
-            const _safeMsg = typeof _esc === 'function' ? _esc(winnerMsg || '') : (winnerMsg || '');
-            if (typeof toast === 'function') toast(_safeMsg, 'gold', 5000);
-            // H-2/H-10 Fix：使用 hostWon 布林值，不再解析訊息文字
-            const guestWon = hostWon === false || (!hostWon && winnerMsg && winnerMsg.includes('客方'));
+        Network.on('game_over', ({ winnerMsg }) => {
+            if (typeof toast === 'function') toast(winnerMsg, 'gold', 5000);
             setTimeout(() => {
-                if (typeof triggerGameOver === 'function') triggerGameOver(guestWon);
+                if (typeof triggerGameOver === 'function') triggerGameOver(winnerMsg.includes('勝'));
             }, 2000);
         });
     }
@@ -2948,11 +2730,6 @@
     function _guestShowDefense(data) {
         const { targetZone, targetIdx, dmg, unDodgeable, ignoreFirstDodge = false, targetName } = data;
         const target = myBoard[targetZone] && myBoard[targetZone][targetIdx];
-        // Fix F：目標不在場（已在狀態不同步時被移除），自動硬扛並通知主機
-        if (!target) {
-            Network.send('guest_action', { type: 'defense_result', result: 'take', targetZone, targetIdx });
-            return;
-        }
 
         const dodgeIdx = myHand.findIndex(c => c.name && c.name.includes('固守'));
         const spaceIdx = myHand.findIndex(c => c.name && c.name.includes('空城計'));
@@ -2968,10 +2745,8 @@
             else if (zhaoIdx !== -1)  { realIdx = zhaoIdx;  dodgeLabel = '🐉 龍膽'; }
         }
 
-        // R3 Fix：targetName 來自 host_attacking 網路訊息，openDefenseModal 使用 innerHTML，需轉義
-        const _safeTN = typeof _esc === 'function' ? _esc(targetName || '您的武將') : (targetName || '您的武將');
         openDefenseModal(
-            `主機突擊 <b>${_safeTN}</b>！（傷害 ${dmg}）\n${unDodgeable ? '⚠️ 此次攻擊無法閃避！' : ''}`,
+            `主機突擊 <b>${targetName || '您的武將'}</b>！（傷害 ${dmg}）\n${unDodgeable ? '⚠️ 此次攻擊無法閃避！' : ''}`,
             dodgeLabel, '💥 硬扛',
             hasDodge ? () => {
                 consumeHandCard(realIdx, myHand[realIdx]);
@@ -3081,53 +2856,28 @@
         }
     }
 
-    /** 修為晉境執行（18境界版） */
+    /** 升星確認並執行 */
     window._upgradeCardStar = function(cardId) {
-        // 優先使用 game.js 的全域常數，否則用備用值
-        const _XN    = window.XIUWEI_NAMES  || [];
-        const _XI    = window.XIUWEI_ICONS  || [];
-        const _XCO   = window.XIUWEI_COSTS  || [3,6,12,20,35,55,80,120,180,260,380,550,800,1200,1800,2800,5000];
-        const _XMAX  = _XN.length > 0 ? _XN.length - 1 : 17;
-        const _XSTAGE= window.XIUWEI_STAGE || [];
-
-        const xw = Math.min(window.playerCardStars[cardId] || 0, _XMAX);
-
-        if (xw >= _XMAX) {
-            _safeToast('🔱 已達大道级，超越一切！', 'gold');
-            return;
-        }
-
-        const cost  = _XCO[xw];
+        const starCosts = [3, 5, 8, 12, 20]; // 升至 1★ ~ 5★ 的碎片需求
+        const stars = window.playerCardStars[cardId] || 0;
+        if (stars >= 5) { _safeToast('已是滿星武將！', 'info'); return; }
+        const cost = starCosts[stars];
         const frags = window.playerCardFragments[cardId] || 0;
-
-        if (frags < cost) {
-            _safeToast(`修為碎片不足！需要 ${cost} 片（現有 ${frags} 片）`, 'danger');
-            return;
-        }
+        if (frags < cost) { _safeToast(`碎片不足！需要 ${cost} 個碎片`, 'danger'); return; }
 
         window.playerCardFragments[cardId] = frags - cost;
-        window.playerCardStars[cardId]     = xw + 1;
+        window.playerCardStars[cardId]     = stars + 1;
         _saveCollection();
         _updateHUD();
 
-        const card   = window.cardDatabase ? window.cardDatabase.find(c => c.id === cardId) : null;
-        const newLvl = xw + 1;
-        const name   = card ? card.name : '';
-        const icon   = _XI[newLvl] || '✨';
-        const lvName = _XN[newLvl] || `境界${newLvl}`;
-        const stage  = _XSTAGE[newLvl] || '';
-
-        _safeToast(`${icon} ${name} 修為晉升！\n${stage} · ${lvName}`, 'success', 4000);
-
-        // 特殊境界突破提示
-        if (newLvl === 7)  _safeToast('⛈️ 渡劫成功！舉霞飛升，位列仙班！', 'gold', 4000);
-        if (newLvl === 11) _safeToast('✨ 證得不朽！萬劫不滅！', 'gold', 4000);
-        if (newLvl === 13) _safeToast('🌟 大羅混元！超脫命運長河！', 'gold', 4000);
-        if (newLvl === 15) _safeToast('☯️ 聖人之下，皆為蝼蚁！', 'gold', 5000);
-        if (newLvl === 17) _safeToast('🔱 大道级！超越一切存在與虛無！', 'gold', 5000);
+        const card = window.cardDatabase ? window.cardDatabase.find(c => c.id === cardId) : null;
+        const lvlNames = ['一', '二', '三', '四', '五'];
+        _safeToast(`✨ ${card ? card.name : ''} 升至 ${lvlNames[stars]}★！`, 'success', 3000);
 
         // 刷新詳情彈窗
         if (typeof window._openCardDetail === 'function') window._openCardDetail(cardId);
+
+        // 成就檢查
         _checkAchievements();
     };
 
@@ -3194,8 +2944,7 @@
             all_monarchs: allMonarchs,
             star_3:       maxStar    >= 3,
             star_5:       maxStar    >= 5,
-            post_board:    boardPosts >= 1,
-            tutorial_done: parseInt(localStorage.getItem('hua_tutorial_done') || '0') > 0, // L-10 Fix
+            post_board:   boardPosts >= 1,
         };
 
         let newlyUnlocked = [];
@@ -3693,7 +3442,7 @@
             if (btnJoin)   { btnJoin.disabled   = false; }
         };
         if (btn)       { btn.disabled = true;       btn.textContent = '🔍 搜尋對手中…'; }
-        if (btnCreate) { btnCreate.disabled = true; } // 防止配對中途切換建立房間
+        if (btnCreate) { btnCreate.disabled = true; }
         if (btnJoin)   { btnJoin.disabled   = true; }
 
         try {

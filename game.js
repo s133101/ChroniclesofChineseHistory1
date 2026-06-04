@@ -1,4 +1,4 @@
-﻿﻿// ============================================================
+// ============================================================
 //  華夏風雲錄 — game.js
 //
 //  Copyright © 2026 linus622wang@gmail.com
@@ -12,11 +12,6 @@
 
 // ---- 全域模式旗標 ----
 window.GAME_MODE = 'ai'; // 'ai' | 'host' | 'guest'
-
-// L-6/L-7 Fix：HTML 跳脫函式，防止卡牌名稱/描述 XSS
-function _esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 
 // ==============================================================
 //  SPECTATE BROADCAST (觀戰狀態廣播)
@@ -33,14 +28,6 @@ let interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null };
 // 供教學系統偵測當前互動模式
 window._getInteractionMode = () => interactionState.mode;
 let wineBuff = 0; // 酒：下一張【殺】傷害 +1
-
-// ── 陣法狀態 ──────────────────────────────────────────
-let myFormation  = null;
-let oppFormation = null;
-
-// ── 裝備系統：裝備綁定在陣法上，槽位數由陣法卡的 slots 屬性決定 ──
-// 裝備狀態存放在 myFormation.equippedItems / oppFormation.equippedItems
-// 無陣法時無法裝備
 let _escListenerAdded = false; // M-9：防止 ESC 監聽器重複掛載
 
 const PHASES = ['抽牌階段','準備階段','主要階段','戰鬥階段','結束階段'];
@@ -88,520 +75,81 @@ const _SFX = (() => {
 
 // ---- Card art ----
 const CARD_ART = {
-    '聖人': '☯️',
-    '大神': '⚡',
-    '天仙': '⚔️',
-    '金仙': '📜',
-    '靈獸': '🐉',
-    '巫族': '🌿',
-    '妖族': '👁️',
+    '君王': '👑',
+    '大將軍': '⚔️',
+    '將軍': '⚔️',
+    '軍師': '📜',
+    '後勤': '🌾',
+    '內政': '🏛️',
+    '監察': '👁️',
     '計策': 'gen_strategy_art_1775725939237.png',
     '突發事件': 'gen_event_art_1775725970977.png'
 };
 
 // ---- 角色屬性對照表 (ATK: 攻擊, DEF: 防禦) ----
 const CHAR_STATS = {
-    // 聖人 (HP×100=500)
-    'h01':{ atk:72,  def:48 }, 'h02':{ atk:85,  def:45 }, 'h03':{ atk:90,  def:40 },
-    'h04':{ atk:75,  def:50 }, 'h05':{ atk:70,  def:46 }, 'h06':{ atk:78,  def:42 },
-    'h07':{ atk:68,  def:50 }, 'h08':{ atk:95,  def:38 },
-    // 大神 (HP×100=400)
-    'd01':{ atk:130, def:30 }, 'd02':{ atk:140, def:25 }, 'd03':{ atk:135, def:28 },
-    'd04':{ atk:125, def:30 }, 'd05':{ atk:118, def:35 }, 'd06':{ atk:128, def:28 },
-    'd07':{ atk:110, def:38 }, 'd08':{ atk:115, def:35 }, 'd09':{ atk:105, def:38 },
-    'd10':{ atk:112, def:36 },
-    // 天仙 (HP×100=400)
-    'x01':{ atk:118, def:22 }, 'x02':{ atk:125, def:24 }, 'x03':{ atk:130, def:18 },
-    'x04':{ atk:110, def:35 }, 'x05':{ atk:120, def:28 }, 'x06':{ atk:108, def:22 },
-    'x07':{ atk:115, def:20 }, 'x08':{ atk:112, def:30 }, 'x09':{ atk:122, def:25 },
-    'x10':{ atk:100, def:40 }, 'x11':{ atk:118, def:22 }, 'x12':{ atk:105, def:26 },
-    // 金仙 (HP×100=300)
-    'j01':{ atk:55,  def:14 }, 'j02':{ atk:50,  def:16 }, 'j03':{ atk:52,  def:13 },
-    'j04':{ atk:54,  def:14 }, 'j05':{ atk:48,  def:15 }, 'j06':{ atk:58,  def:12 },
-    'j07':{ atk:46,  def:16 }, 'j08':{ atk:44,  def:16 }, 'j09':{ atk:50,  def:14 },
-    'j10':{ atk:42,  def:14 },
-    // 靈獸 (HP×100=300)
-    'l01':{ atk:40,  def:18 }, 'l02':{ atk:48,  def:14 }, 'l03':{ atk:45,  def:16 },
-    'l04':{ atk:35,  def:22 }, 'l05':{ atk:38,  def:18 }, 'l06':{ atk:50,  def:14 },
-    'l07':{ atk:36,  def:20 }, 'l08':{ atk:42,  def:15 },
-    // 巫族 (HP×100=300)
-    'w01':{ atk:38,  def:18 }, 'w02':{ atk:55,  def:12 }, 'w03':{ atk:52,  def:14 },
-    'w04':{ atk:50,  def:12 }, 'w05':{ atk:54,  def:13 }, 'w06':{ atk:40,  def:18 },
-    'w07':{ atk:48,  def:15 }, 'w08':{ atk:45,  def:14 }, 'w09':{ atk:50,  def:12 },
-    'w10':{ atk:36,  def:18 },
-    // 妖族 (HP×100=300)
-    'y01':{ atk:35,  def:12 }, 'y02':{ atk:30,  def:12 }, 'y03':{ atk:28,  def:11 },
-    'y04':{ atk:40,  def:14 }, 'y05':{ atk:55,  def:10 }, 'y06':{ atk:32,  def:12 },
-    'y07':{ atk:30,  def:11 }, 'y08':{ atk:30,  def:11 },
+    // 君王 (HP×100=500)
+    'm01':{ atk:75,  def:45 }, 'm02':{ atk:85,  def:40 }, 'm03':{ atk:80,  def:50 },
+    'm04':{ atk:70,  def:38 }, 'm05':{ atk:78,  def:42 }, 'm06':{ atk:82,  def:40 },
+    'm07':{ atk:88,  def:35 }, 'm08':{ atk:72,  def:44 }, 'm09':{ atk:76,  def:42 },
+    'm10':{ atk:73,  def:46 }, 'm11':{ atk:90,  def:48 }, 'm12':{ atk:68,  def:45 },
+    'm13':{ atk:80,  def:42 }, 'm14':{ atk:95,  def:35 }, 'm15':{ atk:85,  def:40 },
+    'm16':{ atk:88,  def:38 }, 'm17':{ atk:82,  def:45 }, 'm18':{ atk:78,  def:42 },
+    // 大將軍 (HP×100=400)
+    'c01':{ atk:140, def:25 }, 'c02':{ atk:120, def:35 }, 'c03':{ atk:130, def:22 },
+    'c04':{ atk:125, def:28 }, 'c05':{ atk:145, def:20 }, 'c06':{ atk:118, def:30 },
+    'c07':{ atk:115, def:28 }, 'c08':{ atk:128, def:32 }, 'c09':{ atk:132, def:26 },
+    'c10':{ atk:122, def:30 }, 'c11':{ atk:138, def:28 }, 'c12':{ atk:120, def:35 },
+    'c13':{ atk:125, def:30 }, 'c14':{ atk:140, def:22 }, 'c15':{ atk:135, def:24 },
+    'c16':{ atk:128, def:32 }, 'c17':{ atk:133, def:26 },
+    // 將軍 (HP×100=400)
+    'g01':{ atk:105, def:28 }, 'g02':{ atk:125, def:18 }, 'g03':{ atk:118, def:20 },
+    'g04':{ atk:115, def:22 }, 'g05':{ atk:108, def:26 }, 'g06':{ atk:112, def:22 },
+    'g07':{ atk:110, def:20 }, 'g08':{ atk:105, def:25 }, 'g09':{ atk:100, def:24 },
+    'g10':{ atk:102, def:22 }, 'g11':{ atk:108, def:25 }, 'g12':{ atk:98,  def:30 },
+    'g13':{ atk:110, def:22 }, 'g14':{ atk:115, def:20 }, 'g15':{ atk:95,  def:24 },
+    // 軍師 (HP×100=300)
+    't01':{ atk:55,  def:15 }, 't02':{ atk:45,  def:12 }, 't03':{ atk:50,  def:14 },
+    't04':{ atk:48,  def:12 }, 't05':{ atk:58,  def:10 }, 't06':{ atk:52,  def:12 },
+    't07':{ atk:50,  def:14 }, 't08':{ atk:55,  def:10 }, 't09':{ atk:50,  def:16 },
+    't10':{ atk:45,  def:14 }, 't11':{ atk:42,  def:14 }, 't12':{ atk:52,  def:12 },
+    't13':{ atk:55,  def:10 }, 't14':{ atk:45,  def:14 },
+    // 後勤 (HP×100=300)
+    's01':{ atk:40,  def:18 }, 's02':{ atk:38,  def:16 }, 's03':{ atk:48,  def:15 },
+    's04':{ atk:38,  def:18 }, 's05':{ atk:40,  def:16 }, 's06':{ atk:35,  def:16 },
+    's07':{ atk:38,  def:16 }, 's08':{ atk:42,  def:15 }, 's09':{ atk:45,  def:14 },
+    // 內政 (HP×100=300)
+    'n01':{ atk:45,  def:18 }, 'n02':{ atk:42,  def:16 }, 'n03':{ atk:35,  def:18 },
+    'n04':{ atk:40,  def:16 }, 'n05':{ atk:38,  def:16 }, 'n06':{ atk:32,  def:18 },
+    'n07':{ atk:35,  def:16 }, 'n08':{ atk:40,  def:15 }, 'n09':{ atk:38,  def:17 },
+    'n10':{ atk:32,  def:18 }, 'n11':{ atk:45,  def:15 }, 'n12':{ atk:42,  def:15 },
+    // 監察 (HP×100=300)
+    'j01':{ atk:35,  def:12 }, 'j02':{ atk:32,  def:12 }, 'j03':{ atk:28,  def:10 },
+    'j04':{ atk:30,  def:10 }, 'j05':{ atk:25,  def:10 },
 };
 
 const TYPE_STAT_DEFAULTS = {
-    '聖人': { atk:80,  def:45 },
-    '大神': { atk:125, def:30 },
-    '天仙': { atk:115, def:25 },
-    '金仙': { atk:50,  def:14 },
-    '靈獸': { atk:42,  def:17 },
-    '巫族': { atk:45,  def:15 },
-    '妖族': { atk:33,  def:12 },
+    '君王':   { atk:80,  def:42 },
+    '大將軍': { atk:125, def:28 },
+    '將軍':   { atk:108, def:23 },
+    '軍師':   { atk:50,  def:12 },
+    '後勤':   { atk:40,  def:16 },
+    '內政':   { atk:38,  def:16 },
+    '監察':   { atk:30,  def:10 },
 };
 
-// ══════════════════════════════════════════════════════
-//  修為境界體系（18 階）
-//  凡人境 → 超凡境 → 渡劫境 → 仙人境 → 高階仙 → 至高境
-// ══════════════════════════════════════════════════════
-
-// 境界名稱（0=炼气期 起始）
-const XIUWEI_NAMES = [
-    '炼气期',   // 0  凡人境
-    '筑基期',   // 1
-    '金丹期',   // 2
-    '元婴期',   // 3  超凡境
-    '化神期',   // 4
-    '合体期',   // 5  渡劫境
-    '大乘期',   // 6
-    '渡劫期',   // 7
-    '人仙',     // 8  基础仙人
-    '天仙',     // 9
-    '真仙',     // 10
-    '金仙',     // 11 高阶仙人
-    '太乙金仙', // 12
-    '大罗金仙', // 13
-    '准圣',     // 14 至高主宰
-    '圣人',     // 15
-    '道级',     // 16
-    '大道级',   // 17
-];
-
-// 對應圖示
-const XIUWEI_ICONS = [
-    '💨','🏔️','⚱️',          // 凡人境
-    '🥚','🧿',               // 超凡境
-    '⚡','🌊','⛈️',           // 渡劫境
-    '🌤️','☁️','🌈',           // 基础仙人
-    '✨','🌠','🌟',           // 高阶仙人
-    '🔮','☯️','🌌','🔱',      // 至高主宰
-];
-
-// 對應顏色
-const XIUWEI_COLORS = [
-    '#aaaaaa','#8bc34a','#ff9800',          // 凡人境
-    '#9c27b0','#673ab7',                    // 超凡境
-    '#2196f3','#00bcd4','#f44336',          // 渡劫境
-    '#4caf50','#03a9f4','#00e676',          // 基础仙人
-    '#ffd700','#ffab00','#ff6d00',          // 高阶仙人
-    '#e040fb','#ea80fc','#40c4ff','#ffffff' // 至高主宰
-];
-
-// 大段名稱
-const XIUWEI_STAGE = [
-    '凡人境','凡人境','凡人境',
-    '超凡境','超凡境',
-    '渡劫境','渡劫境','渡劫境',
-    '基础仙人','基础仙人','基础仙人',
-    '高阶仙人','高阶仙人','高阶仙人',
-    '至高主宰','至高主宰','至高主宰','至高主宰',
-];
-
-// 境界說明
-const XIUWEI_DESC = [
-    '引气入体，强身健体，可使用低级法术。',
-    '灵气化液，筑就根基，寿元可达两百岁，可御剑飞行。',
-    '液态灵气凝成金丹，战力飙升，寿元可达五百年。',
-    '金丹碎裂化为元婴，肉身毁灭元婴可夺舍重生，寿元千年以上。',
-    '元婴成长，衍生神识，可借用天地法则、操纵自然力量。',
-    '肉身与元婴完美融合，进入物我两忘的境界。',
-    '灵力向仙灵之力转化，法力无边，凡人界战力天花板。',
-    '迎接雷劫洗礼，渡劫成功则举霞飞升，位列仙班。',
-    '初步跳出三界，拥有漫长寿命，驻留大地的仙人。',
-    '正式位列仙班，掌握五行法则，肉身与神魂彻底蜕变为仙体。',
-    '仙力纯正，对天地规则的领悟更加高深，超脱因果。',
-    '证得不朽，肉身与神魂万劫不灭，寿与天齐。',
-    '比金仙更进一步，开始摸索并掌控特定的「道」。',
-    '仙人极致，超脱命运长河，一切时空永恒自在，跳出三界外。',
-    '大罗金仙到圣人的过渡，需斩善尸、恶尸、自身尸方可突破。',
-    '元神寄托天道，天道不灭则圣人不死，一念可演化宇宙。',
-    '合道层次，鸿钧老祖境界，掌控天、地、人、魔、佛、妖六道。',
-    '大道本源，盘古开天前的混沌层次，超越一切存在与虚无。',
-];
-
-// ── ATK 倍率（0-17）──
-const XIUWEI_ATK = [
-    1.00, 1.15, 1.35,                  // 凡人境
-    1.60, 1.90,                         // 超凡境
-    2.25, 2.65, 3.10,                   // 渡劫境
-    3.60, 4.20, 4.85,                   // 基础仙人
-    5.60, 6.40, 7.30,                   // 高阶仙人
-    8.30, 9.50, 11.00, 13.00,           // 至高主宰
-];
-
-// ── DEF / HP 倍率（0-17）──
-const XIUWEI_DEF = [
-    1.00, 1.12, 1.28,
-    1.48, 1.72,
-    2.00, 2.32, 2.68,
-    3.08, 3.52, 4.00,
-    4.52, 5.08, 5.68,
-    6.32, 7.00, 7.80, 8.80,
-];
-const XIUWEI_HP = XIUWEI_DEF; // HP 與 DEF 使用相同倍率
-
-// ── 技能觸發機率額外加成（0-17）──
-const XIUWEI_SKILL_BONUS = [
-    0.00, 0.00, 0.05,
-    0.10, 0.15,
-    0.20, 0.25, 0.30,
-    0.35, 0.40, 0.45,
-    0.50, 0.55, 0.60,
-    0.65, 0.70, 0.80, 0.95,
-];
-
-// ── 技能傷害加成（0-17）──
-const XIUWEI_DMG_BONUS = [
-    0, 0, 0,
-    0, 0,
-    1, 1, 1,
-    2, 2, 3,
-    3, 4, 4,
-    5, 5, 6, 8,
-];
-
-// ── 升境所需碎片（從境界 n 升至 n+1）──
-const XIUWEI_COSTS = [
-    3, 6, 12,           // 炼气→筑基→金丹
-    20, 35,             // →元婴→化神
-    55, 80, 120,        // →合体→大乘→渡劫
-    180, 260, 380,      // →人仙→天仙→真仙
-    550, 800, 1200,     // →金仙→太乙→大罗
-    1800, 2800, 5000,   // →准圣→圣人→道级
-    // 大道级為最高境界，無需升級
-];
-
-const XIUWEI_MAX = XIUWEI_NAMES.length - 1; // 17
-
-// 非人族起始修為下限（人仙 = 第8階）
-const XIUWEI_NONHUMAN_MIN = 8;
-// 人族類型（目前洪荒無人族卡牌，留作擴充）
-const XIUWEI_HUMAN_TYPES  = ['人族'];
-
-/** 取得卡牌修為最低下限（非人族最低為人仙） */
-function getXiuweiFloor(cardType) {
-    return XIUWEI_HUMAN_TYPES.includes(cardType) ? 0 : XIUWEI_NONHUMAN_MIN;
-}
-
-/** 取得卡牌當前修為等級（非人族至少人仙） */
-function getCardXiuwei(cardId, cardType) {
-    const stored = (window.playerCardStars && window.playerCardStars[cardId]) || 0;
-    const floor  = getXiuweiFloor(cardType);
-    return Math.min(Math.max(stored, floor), XIUWEI_MAX);
-}
-
-/** 初始化角色卡：擴大 HP×100 並賦予 ATK/DEF（含修為加成） */
+/** 初始化角色卡：擴大 HP×100 並賦予 ATK/DEF */
 function initCharCard(card) {
     if (card._statsInited || card.isBasic || card.type === '計策' || card.type === '突發事件') return;
     const s = CHAR_STATS[card.id] || TYPE_STAT_DEFAULTS[card.type] || { atk:50, def:12 };
-
-    const xw = getCardXiuwei(card.id, card.type);
-    card._xiuwei = xw;
-    card._xiuweiFloor = getXiuweiFloor(card.type);
-
-    card.atk = Math.round(s.atk * XIUWEI_ATK[xw]);
-    card.def = Math.round(s.def * XIUWEI_DEF[xw]);
+    card.atk = s.atk;
+    card.def = s.def;
     if (typeof card.hp === 'number') {
-        card.hp    = Math.round(card.hp    * 100 * XIUWEI_HP[xw]);
-        card.maxHp = Math.round(card.maxHp * 100 * XIUWEI_HP[xw]);
+        card.hp    = card.hp    * 100;
+        card.maxHp = card.maxHp * 100;
     }
     card._statsInited = true;
 }
-
-/** 修為技能加成：回傳調整後觸發機率 */
-function xiuweiProcChance(card, baseChance) {
-    const xw = card._xiuwei || 0;
-    return Math.min(1.0, baseChance + XIUWEI_SKILL_BONUS[xw]);
-}
-
-/** 修為技能傷害加成 */
-function xiuweiDmgBonus(card) {
-    return XIUWEI_DMG_BONUS[card._xiuwei || 0] || 0;
-}
-
-// ══════════════════════════════════════════════════════
-//  陣法效果輔助函數
-// ══════════════════════════════════════════════════════
-
-// ══════════════════════════════════════════════════════
-//  裝備系統（槽位綁定在陣法上）
-// ══════════════════════════════════════════════════════
-
-/** 重新計算陣法效果（基礎值 × 已裝備物品加成） */
-function recomputeFormation(fm) {
-    if (!fm) return;
-    const base  = fm._base;
-    const items = fm.equippedItems || [];
-    const doubleMulti = (fm._firstTurnDouble && fm._firstTurn) ? 2 : 1;
-
-    const boost = (type) => items.reduce((s, e) => {
-        const all = e.allFormBoost || 0;
-        if (type === 'atk')    return s + all + (e.atkFormBoost    || 0);
-        if (type === 'def')    return s + all + (e.defFormBoost    || 0);
-        if (type === 'debuff') return s + all + (e.debuffFormBoost || 0);
-        if (type === 'heal')   return s + all + (e.defFormBoost    || 0) + (e.healFormBoost || 0);
-        return s + all;
-    }, 0);
-
-    fm.atkBuff       = (base.atkBuff       || 0) * (1 + boost('atk'))    * doubleMulti;
-    fm.dmgReduce     = (base.dmgReduce     || 0) * (1 + boost('def'))    * doubleMulti;
-    fm.atkDebuff     = (base.atkDebuff     || 0) * (1 + boost('debuff')) * doubleMulti;
-    fm.healPerTurn   = (base.healPerTurn   || 0) * (1 + boost('heal'))   * doubleMulti;
-    fm.dotDmgPerTurn = (base.dotDmgPerTurn || 0)                         * doubleMulti;
-    fm.triggerReduce = (base.triggerReduce || 0) * (1 + boost('debuff')) * doubleMulti;
-    fm.skillBonus    = (base.skillBonus    || 0);
-}
-
-/** 裝備法寶到當前陣法 */
-function equipItem(card, isPlayer) {
-    const fm = isPlayer ? myFormation : oppFormation;
-    if (!fm) {
-        if (isPlayer) toast('⚠ 尚未布下陣法！需先布陣才能裝備法寶。', 'warn', 3000);
-        return false;
-    }
-    const maxSlots = fm.slots || 0;
-    if (fm.equippedItems.length >= maxSlots) {
-        if (isPlayer) toast(`⚠ 陣法槽位已滿（${fm.equippedItems.length}/${maxSlots}）！`, 'warn', 2500);
-        return false;
-    }
-    const eq = { ...(card.equipment || {}), id: card.id, name: card.name };
-    fm.equippedItems.push(eq);
-    recomputeFormation(fm);
-
-    if (isPlayer) {
-        toast(`⚙ <b>${card.name}</b> 裝入 ${fm.name}（${fm.equippedItems.length}/${maxSlots} 槽）`, 'gold', 3000);
-        // 顯示被動效果
-        const hints = [];
-        if (eq.passiveAtkBoost)   hints.push(`攻擊+${Math.round(eq.passiveAtkBoost*100)}%`);
-        if (eq.passiveDmgReduce)  hints.push(`減傷+${Math.round(eq.passiveDmgReduce*100)}%`);
-        if (eq.passiveSkillBonus) hints.push(`技能觸發+${Math.round(eq.passiveSkillBonus*100)}%`);
-        if (eq.enemyFormDecay)    hints.push(`敵陣每回合-${eq.enemyFormDecay}回`);
-        if (hints.length) toast(`✨ 被動效果：${hints.join('・')}`, 'success', 2500);
-        // onDeployDmg 立即觸發
-        if (eq.onDeployDmg) {
-            const oppM = [...oppBoard.active, ...oppBoard.bench].find(c => c && c.type === '聖人');
-            if (oppM) {
-                oppM.hp = Math.max(0, oppM.hp - eq.onDeployDmg * 100);
-                toast(`💥 <b>${card.name}</b> 震懾 — 敵方主公受到 ${eq.onDeployDmg} 點傷害！`, 'skill', 2500);
-            }
-        }
-    }
-    renderFormationUI();
-    return true;
-}
-
-/** 取得陣法裝備的持久被動加成 */
-function getEquipPassive(isPlayer, prop) {
-    const fm = isPlayer ? myFormation : oppFormation;
-    const hasFormation = !!fm;
-    const items = fm?.equippedItems || [];
-    return items.reduce((sum, eq) => {
-        let val = eq[prop] || 0;
-        if (hasFormation && eq.id === 'eq10') val *= 2;   // 開天珠：有陣法時加倍
-        if (hasFormation && eq.id === 'eq08' && prop === 'passiveDmgReduce') val += 0.08; // 玲瓏寶塔
-        return sum + val;
-    }, 0);
-}
-
-/** 啟動陣法（無裝備，裝備後再 recompute） */
-function activateFormation(card, isPlayer) {
-    const fm  = card.formation || {};
-    const base = {
-        atkBuff: fm.atkBuff || 0, dmgReduce: fm.dmgReduce || 0,
-        atkDebuff: fm.atkDebuff || 0, healPerTurn: fm.healPerTurn || 0,
-        dotDmgPerTurn: fm.dotDmgPerTurn || 0,
-        triggerReduce: fm.triggerReduce || 0, skillBonus: fm.skillBonus || 0,
-    };
-    const state = {
-        id: card.id, name: card.name,
-        slots: fm.slots || 0,
-        turnsLeft: fm.duration || 3,
-        equippedItems: [],
-        _base: base, _firstTurn: true, _firstTurnDouble: false,
-        // 初始效果（無裝備）
-        ...base,
-    };
-    if (isPlayer) {
-        myFormation = state;
-        toast(`🔱 <b>${card.name}</b> 布陣完成！持續 ${state.turnsLeft} 回合${state.slots > 0 ? `・法寶槽 ${state.slots} 個` : ''}`, 'gold', 3500);
-    } else {
-        oppFormation = state;
-    }
-    renderFormationUI();
-}
-
-/** 獲取己方攻擊倍率（含陣法加成） */
-function getFormationAtkMult(isPlayerAttacking) {
-    const myFm = isPlayerAttacking ? myFormation : oppFormation;
-    return 1 + (myFm?.atkBuff || 0);
-}
-
-/** 獲取敵方受到攻擊時的削弱倍率 */
-function getFormationDebuffMult(isPlayerAttacking) {
-    // 防守方的陣法可以削弱攻方 ATK
-    const defenderFm = isPlayerAttacking ? oppFormation : myFormation;
-    return 1 - (defenderFm?.atkDebuff || 0);
-}
-
-/** 獲取受傷減免倍率（防守方陣法） */
-function getFormationDmgReduce(isPlayerDefending) {
-    const fm = isPlayerDefending ? myFormation : oppFormation;
-    return 1 - (fm?.dmgReduce || 0);
-}
-
-/** 修為+陣法 技能觸發機率 */
-function getEffectiveProcChance(card, baseChance, isPlayer) {
-    const xwBonus = XIUWEI_SKILL_BONUS[card._xiuwei || 0] || 0;
-    const fmBonus = isPlayer ? (myFormation?.skillBonus || 0) : (oppFormation?.skillBonus || 0);
-    const fmDebuff = isPlayer ? (oppFormation?.triggerReduce || 0) : (myFormation?.triggerReduce || 0);
-    return Math.min(1.0, baseChance + xwBonus + fmBonus - fmDebuff);
-}
-
-/** 每回合陣法持續效果（回血/點傷） */
-function tickFormation(isPlayerTurn) {
-    // 己方陣法：回合開始回血
-    if (isPlayerTurn && myFormation && myFormation.healPerTurn > 0) {
-        const allUnits = [...myBoard.active, ...myBoard.bench].filter(Boolean);
-        allUnits.forEach(c => {
-            if (c.hp > 0) c.hp = Math.min(c.maxHp, Math.round(c.hp + c.maxHp * myFormation.healPerTurn));
-        });
-        toast(`🌿 <b>${myFormation.name}</b> — 天地靈氣回復！`, 'success', 2000);
-    }
-    // 對手陣法：其持續傷害在對手回合處理
-    if (!isPlayerTurn && oppFormation && oppFormation.healPerTurn > 0) {
-        const allUnits = [...oppBoard.active, ...oppBoard.bench].filter(Boolean);
-        allUnits.forEach(c => {
-            if (c.hp > 0) c.hp = Math.min(c.maxHp, Math.round(c.hp + c.maxHp * oppFormation.healPerTurn));
-        });
-    }
-    // dotDmg：我方陣法在己方回合結束時傷害敵方主公
-    if (isPlayerTurn && myFormation && myFormation.dotDmgPerTurn > 0) {
-        const oppM = [...oppBoard.active, ...oppBoard.bench].find(c => c && c.type === '聖人');
-        if (oppM) {
-            oppM.hp = Math.max(0, oppM.hp - myFormation.dotDmgPerTurn * 100);
-            toast(`⚔ <b>${myFormation.name}</b> 侵蝕 — 敵方主公受到 ${myFormation.dotDmgPerTurn} 點傷害！`, 'skill', 2000);
-        }
-    }
-    if (!isPlayerTurn && oppFormation && oppFormation.dotDmgPerTurn > 0) {
-        const myM = [...myBoard.active, ...myBoard.bench].find(c => c && c.type === '聖人');
-        if (myM) {
-            myM.hp = Math.max(0, myM.hp - oppFormation.dotDmgPerTurn * 100);
-        }
-    }
-}
-
-/** 回合末陣法倒計時（含裝備：落魂燈加速敵方陣法消耗、firstTurn重置） */
-function tickdownFormation(isPlayerTurn) {
-    if (isPlayerTurn && myFormation) {
-        // 結束第一回合標記（混元金斗首回翻倍效果）
-        if (myFormation._firstTurn) {
-            myFormation._firstTurn = false;
-            if (myFormation._firstTurnDouble) recomputeFormation(myFormation);
-        }
-        myFormation.turnsLeft--;
-        // 落魂燈：玩家裝備可加速敵方陣法消耗
-        const decay = (myFormation.equippedItems || []).reduce((s, e) => s + (e.enemyFormDecay || 0), 0);
-        if (decay > 0 && oppFormation) {
-            oppFormation.turnsLeft -= decay;
-            toast(`🕯 <b>落魂燈</b> 侵蝕 — 敵方陣法消耗加速！`, 'warn', 2000);
-        }
-        if (myFormation.turnsLeft <= 0) {
-            toast(`💨 <b>${myFormation.name}</b> 效果結束`, 'info', 2000);
-            myFormation = null;
-        }
-    }
-    if (!isPlayerTurn && oppFormation) {
-        if (oppFormation._firstTurn) {
-            oppFormation._firstTurn = false;
-            if (oppFormation._firstTurnDouble) recomputeFormation(oppFormation);
-        }
-        oppFormation.turnsLeft--;
-        // 對手落魂燈加速我方陣法消耗
-        const decay = (oppFormation?.equippedItems || []).reduce((s, e) => s + (e.enemyFormDecay || 0), 0);
-        if (decay > 0 && myFormation) myFormation.turnsLeft -= decay;
-        if (oppFormation && oppFormation.turnsLeft <= 0) oppFormation = null;
-    }
-    renderFormationUI();
-}
-
-/** 渲染戰場陣法顯示（含裝備槽位） */
-function renderFormationUI() {
-    const myEl  = document.getElementById('my-formation-display');
-    const oppEl = document.getElementById('opp-formation-display');
-
-    function renderFm(el, fm, isPlayer) {
-        if (!el) return;
-        if (!fm) {
-            el.style.display = 'none';
-            el.innerHTML = '';
-            return;
-        }
-        el.style.display = 'flex';
-        el.style.flexDirection = 'column';
-        el.style.gap = '3px';
-
-        // 效果標籤
-        const effects = [];
-        if (fm.atkBuff > 0)       effects.push(`⚔+${Math.round(fm.atkBuff*100)}%`);
-        if (fm.dmgReduce > 0)     effects.push(`🛡-${Math.round(fm.dmgReduce*100)}%`);
-        if (fm.atkDebuff > 0)     effects.push(`💀敵攻-${Math.round(fm.atkDebuff*100)}%`);
-        if (fm.healPerTurn > 0)   effects.push(`💚+${Math.round(fm.healPerTurn*100)}%/回`);
-        if (fm.dotDmgPerTurn > 0) effects.push(`☠️傷${fm.dotDmgPerTurn}/回`);
-        if (fm.triggerReduce > 0) effects.push(`🚫技能-${Math.round(fm.triggerReduce*100)}%`);
-        if (fm.skillBonus > 0)    effects.push(`✨技能+${Math.round(fm.skillBonus*100)}%`);
-
-        // 裝備槽位
-        const slotTotal = fm.slots || 0;
-        const equipped  = fm.equippedItems || [];
-        let slotsHTML = '';
-        if (slotTotal > 0) {
-            const slotEls = [];
-            for (let i = 0; i < slotTotal; i++) {
-                const eq = equipped[i];
-                if (eq) {
-                    slotEls.push(`<span title="${eq.name}" style="padding:1px 5px;border-radius:3px;background:rgba(232,197,71,0.2);border:1px solid rgba(232,197,71,0.5);font-size:9px;color:#e8c547;white-space:nowrap;">⚙${eq.name}</span>`);
-                } else {
-                    slotEls.push(`<span style="padding:1px 5px;border-radius:3px;border:1px dashed #333;font-size:9px;color:#333;white-space:nowrap;">空槽</span>`);
-                }
-            }
-            slotsHTML = `<div style="display:flex;gap:3px;flex-wrap:wrap;">${slotEls.join('')}</div>`;
-        }
-
-        el.innerHTML = `
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                <span style="font-size:11px;color:#e8c547;font-weight:900;">🔱 ${_esc(fm.name)}</span>
-                <span style="font-size:10px;color:#a07aff;">${effects.join(' ')}</span>
-                <span style="font-size:10px;color:#555;margin-left:auto;">${fm.turnsLeft}回合</span>
-            </div>
-            ${slotsHTML}`;
-    }
-
-    renderFm(myEl,  myFormation,  true);
-    renderFm(oppEl, oppFormation, false);
-    renderAll();
-}
-
-function renderEquipmentUI() { renderFormationUI(); }
-
-// 將修為常數暴露為全域，供 lobby.js 使用
-window.XIUWEI_NAMES         = XIUWEI_NAMES;
-window.XIUWEI_ICONS         = XIUWEI_ICONS;
-window.XIUWEI_COLORS        = XIUWEI_COLORS;
-window.XIUWEI_STAGE         = XIUWEI_STAGE;
-window.XIUWEI_DESC          = XIUWEI_DESC;
-window.XIUWEI_COSTS         = XIUWEI_COSTS;
-window.XIUWEI_ATK           = XIUWEI_ATK;
-window.XIUWEI_DEF           = XIUWEI_DEF;
-window.XIUWEI_SKILL_BONUS   = XIUWEI_SKILL_BONUS;
-window.XIUWEI_DMG_BONUS     = XIUWEI_DMG_BONUS;
-window.XIUWEI_NONHUMAN_MIN  = XIUWEI_NONHUMAN_MIN;
-window.XIUWEI_HUMAN_TYPES   = XIUWEI_HUMAN_TYPES;
-window.getXiuweiFloor       = getXiuweiFloor;
 
 // 階段名稱對照
 // PHASE_NAMES 已整併至 PHASES，移除重複宣告
@@ -651,6 +199,10 @@ function runLoadingScreen() {
 //  INIT GAME
 // ==============================================================
 function initGame() {
+    // 對戰開始：隱藏左上角頭像/防火牆/成就等按鈕
+    const _topBtns = document.getElementById('top-left-btns');
+    if (_topBtns) _topBtns.style.display = 'none';
+
     // 重置狀態
     myBoard  = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
     oppBoard = { active:[null,null,null,null,null], bench:[null,null,null,null,null], discard:[] };
@@ -681,16 +233,16 @@ function initGame() {
 
     // 取得在點將臺選擇的君主，若無則隨機給一個
     let targetMonarch = cardDatabase.find(c => c.id === window.selectedMonarchId);
-    if (!targetMonarch) targetMonarch = cardDatabase.find(c => c.type === '聖人');
+    if (!targetMonarch) targetMonarch = cardDatabase.find(c => c.type === '君王');
     const myMonarch = { ...targetMonarch, uid: 'init_M_' + Math.random().toString(36).slice(2,11) };
 
     // 保底一張大將軍
-    const myGeneral = extract('大神');
+    const myGeneral = extract('大將軍');
 
     // ── 教學模式：給予固定手牌（確保教學步驟可正確引導）──
     if (window.TUTORIAL_MODE) {
-        const tutKill = cardDatabase.find(c => c.name === '道術 (殺)' && c.isBasic)
-                     || cardDatabase.find(c => c.name && (c.name.includes('殺') || c.name.includes('道術') || c.name.includes('三昧真火') || c.name.includes('天雷劈') || c.name.includes('水遁')));
+        const tutKill = cardDatabase.find(c => c.name === '殺' && c.isBasic)
+                     || cardDatabase.find(c => c.name.includes('殺'));
         myHand = [
             myMonarch,
             myGeneral,
@@ -711,24 +263,24 @@ function initGame() {
 
     // 十全武功：開局額外攜帶兩張突擊卡
     if (myMonarch.skillName === '十全武功') {
-        const atkBase = cardDatabase.find(c => c.name.includes('道術') && c.isBasic);
+        const atkBase = cardDatabase.find(c => c.name.includes('突擊') && c.isBasic);
         if (atkBase) {
             myHand.push({ ...atkBase, uid: 'qql_1_' + Date.now() });
-            myHand.push({ ...atkBase, uid: 'qql_2_' + (Date.now() + 1) }); // L-1 Fix：避免同毫秒重複 UID
+            myHand.push({ ...atkBase, uid: 'qql_2_' + Date.now() });
             toast('👑 <b>乾隆 · 十全武功</b> — 開局攜帶 2 張突擊！', 'gold', 3000);
         }
     }
 
     // ------ 對手牌組 ------
     oppDeck = generateDeck(true);
-    let oppMonarchData = cardDatabase.filter(c => c.type === '聖人');
+    let oppMonarchData = cardDatabase.filter(c => c.type === '君王');
     const oppMonarch = { ...oppMonarchData[Math.floor(Math.random() * oppMonarchData.length)], uid: 'init_opp_M' };
     const extractOpp = (type) => {
         const i = oppDeck.findIndex(c => c.type === type);
         if (i !== -1) return oppDeck.splice(i, 1)[0];
         return { ...cardDatabase.find(c => c.type === type), uid:'opp_init_' + type };
     };
-    const oppGeneral = extractOpp('大神');
+    const oppGeneral = extractOpp('大將軍');
 
     if (window.GAME_MODE === 'host') {
         // 主機：為客方發 7 張起始手牌
@@ -746,8 +298,8 @@ function initGame() {
             const idx = oppHandData.findIndex(c => c.type === type);
             return idx !== -1 ? oppHandData.splice(idx, 1)[0] : null;
         };
-        const aiM  = aiTake('聖人');
-        const aiG1 = aiTake('大神');
+        const aiM  = aiTake('君王');
+        const aiG1 = aiTake('大將軍');
         if (aiM)  { initCharCard(aiM);  oppBoard.active[2] = aiM; }
         if (aiG1) { initCharCard(aiG1); oppBoard.active[1] = aiG1; }
     }
@@ -828,10 +380,10 @@ function updateHUDs() {
     safe('opp-hand-count',  oppHandData.length);
 
     // 君主血條：在前排 + 後排全場搜尋君王類型卡片
-    const _myM  = myBoard.active.find(c => c && c.type === '聖人')
-               || myBoard.bench.find(c => c && c.type === '聖人');
-    const _oppM = oppBoard.active.find(c => c && c.type === '聖人')
-               || oppBoard.bench.find(c => c && c.type === '聖人');
+    const _myM  = myBoard.active.find(c => c && c.type === '君王')
+               || myBoard.bench.find(c => c && c.type === '君王');
+    const _oppM = oppBoard.active.find(c => c && c.type === '君王')
+               || oppBoard.bench.find(c => c && c.type === '君王');
     const myMhp  = document.getElementById('my-monarch-hp');
     const oppMhp = document.getElementById('opp-monarch-hp');
     const myMbar  = document.getElementById('my-monarch-hp-fill');
@@ -863,15 +415,15 @@ function updateHUDs() {
         el.className   = `sys-stat ${_sysClass(data.hp, data.max)}`;
         el.title       = `${label}：${data.hp} / ${data.max}`;
     };
-    const _mil = ['大神', '天仙'];
+    const _mil = ['大將軍', '將軍'];
     _setStat('my-stat-mil',   '⚔', '兵力', _sysSum(myBoard,  _mil));
-    _setStat('my-stat-log',   '🌾', '儲備', _sysSum(myBoard,  ['靈獸']));
-    _setStat('my-stat-dom',   '🏛', '民心', _sysSum(myBoard,  ['巫族']));
-    _setStat('my-stat-insp',  '👁', '忠誠', _sysSum(myBoard,  ['妖族']));
+    _setStat('my-stat-log',   '🌾', '儲備', _sysSum(myBoard,  ['後勤']));
+    _setStat('my-stat-dom',   '🏛', '民心', _sysSum(myBoard,  ['內政']));
+    _setStat('my-stat-insp',  '👁', '忠誠', _sysSum(myBoard,  ['監察']));
     _setStat('opp-stat-mil',  '⚔', '兵力', _sysSum(oppBoard, _mil));
-    _setStat('opp-stat-log',  '🌾', '儲備', _sysSum(oppBoard, ['靈獸']));
-    _setStat('opp-stat-dom',  '🏛', '民心', _sysSum(oppBoard, ['巫族']));
-    _setStat('opp-stat-insp', '👁', '忠誠', _sysSum(oppBoard, ['妖族']));
+    _setStat('opp-stat-log',  '🌾', '儲備', _sysSum(oppBoard, ['後勤']));
+    _setStat('opp-stat-dom',  '🏛', '民心', _sysSum(oppBoard, ['內政']));
+    _setStat('opp-stat-insp', '👁', '忠誠', _sysSum(oppBoard, ['監察']));
 
     safe('phase-display',   PHASES[currentPhaseIndex]);
 
@@ -953,11 +505,11 @@ function makeCardEl(card) {
     const artValue = card.img || CARD_ART[card.type] || '📜';
     const isImagePath = artValue.toLowerCase().includes('.png') || artValue.toLowerCase().includes('.jpg');
     const artHtml = isImagePath 
-        ? `<img src="${_esc(artValue)}" alt="${_esc(card.name)}">` // L-6/L-7 Fix
+        ? `<img src="${artValue}" alt="${card.name}">` 
         : artValue;
 
     const badge = card.skillName
-        ? `<div class="skill-badge" title="${_esc(card.skillName)}">${_esc(card.skillName)}</div>` : ''; // M-5 Fix
+        ? `<div class="skill-badge" title="${card.skillName}">${card.skillName}</div>` : '';
     
     // 象徵物元件
     const symbolHtml = card.symbolItem 
@@ -988,41 +540,32 @@ function makeCardEl(card) {
           </div>${statsRow}`;
     }
 
-    // 修為指示器（角色卡皆顯示，讓玩家知道當前境界）
-    const xw = card._xiuwei || 0;
-    const xwColor = XIUWEI_COLORS[xw] || '#aaa';
-    const xiuweiHtml = isChar
-        ? `<div class="card-xiuwei" title="${XIUWEI_STAGE[xw]}・${XIUWEI_NAMES[xw]}" style="color:${xwColor};border-color:${xwColor}40;">${XIUWEI_ICONS[xw]}${XIUWEI_NAMES[xw]}</div>`
-        : '';
-
     el.innerHTML = `
-      <div class="card-dynasty">${_esc(card.dynasty || '')}</div>
-      <div class="card-type">${_esc(card.type || '')}</div>
+      <div class="card-dynasty">${card.dynasty || ''}</div>
+      <div class="card-type">${card.type || ''}</div>
       ${badge}
-      ${xiuweiHtml}
       <div class="card-art">${artHtml}</div>
-      <div class="card-name">${_esc(card.name || '')}</div>
+      <div class="card-name">${card.name || ''}</div>
       ${symbolHtml}
       ${hpHtml}
-    `; /* M-6 Fix: XSS 轉義 */
+    `;
     return el;
 }
 
 function typeClass(type) {
     const m = {
-        '聖人':'theme-monarch','大神':'theme-commander','天仙':'theme-general',
-        '金仙':'theme-tactician','靈獸':'theme-logistics','巫族':'theme-domestic',
-        '妖族':'theme-inspector','陣法':'theme-formation','裝備':'theme-equipment',
-        '計策':'theme-spell','突發事件':'theme-trap'
+        '君王':'theme-monarch','大將軍':'theme-commander','將軍':'theme-general',
+        '軍師':'theme-tactician','後勤':'theme-logistics','內政':'theme-domestic',
+        '監察':'theme-inspector','計策':'theme-spell','突發事件':'theme-trap'
     };
     return m[type] || 'theme-default';
 }
 
 /** 根據兵種回傳對應屬性名稱與圖標 */
 function getStatMeta(type) {
-    if (type === '靈獸') return { atkLabel:'靈力', defLabel:'損耗', hpLabel:'靈氣', atkIcon:'🐉', defIcon:'📦' };
-    if (type === '巫族') return { atkLabel:'巫力', defLabel:'壓制', hpLabel:'巫氣', atkIcon:'🌿', defIcon:'🏛' };
-    if (type === '妖族') return { atkLabel:'妖術', defLabel:'反制', hpLabel:'煞氣', atkIcon:'👁', defIcon:'🔒' };
+    if (type === '後勤') return { atkLabel:'運輸', defLabel:'損耗', hpLabel:'儲備', atkIcon:'🚚', defIcon:'📦' };
+    if (type === '內政') return { atkLabel:'開發', defLabel:'治安', hpLabel:'民心', atkIcon:'🌾', defIcon:'🏛' };
+    if (type === '監察') return { atkLabel:'諜報', defLabel:'反間', hpLabel:'忠誠', atkIcon:'🕵', defIcon:'🔒' };
     return { atkLabel:'攻擊', defLabel:'防禦', hpLabel:'兵力', atkIcon:'⚔', defIcon:'🛡' };
 }
 
@@ -1044,24 +587,24 @@ function isSystemCritical(board, type) {
 /** 系統整體狀態標籤文字（用於輸贏提示與卡牌顯示）*/
 function getSystemStatusText(type, pct) {
     if (pct < 0) return '';
-    if (type === '靈獸') return pct > 0.60 ? '靈脈充盈' : pct > 0.30 ? '靈氣平穩' : '捉襟見肘';
-    if (type === '巫族') return pct > 0.60 ? '巫力鼎盛' : pct > 0.30 ? '巫力尚存' : '妖亂四起';
-    if (type === '妖族') return pct > 0.60 ? '煞氣凌雲' : pct > 0.30 ? '煞氣尚存' : '人人自危';
+    if (type === '後勤') return pct > 0.60 ? '糧倉充盈' : pct > 0.30 ? '物資平衡' : '捉襟見肘';
+    if (type === '內政') return pct > 0.60 ? '安居樂業' : pct > 0.30 ? '民怨不生' : '民怨四起';
+    if (type === '監察') return pct > 0.60 ? '上下一心' : pct > 0.30 ? '職守本分' : '人人自危';
     return '';
 }
 
 /** 單位屬性等級標籤（運輸/損耗/開發/治安/諜報/反間 顯示 高/中/低 或特殊文字）*/
 function getStatLevelLabel(val, type, statType) {
     if (!val) return '';
-    if (type === '靈獸') {
+    if (type === '後勤') {
         if (statType === 'atk') return val >= 45 ? '高' : val >= 38 ? '中' : '低';         // 運輸
         if (statType === 'def') return val >= 18 ? '低損耗' : val >= 14 ? '中損耗' : '高損耗'; // 損耗(反向)
     }
-    if (type === '巫族') {
+    if (type === '內政') {
         if (statType === 'atk') return val >= 42 ? '+50%' : val >= 36 ? '+20%' : '±0%';    // 開發
         if (statType === 'def') return val >= 18 ? '高' : val >= 14 ? '中' : '低';          // 治安
     }
-    if (type === '妖族') {
+    if (type === '監察') {
         if (statType === 'atk') return val >= 32 ? '高' : val >= 28 ? '中' : '低';          // 諜報
         if (statType === 'def') return val >= 12 ? '高' : val >= 10 ? '中' : '低';          // 反間
     }
@@ -1081,21 +624,21 @@ function showPreview(card) {
     const artValue = card.img || CARD_ART[card.type] || '📜';
     const isImagePath = artValue.toLowerCase().includes('.png') || artValue.toLowerCase().includes('.jpg');
     const artHtml = isImagePath 
-        ? `<img src="${_esc(artValue)}" alt="${_esc(card.name)}">` // L-6/L-7 Fix
+        ? `<img src="${artValue}" alt="${card.name}">` 
         : artValue;
     el.innerHTML = `
       <div class="preview-card ${typeClass(card.type)}">
         <div class="preview-header">
-          <div class="preview-name">${_esc(card.name)}</div>
-          <div class="preview-meta">[${_esc(card.dynasty)}] · ${_esc(card.type)}</div>
+          <div class="preview-name">${card.name}</div>
+          <div class="preview-meta">[${card.dynasty}] · ${card.type}</div>
         </div>
         <div class="preview-art">${artHtml}</div>
         <div class="preview-body">
-          <div class="preview-desc">${_esc(card.desc || '')}</div>
+          <div class="preview-desc">${card.desc || ''}</div>
           ${card.skillName ? `<div class="preview-skill">
-            <div class="preview-skill-name">【${_esc(card.skillName)}】</div>
-            <div class="preview-skill-desc">${_esc(card.skillDesc || '')}</div>
-          </div>` : ''} <!-- M-7 Fix: XSS escape -->
+            <div class="preview-skill-name">【${card.skillName}】</div>
+            <div class="preview-skill-desc">${card.skillDesc || ''}</div>
+          </div>` : ''}
           ${(card.hp !== '-' && card.hp !== undefined) ? (() => {
             const pm = getStatMeta(card.type);
             const atkInfo = card.atk ? `<div class="preview-stat-row"><span>${pm.atkIcon} ${pm.atkLabel}：${card.atk}</span><span>${pm.defIcon} ${pm.defLabel}：${card.def || 0}</span></div>` : '';
@@ -1213,8 +756,6 @@ function endPlayerTurn() {
     // 回合結束清算
     attacksThisTurn = 0;
     wineBuff = 0; // 回合結束，酒效果消失
-    // 陣法倒計時
-    tickdownFormation(true);
     [...myBoard.active, ...myBoard.bench].forEach(c => { if (c) { delete c._dmgBonus; c._xiangBuff = false; } });
 
     // 仁德（劉備）：回合結束，多餘手牌轉換成君主血量
@@ -1248,7 +789,7 @@ function startMyTurn() {
     if (!gameActive) { gameActive = true; }
     isPlayerTurn = true;
     currentPhaseIndex = 0;
-    // L-4 Fix：wineBuff 只在 endPlayerTurn 重置，startMyTurn 不重複重置
+    wineBuff = 0; // 回合結束重置酒效果
     updateHUDs();
     // 綠色閃屏
     const gc = document.getElementById('game-container');
@@ -1256,8 +797,6 @@ function startMyTurn() {
     toast(`🌅 第 ${turnCount} 回合 — 您的回合開始！`, 'gold', 2000);
 
     setTimeout(() => {
-        // 陣法持續效果（回血/點傷）
-        tickFormation(true);
         drawCard();
         execTurnStartSkills(true);
         currentPhaseIndex = 2;
@@ -1301,10 +840,7 @@ function execTurnStartSkills(isPlayer) {
         if (c.statusEffects && c.statusEffects.includes('poison')) {
             c.hp = Math.max(0, c.hp - 20);
             if (isPlayer) {
-                // Fix A：正確判斷中毒單位所在的 zone 與 index，避免後營單位顯示在前排插槽
-                const _poisZone = board.active.includes(c) ? 'active' : 'bench';
-                const _poisIdx  = board[_poisZone].indexOf(c);
-                spawnDmgPopup(20, getSlotEl(`my-${_poisZone}-zone`, _poisIdx));
+                spawnDmgPopup(20, getSlotEl('my-active-zone', board.active.indexOf(c) !== -1 ? board.active.indexOf(c) : 0));
                 toast(`☠ <b>${c.name}</b> 毒發傷血 20！`, 'danger', 2000);
                 _SFX.poison();
             }
@@ -1312,11 +848,9 @@ function execTurnStartSkills(isPlayer) {
                 c.hp = 0;
                 const zoneKey = board.active.includes(c) ? 'active' : 'bench';
                 const zoneIdx = board[zoneKey].indexOf(c);
-                execOnKill(null, c, !isPlayer); // Fix：中毒死亡，execOnKill(null,...) 內部呼叫 execOnDeath 並觸發 on-kill 技能
                 board[zoneKey][zoneIdx] = null;
                 board.discard.push(c);
                 if (isPlayer) renderBoard(); else renderOppBoard();
-                checkWinCondition(); // H-2 Fix：中毒死亡後判斷勝負
             }
         }
 
@@ -1425,10 +959,10 @@ function execTurnStartSkills(isPlayer) {
 
         // ── 黃袍加身（宋太祖）── 手牌中第一張事件/計策卡 → 固守
         if (c.skillName === '黃袍加身' && isPlayer) {
-            const fixIdx = hand.findIndex(h => h.type === '突發事件' || (h.type === '計策' && !h.name.includes('護法') && !h.name.includes('道術')));
+            const fixIdx = hand.findIndex(h => h.type === '突發事件' || (h.type === '計策' && !h.name.includes('固守') && !h.name.includes('突擊')));
             if (fixIdx !== -1) {
                 const fixCard = hand[fixIdx];
-                const dodgeBase = cardDatabase.find(d => d.name.includes('護法') && d.isBasic);
+                const dodgeBase = cardDatabase.find(d => d.name.includes('固守') && d.isBasic);
                 if (dodgeBase) {
                     hand[fixIdx] = { ...dodgeBase, uid: 'hpj_' + Date.now() };
                     toast(`👑 <b>${c.name} · 黃袍加身</b> — 將 <b>${fixCard.name}</b> 轉換為固守！`, 'gold', 3000);
@@ -1460,16 +994,6 @@ function execTurnStartSkills(isPlayer) {
                 spawnDmgPopup(25, getSlotEl('my-active-zone', pi));
                 toast(`🖤 <b>${c.name} · 黑衣</b> — 暗中刺傷 ${pTarget.name}！`, 'danger', 2500);
                 _SFX.skill();
-                // Fix：黑衣造成致命傷時需處理死亡
-                if (pTarget.hp <= 0) {
-                    pTarget.hp = 0;
-                    toast(`💀 <b>${pTarget.name}</b> 被黑衣刺殺！`, 'danger', 3000);
-                    execOnKill(c, pTarget, false); // AI 黑衣，isPlayerAttacking=false
-                    myBoard.active[pi] = null;
-                    myBoard.discard.push(pTarget);
-                    renderBoard(); updateHUDs();
-                    checkWinCondition();
-                }
             }
         }
     });
@@ -1477,7 +1001,7 @@ function execTurnStartSkills(isPlayer) {
     // ── 系統被動效果（按系統整體計算）───────────────────
 
     // 後勤系統
-    const logUnits = allUnits.filter(c => c && c.type === '靈獸');
+    const logUnits = allUnits.filter(c => c && c.type === '後勤');
     if (logUnits.length > 0) {
         const avgLogAtk = logUnits.reduce((s, c) => s + (c.atk || 0), 0) / logUnits.length;
         const avgLogDef = logUnits.reduce((s, c) => s + (c.def || 0), 0) / logUnits.length;
@@ -1499,7 +1023,7 @@ function execTurnStartSkills(isPlayer) {
     }
 
     // 內政系統
-    const domUnits = allUnits.filter(c => c && c.type === '巫族');
+    const domUnits = allUnits.filter(c => c && c.type === '內政');
     if (domUnits.length > 0) {
         const avgDomAtk = domUnits.reduce((s, c) => s + (c.atk || 0), 0) / domUnits.length;
         // 開發高(+50%) → 每回合額外抽 1 張
@@ -1515,7 +1039,7 @@ function execTurnStartSkills(isPlayer) {
     }
 
     // 監察系統
-    const inspUnits = allUnits.filter(c => c && c.type === '妖族');
+    const inspUnits = allUnits.filter(c => c && c.type === '監察');
     if (inspUnits.length > 0) {
         const avgInspAtk  = inspUnits.reduce((s, c) => s + (c.atk || 0), 0) / inspUnits.length;
         const avgInspDef  = inspUnits.reduce((s, c) => s + (c.def || 0), 0) / inspUnits.length;
@@ -1587,14 +1111,11 @@ function execAoEDamage(targetIdx, targetZone, isPlayerAttacking) {
             arr[i].hp = 0;
             toast(`💀 <b>${arr[i].name}</b> 在大火中陣亡！`, 'danger', 3000);
             _SFX.death();
-            const attacker = isPlayerAttacking ? myBoard.active.find(c=>c) : oppBoard.active.find(c=>c);
-            execOnKill(attacker, arr[i], isPlayerAttacking); // C-1 Fix（execOnKill 內部已呼叫 execOnDeath）
             board.discard.push(arr[i]);
             arr[i] = null;
         }
     });
     if (isPlayerAttacking) renderOppBoard(); else renderBoard();
-    checkWinCondition(); // H-3 Fix：AoE 死亡後判斷勝負
 }
 
 function execDefenseMods(defender, dmg) {
@@ -1616,7 +1137,7 @@ function execDefenseMods(defender, dmg) {
     }
 
     // 保衛（于謙）：君主受到致命傷害時，于謙代為承受（全場限一次）
-    if (defender.type === '聖人' && defender.hp <= dmg) {
+    if (defender.type === '君王' && defender.hp <= dmg) {
         const isMyMonarch = myBoard.active[2] === defender;
         const allyBoard2  = isMyMonarch ? myBoard : oppBoard;
         const yuQian = [...allyBoard2.active, ...allyBoard2.bench].find(c => c && c.skillName === '保衛' && c.hp > 0 && !c._baoWeiUsed);
@@ -1632,13 +1153,9 @@ function execDefenseMods(defender, dmg) {
             if (isMyMonarch) renderBoard(); else renderOppBoard();
             if (yuQian.hp <= 0) {
                 yuQian.hp = 0;
-                toast(`💀 <b>${yuQian.name}</b> 為國捐軀！`, 'danger', 3000);
-                _SFX.death();
-                // Fix R3-8：保衛犧牲時需呼叫 execOnKill 觸發死亡技能
-                // isPlayerAttacking 依據誰擁有 yuQian 來判斷：isMyMonarch=true 代表玩家的于謙護玩家君主，敵方攻擊，isPlayerAttacking=false
-                execOnKill(null, yuQian, !isMyMonarch);
                 allyBoard2[yqZone][yqIdx] = null;
                 allyBoard2.discard.push(yuQian);
+                toast(`💀 <b>${yuQian.name}</b> 為國捐軀！`, 'danger', 3000);
                 if (isMyMonarch) renderBoard(); else renderOppBoard();
             }
             return 0; // 君主免受傷害
@@ -1646,7 +1163,7 @@ function execDefenseMods(defender, dmg) {
     }
 
     // 攝政 + 柱石 只對君主生效
-    if (defender.type === '聖人') {
+    if (defender.type === '君王') {
         const isMyMonarch = myBoard.active[2] === defender;
         const allyBoard   = isMyMonarch ? myBoard : oppBoard;
         const zonePrefix  = isMyMonarch ? 'my' : 'opp';
@@ -1661,16 +1178,6 @@ function execDefenseMods(defender, dmg) {
             spawnDmgPopup(dmg, getSlotEl(`${zonePrefix}-${dZone}-zone`, dZoneIdx));
             toast(`🛡 <b>${dorgon.name} · 攝政</b> — 替主公承受 ${dmg} 傷害！`, 'skill');
             _SFX.skill();
-            // Fix C：攝政承傷致死時，需呼叫 execOnKill 並從場上移除多爾袞
-            if (dorgon.hp <= 0) {
-                dorgon.hp = 0;
-                toast(`💀 <b>${dorgon.name}</b> 攝政殉國！`, 'danger', 3000);
-                _SFX.death();
-                execOnKill(null, dorgon, !isMyMonarch); // 攝政為我方君主擋傷：isPlayerAttacking = !isMyMonarch
-                allyBoard[dZone][dZoneIdx] = null;
-                allyBoard.discard.push(dorgon);
-                checkWinCondition();
-            }
             if (isMyMonarch) renderBoard(); else renderOppBoard();
             return 0;
         }
@@ -1714,17 +1221,12 @@ function execOnKill(attacker, deadCard, isPlayerAttacking) {
                 deadBoard.bench[bi] = null;
                 deadBoard.discard.push(benchTarget);
                 toast(`🗡 <b>${killerMonarch.name} · 削藩</b> — 強制裁撤 ${benchTarget.name}！`, 'skill');
-                // Fix：削藩裁撤需呼叫 execOnKill（含 on-kill 加成 + on-death），攻擊方為 null
-                execOnKill(null, benchTarget, isPlayerAttacking);
                 if (isPlayerAttacking) renderOppBoard(); else renderBoard();
             }
         }
         // 蘇定方（生擒）：擊殺後將敵將加入手牌
         if (attacker.skillName === '生擒' && isPlayerAttacking) {
             const copy = { ...deadCard, uid: 'captured_' + Date.now(), _captured: true };
-            // H-5 Fix：從敵方棄牌堆移除，避免雙重計入大將軍/將軍死亡條件
-            const discardIdx = oppBoard.discard.indexOf(deadCard);
-            if (discardIdx !== -1) oppBoard.discard.splice(discardIdx, 1);
             myHand.push(copy);
             renderHand(); updateHUDs();
             toast(`⚔ <b>${attacker.name} · 生擒</b> — 俘虜 <b>${deadCard.name}</b> 入手牌！`, 'skill');
@@ -1756,19 +1258,15 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
     }
 
     // 楊漣（死諫）：臨死帶走一名敵方武將
-    // Fix B：加入遞迴防護旗標，防止雙方均有死諫時無限遞迴
-    if (deadCard.skillName === '死諫' && !deadCard._siJianTriggered) {
-        deadCard._siJianTriggered = true; // 標記已觸發，防止連鎖遞迴
+    if (deadCard.skillName === '死諫') {
         const enemyBoard = isOwnerPlayer ? oppBoard : myBoard;
-        const victims = enemyBoard.active.filter(c => c && c.type !== '聖人');
+        const victims = enemyBoard.active.filter(c => c && c.type !== '君王');
         if (victims.length > 0) {
             const v = victims[Math.floor(Math.random() * victims.length)];
             const vi = enemyBoard.active.indexOf(v);
             enemyBoard.active[vi] = null;
             enemyBoard.discard.push(v);
             toast(`💀 <b>${deadCard.name} · 死諫</b> — 臨終拉下 <b>${v.name}</b>！`, 'danger', 3500);
-            // Fix：死諫拉走的武將需呼叫 execOnKill（無攻擊方），確保所有死亡鏈正確觸發
-            execOnKill(null, v, !isOwnerPlayer);
             if (!isOwnerPlayer) renderOppBoard(); else renderBoard();
             _SFX.death();
         }
@@ -1782,9 +1280,7 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
     }
 
     // 遺計（郭嘉）on death：補抽 2 張（玩家陣亡）
-    // Fix D：execDamageResponse 已在受傷時補抽 2 張；若郭嘉一擊斃命（未觸發 execDamageResponse）
-    // 則在此補抽，但使用旗標防止受傷+死亡路徑重複抽 4 張
-    if (deadCard.skillName === '遺計' && isOwnerPlayer && !deadCard._yijiDrawnOnHit) {
+    if (deadCard.skillName === '遺計' && isOwnerPlayer) {
         setTimeout(() => { drawCard(true); drawCard(true); }, 400);
         toast(`📜 <b>郭嘉 · 遺計</b> — 魂歸遺計，補抽 2 張！`, 'skill');
     }
@@ -1805,7 +1301,6 @@ function execDamageResponse(injured, isPlayerInjured) {
         }
     }
     if (injured.skillName === '遺計' && isPlayerInjured) {
-        injured._yijiDrawnOnHit = true; // Fix D：標記已在受傷時抽牌，防止死亡時重複抽
         drawCard(true); drawCard(true);
         toast(`📜 <b>郭嘉 · 遺計</b> — 受傷連抽 2 張！`, 'skill');
     }
@@ -1827,29 +1322,11 @@ function handleHandClick(handIndex) {
         return;
     }
 
-    // ─── 陣法卡 ────────────────────────────────────
-    if (card.type === '陣法') {
-        _consumeHandCard(handIndex, card);
-        activateFormation(card, true);
-        return;
-    }
-
-    // ─── 裝備卡 ────────────────────────────────────
-    if (card.type === '裝備') {
-        if (!myFormation) {
-            toast('⚠ 需先布下陣法，才能裝備法寶！', 'warn', 3000);
-            return;
-        }
-        const success = equipItem(card, true);
-        if (success) _consumeHandCard(handIndex, card);
-        return;
-    }
-
     // ─── ACTION CARDS ───────────────────────────────
     if (card.type === '計策' || card.type === '突發事件' || card.isBasic) {
         // 所有「殺」類攻擊牌：先選攻擊武將，再選目標
-        const isAnyKill = card.name.includes('道術') || card.name.includes('三昧真火') ||
-                          card.name.includes('天雷劈') || card.name.includes('水遁');
+        const isAnyKill = card.name.includes('突擊') || card.name.includes('火殺') ||
+                          card.name.includes('雷殺') || card.name.includes('水殺');
         if (isAnyKill) {
             const validAttackers = myBoard.active.filter(c => c !== null && c.atk);
             if (validAttackers.length === 0) {
@@ -1857,7 +1334,7 @@ function handleHandClick(handIndex) {
                 return;
             }
             interactionState = { mode:'select_attacker', pendingCardIndex:handIndex, selectedCard:card, attacker:null };
-            const emoji = card.name.includes('三昧真火') ? '🔥' : card.name.includes('天雷劈') ? '⚡' : card.name.includes('水遁') ? '💧' : '⚔';
+            const emoji = card.name.includes('火殺') ? '🔥' : card.name.includes('雷殺') ? '⚡' : card.name.includes('水殺') ? '💧' : '⚔';
             showHint(`${emoji} 選擇出擊武將（點擊己方主將區武將）`);
             highlightAttackers();
             return;
@@ -1917,8 +1394,7 @@ function handleHandClick(handIndex) {
                 const tgt = allOppUnits[Math.floor(Math.random() * allOppUnits.length)];
                 toast(`🌉 <b>過河拆橋</b> — 強制棄置 <b>${tgt.c.name}</b>！`, 'attack');
                 _SFX.attack();
-                const qhqAttacker = myBoard.active.find(u => u !== null);
-                execOnKill(qhqAttacker, tgt.c, true); // Fix：玩家發動過河拆橋，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
+                execOnDeath(tgt.c, oppBoard, false);
                 oppBoard[tgt.zone][tgt.i] = null;
                 oppBoard.discard.push(tgt.c);
                 renderOppBoard(); updateHUDs();
@@ -1980,7 +1456,7 @@ function handleHandClick(handIndex) {
             let nanDelay = 400;
             nanTargets.forEach(tgt => {
                 setTimeout(() => {
-                    const killIdx = oppHandData.findIndex(c => c.name && (c.name.includes('殺') || c.name.includes('道術') || c.name.includes('三昧真火') || c.name.includes('天雷劈') || c.name.includes('水遁')));
+                    const killIdx = oppHandData.findIndex(c => c.name && c.name.includes('殺'));
                     if (killIdx !== -1) {
                         const kc = oppHandData.splice(killIdx, 1)[0];
                         oppBoard.discard.push(kc);
@@ -1992,13 +1468,7 @@ function handleHandClick(handIndex) {
                         tgt.hp = Math.max(0, tgt.hp - 25);
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`⚔ <b>${tgt.name}</b> 無法應對，受 25 點傷害！`, 'danger', 1500);
-                        if (tgt.hp <= 0) {
-                            execOnKill(null, tgt, true); // execOnKill 內部已呼叫 execOnDeath
-                            oppBoard[tgtZone][tgtIdx] = null;
-                            oppBoard.discard.push(tgt);
-                            renderOppBoard(); updateHUDs();
-                            if (checkWinCondition()) { _maybeSyncHost(); return; } // C-2 Fix
-                        }
+                        if (tgt.hp <= 0) { execOnKill(null, tgt, true); oppBoard[tgtZone][tgtIdx] = null; oppBoard.discard.push(tgt); }
                     }
                     renderOppBoard(); updateHUDs();
                 }, nanDelay);
@@ -2016,7 +1486,7 @@ function handleHandClick(handIndex) {
             let wanDelay = 400;
             wanTargets.forEach(tgt => {
                 setTimeout(() => {
-                    const dodgeIdx = oppHandData.findIndex(c => c.name && c.name.includes('護法'));
+                    const dodgeIdx = oppHandData.findIndex(c => c.name && c.name.includes('固守'));
                     if (dodgeIdx !== -1) {
                         const dc = oppHandData.splice(dodgeIdx, 1)[0];
                         oppBoard.discard.push(dc);
@@ -2028,13 +1498,7 @@ function handleHandClick(handIndex) {
                         tgt.hp = Math.max(0, tgt.hp - 25);
                         spawnDmgPopup(25, getSlotEl('opp-' + tgtZone + '-zone', tgtIdx));
                         toast(`🏹 <b>${tgt.name}</b> 無法閃避，受 25 點傷害！`, 'danger', 1500);
-                        if (tgt.hp <= 0) {
-                            execOnKill(null, tgt, true); // execOnKill 內部已呼叫 execOnDeath
-                            oppBoard[tgtZone][tgtIdx] = null;
-                            oppBoard.discard.push(tgt);
-                            renderOppBoard(); updateHUDs();
-                            if (checkWinCondition()) { _maybeSyncHost(); return; } // C-2 Fix
-                        }
+                        if (tgt.hp <= 0) { execOnKill(null, tgt, true); oppBoard[tgtZone][tgtIdx] = null; oppBoard.discard.push(tgt); }
                     }
                     renderOppBoard(); updateHUDs();
                 }, wanDelay);
@@ -2055,7 +1519,7 @@ function handleHandClick(handIndex) {
             _consumeHandCard(handIndex, card);
             let healCount = 0;
             [...myBoard.active, ...myBoard.bench].forEach(c => {
-                if (c && c.type === '靈獸' && c.hp < c.maxHp) {
+                if (c && c.type === '後勤' && c.hp < c.maxHp) {
                     const h = Math.floor(c.maxHp * 0.20);
                     c.hp = Math.min(c.maxHp, c.hp + h);
                     spawnDmgPopup(h, getSlotEl(myBoard.active.includes(c) ? 'my-active-zone' : 'my-bench-zone',
@@ -2073,15 +1537,14 @@ function handleHandClick(handIndex) {
         if (card.name.includes('截斷糧道')) {
             _consumeHandCard(handIndex, card);
             const oppLogistics = [
-                ...oppBoard.active.map((c,i) => c && c.type === '靈獸' ? {c,z:'active',i} : null),
-                ...oppBoard.bench.map((c,i)  => c && c.type === '靈獸' ? {c,z:'bench',i}  : null)
+                ...oppBoard.active.map((c,i) => c && c.type === '後勤' ? {c,z:'active',i} : null),
+                ...oppBoard.bench.map((c,i)  => c && c.type === '後勤' ? {c,z:'bench',i}  : null)
             ].filter(Boolean);
             if (oppLogistics.length > 0) {
                 const tgt = oppLogistics[Math.floor(Math.random() * oppLogistics.length)];
                 toast(`✂ <b>截斷糧道</b> — 截斷 <b>${tgt.c.name}</b> 的補給線，強制退場！`, 'attack');
                 _SFX.attack();
-                const jdAttacker = myBoard.active.find(u => u !== null);
-                execOnKill(jdAttacker, tgt.c, true); // Fix：玩家發動截斷糧道，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
+                execOnDeath(tgt.c, oppBoard, false);
                 oppBoard[tgt.z][tgt.i] = null; oppBoard.discard.push(tgt.c);
                 renderOppBoard(); updateHUDs();
             } else {
@@ -2092,14 +1555,7 @@ function handleHandClick(handIndex) {
                     c.hp = Math.max(0, c.hp - 30);
                     const z = i < 5 ? 'opp-active-zone' : 'opp-bench-zone';
                     spawnDmgPopup(30, getSlotEl(z, i < 5 ? i : i - 5));
-                    if (c.hp <= 0) {
-                        const zoneKey = i < 5 ? 'active' : 'bench';
-                        const zoneIdx = i < 5 ? i : i - 5;
-                        const attacker = myBoard.active.find(u => u !== null);
-                        execOnKill(attacker, c, true); // Fix：玩家使用截斷糧道，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
-                        oppBoard[zoneKey][zoneIdx] = null;
-                        oppBoard.discard.push(c);
-                    }
+                    if (c.hp <= 0) { oppBoard[i < 5 ? 'active' : 'bench'][i < 5 ? i : i-5] = null; oppBoard.discard.push(c); }
                 });
                 renderOppBoard(); updateHUDs();
             }
@@ -2111,7 +1567,7 @@ function handleHandClick(handIndex) {
             _consumeHandCard(handIndex, card);
             let healed = 0;
             [...myBoard.active, ...myBoard.bench].forEach(c => {
-                if (c && c.type === '巫族' && c.hp < c.maxHp) {
+                if (c && c.type === '內政' && c.hp < c.maxHp) {
                     const h = Math.floor(c.maxHp * 0.20);
                     c.hp = Math.min(c.maxHp, c.hp + h); healed++;
                 }
@@ -2126,19 +1582,12 @@ function handleHandClick(handIndex) {
             _consumeHandCard(handIndex, card);
             let hit = 0;
             [...oppBoard.active, ...oppBoard.bench].forEach((c, i) => {
-                if (!c || c.type !== '巫族') return;
+                if (!c || c.type !== '內政') return;
                 const dmg = Math.floor(c.maxHp * 0.20);
                 c.hp = Math.max(0, c.hp - dmg); hit++;
                 const z = i < 5 ? 'opp-active-zone' : 'opp-bench-zone';
                 spawnDmgPopup(dmg, getSlotEl(z, i < 5 ? i : i-5));
-                if (c.hp <= 0) {
-                    const zoneKey2 = i < 5 ? 'active' : 'bench';
-                    const zoneIdx2 = i < 5 ? i : i - 5;
-                    const attacker2 = myBoard.active.find(u => u !== null);
-                    execOnKill(attacker2, c, true); // Fix：玩家使用橫徵暴斂，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
-                    oppBoard[zoneKey2][zoneIdx2] = null;
-                    oppBoard.discard.push(c);
-                }
+                if (c.hp <= 0) { oppBoard[i < 5 ? 'active' : 'bench'][i < 5 ? i : i-5] = null; oppBoard.discard.push(c); }
             });
             if (hit > 0) {
                 toast(`💸 <b>橫徵暴斂</b> — ${hit} 名內政官員民心大損！`, 'attack');
@@ -2158,7 +1607,7 @@ function handleHandClick(handIndex) {
         // 反間計：強制棄置對手 2 張手牌；若己方有監察武將加棄 1 張
         if (card.name.includes('反間計')) {
             _consumeHandCard(handIndex, card);
-            const myJiancha = [...myBoard.active, ...myBoard.bench].some(c => c && c.type === '妖族');
+            const myJiancha = [...myBoard.active, ...myBoard.bench].some(c => c && c.type === '監察');
             const discardCount = myJiancha ? 3 : 2;
             let actual = 0;
             for (let i = 0; i < discardCount && oppHandData.length > 0; i++) {
@@ -2196,10 +1645,10 @@ function handleHandClick(handIndex) {
         // 所有後勤武將回復 40% 儲備；若儲備低危，額外再回復 20%，且本回合後勤武將標記免傷
         if (card.name.includes('緊急補給')) {
             _consumeHandCard(handIndex, card);
-            const isCrit = isSystemCritical(myBoard, '靈獸');
+            const isCrit = isSystemCritical(myBoard, '後勤');
             let healed = 0;
             [...myBoard.active, ...myBoard.bench].forEach(c => {
-                if (c && c.type === '靈獸') {
+                if (c && c.type === '後勤') {
                     const h = Math.floor(c.maxHp * (isCrit ? 0.60 : 0.40));
                     c.hp = Math.min(c.maxHp, c.hp + h); healed++;
                     c._emergencyShield = true; // 本回合免傷標記
@@ -2213,10 +1662,10 @@ function handleHandClick(handIndex) {
         // 所有內政武將回復 30% 民心；若民心低危，主公額外恢復 50 兵力，並抽 1 張牌
         if (card.name.includes('勸諫書')) {
             _consumeHandCard(handIndex, card);
-            const isCritDom = isSystemCritical(myBoard, '巫族');
+            const isCritDom = isSystemCritical(myBoard, '內政');
             let healedDom = 0;
             [...myBoard.active, ...myBoard.bench].forEach(c => {
-                if (c && c.type === '巫族') {
+                if (c && c.type === '內政') {
                     const h = Math.floor(c.maxHp * 0.30);
                     c.hp = Math.min(c.maxHp, c.hp + h); healedDom++;
                 }
@@ -2235,10 +1684,10 @@ function handleHandClick(handIndex) {
         // 若忠誠低危，恢復所有監察武將至 50% 忠誠；否則全體回復 30% 並令對手棄 1 張牌
         if (card.name.includes('整頓綱紀')) {
             _consumeHandCard(handIndex, card);
-            const isCritInsp = isSystemCritical(myBoard, '妖族');
+            const isCritInsp = isSystemCritical(myBoard, '監察');
             let healedInsp = 0;
             [...myBoard.active, ...myBoard.bench].forEach(c => {
-                if (c && c.type === '妖族') {
+                if (c && c.type === '監察') {
                     const target = isCritInsp ? Math.floor(c.maxHp * 0.50) : Math.floor(c.maxHp * 0.30);
                     if (isCritInsp) c.hp = Math.max(c.hp, target);
                     else c.hp = Math.min(c.maxHp, c.hp + target);
@@ -2257,7 +1706,7 @@ function handleHandClick(handIndex) {
             toast(`👁 <b>整頓綱紀</b> — ${healedInsp} 名監察官員忠誠整頓${modeMsg}${extraMsg2}！`, 'heal', 3000);
             _SFX.skill(); renderBoard(); updateHUDs(); _maybeSyncHost(); return;
         }
-        if (card.type === '突發事件' || card.name.includes('護法')) {
+        if (card.type === '突發事件' || card.name.includes('固守')) {
             toast(`⚠ <b>${card.name}</b> 是響應型卡，請留在手牌等待觸發！`, 'warn');
             return;
         }
@@ -2295,7 +1744,7 @@ function _placeCharacterCard(handIndex, card, board, isPlayer) {
     const sideClass = isPlayer ? 'my' : 'opp';
     const hand = isPlayer ? myHand : oppHandData;
 
-    if (card.type === '聖人') {
+    if (card.type === '君王') {
         if (board.active[2] !== null) {
             if (isPlayer) toast('⚠ 主公專屬位已有人了！', 'warn');
             return false;
@@ -2305,7 +1754,7 @@ function _placeCharacterCard(handIndex, card, board, isPlayer) {
         board.active[2] = card;
         toast(`${isPlayer ? '👑' : '👺'} <b>${card.name}</b> ${isPlayer ? '君臨主將區' : '降臨戰場'}！`, isPlayer ? 'gold' : 'danger');
         placed = true;
-    } else if (card.type === '大神' || card.type === '天仙') {
+    } else if (card.type === '大將軍' || card.type === '將軍') {
         const si = board.active.findIndex((s, i) => s === null && i !== 2);
         if (si === -1) {
             if (isPlayer) toast('⚠ 主將區已滿！', 'warn');
@@ -2351,7 +1800,7 @@ function _placeCharacterCard(handIndex, card, board, isPlayer) {
 
     if (placed) {
         // 知人善任（劉邦）：每部將上場，主公恢復約 5% HP
-        if (card.type !== '聖人') {
+        if (card.type !== '君王') {
             const myM = board.active[2];
             const liubang = board.active.find(c => c && c.skillName === '知人善任');
             if (liubang && myM && myM.hp < myM.maxHp) {
@@ -2400,7 +1849,7 @@ function _placeCharacterCard(handIndex, card, board, isPlayer) {
         // 日月當空（武則天）：敵方下怪 20% 機率直接誘降
         if (!isPlayer) {
             const wuzetian = myBoard.active.find(c => c && c.skillName === '日月當空');
-            if (wuzetian && Math.random() < 0.2 && card.type !== '聖人') {
+            if (wuzetian && Math.random() < 0.2 && card.type !== '君王') {
                 // Remove from opponent board
                 const za = oppBoard.active.indexOf(card);
                 const zb = oppBoard.bench.indexOf(card);
@@ -2446,16 +1895,16 @@ function aiExecuteFreeAttack() {
 
 /** 客方出牌處理（發送意圖給主機） */
 function _guestHandCardAction(handIndex, card) {
-    const isAction = card.type === '計策' || card.type === '突發事件' || card.type === '陣法' || card.type === '裝備' || card.isBasic;
+    const isAction = card.type === '計策' || card.type === '突發事件' || card.isBasic;
 
     if (isAction) {
         // 客方殺牌：自動選取第一個可用武將作為攻擊者，直接進入目標選擇
-        const isAnyKillG = card.name.includes('道術') || card.name.includes('三昧真火') ||
-                           card.name.includes('天雷劈') || card.name.includes('水遁');
+        const isAnyKillG = card.name.includes('突擊') || card.name.includes('火殺') ||
+                           card.name.includes('雷殺') || card.name.includes('水殺');
         if (isAnyKillG) {
             const autoAttacker = myBoard.active.find(c => c !== null && c.atk) || myBoard.active.find(c => c !== null);
             interactionState = { mode:'select_target_enemy', pendingCardIndex:handIndex, selectedCard:card, attacker:autoAttacker };
-            const emoji = card.name.includes('三昧真火') ? '🔥' : card.name.includes('天雷劈') ? '⚡' : card.name.includes('水遁') ? '💧' : '⚔';
+            const emoji = card.name.includes('火殺') ? '🔥' : card.name.includes('雷殺') ? '⚡' : card.name.includes('水殺') ? '💧' : '⚔';
             showHint(`${emoji} 選擇攻擊目標（點擊對手武將）`);
             highlightEnemies();
             return;
@@ -2479,7 +1928,7 @@ function _guestHandCardAction(handIndex, card) {
             Network.send('guest_action', { type:'spell', spellType:'草船借箭', cardUid:card.uid });
             return;
         }
-        if (card.type === '突發事件' || card.name.includes('護法')) {
+        if (card.type === '突發事件' || card.name.includes('固守')) {
             toast(`⚠ <b>${card.name}</b> 是響應型卡，請留在手牌！`, 'warn');
             return;
         }
@@ -2493,14 +1942,14 @@ function _guestHandCardAction(handIndex, card) {
 
     // 人物牌：本地樂觀更新 + 發送給主機
     let target = 'bench';
-    if (card.type === '聖人' || card.type === '大神' || card.type === '天仙') target = 'active';
+    if (card.type === '君王' || card.type === '大將軍' || card.type === '將軍') target = 'active';
 
     initCharCard(card); // HP×100 + ATK/DEF（客方本地更新也需初始化）
 
     // 客方的 myBoard 映射到主機的 oppBoard
     let placed = false;
     if (target === 'active') {
-        if (card.type === '聖人' && myBoard.active[2] === null) {
+        if (card.type === '君王' && myBoard.active[2] === null) {
             myBoard.active[2] = card; placed = true;
         } else {
             const si = myBoard.active.findIndex((s, i) => s === null && i !== 2);
@@ -2545,7 +1994,7 @@ function handleMyBoardClick(card, zone, idx) {
         interactionState.mode = 'select_target_enemy';
         clearHighlights();
         const sel = interactionState.selectedCard;
-        const emoji = sel && sel.name.includes('三昧真火') ? '🔥' : sel && sel.name.includes('天雷劈') ? '⚡' : sel && sel.name.includes('水遁') ? '💧' : '⚔';
+        const emoji = sel && sel.name.includes('火殺') ? '🔥' : sel && sel.name.includes('雷殺') ? '⚡' : sel && sel.name.includes('水殺') ? '💧' : '⚔';
         showHint(`${emoji} <b>${card.name}</b>（攻:${card.atk} 守:${card.def}）→ 選擇敵方目標`);
         highlightEnemies();
         return;
@@ -2610,9 +2059,7 @@ function handleOppCardClick(card, zone, idx) {
                 myHand.splice(interactionState.pendingCardIndex, 1);
                 renderHand();
             }
-            // C-3 Fix：傳送攻擊者 ATK，讓主機端能正確計算傷害
-            const _atk = interactionState.attacker ? (interactionState.attacker.atk || 60) : 60;
-            Network.send('guest_action', { type:'attack', targetZone:zone, targetIdx:idx, attackerAtk:_atk });
+            Network.send('guest_action', { type:'attack', targetZone:zone, targetIdx:idx });
             toast('⚔ 攻擊指令已送出，等待主機結算...', 'info', 2500);
         }
         interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null, attacker:null };
@@ -2635,14 +2082,12 @@ function handleOppCardClick(card, zone, idx) {
         const slotEl = getSlotEl('opp-bench-zone', idx);
         spawnSkillFx('🔥', slotEl);
         toast(`🔥 <b>釜底抽薪</b> — ${card.name} 遭到強制破壞！`, 'attack');
-        const fudiAttacker = interactionState.attacker || myBoard.active.find(u => u !== null);
-        execOnKill(fudiAttacker, card, true); // Fix：玩家發動釜底抽薪，isPlayerAttacking=true（execOnKill 內部已呼叫 execOnDeath）
+        execOnDeath(card, oppBoard, false);
         oppBoard.bench[idx] = null;
         oppBoard.discard.push(card);
         if (interactionState.pendingCardIndex >= 0) _consumeHandCard(interactionState.pendingCardIndex, sel);
         interactionState = { mode:'idle', pendingCardIndex:-1, selectedCard:null, attacker:null };
         renderOppBoard(); updateHUDs();
-        checkWinCondition(); // Fix：釜底抽薪後檢查勝負（可能殺掉關鍵武將）
         _maybeSyncHost();
         return;
     }
@@ -2651,34 +2096,30 @@ function handleOppCardClick(card, zone, idx) {
     let { unDodgeable, ignoreFirstDodge, extraDmg, hasAoE, hasFireLianYing, hasFengLang } = execAttackMods(myBoard);
     // 取得實際攻擊者
     const attacker = interactionState.attacker || myBoard.active.find(c => c !== null);
-    const isFire    = sel && sel.name && sel.name.includes('三昧真火');
-    const isThunder = sel && sel.name && sel.name.includes('天雷劈');
-    const isWater   = sel && sel.name && sel.name.includes('水遁');
+    const isFire    = sel && sel.name && sel.name.includes('火殺');
+    const isThunder = sel && sel.name && sel.name.includes('雷殺');
+    const isWater   = sel && sel.name && sel.name.includes('水殺');
     if (isFire) unDodgeable = true;
-    // 計算基礎傷害（攻擊者 ATK × 陣法加成 × 裝備被動加成）
-    const baseAtk        = attacker ? attacker.atk : 60;
-    const mult           = isThunder ? 1.5 : 1.0;
-    const eqAtkPassive   = 1 + getEquipPassive(true, 'passiveAtkBoost');
-    const fmAtkMult      = getFormationAtkMult(true) * getFormationDebuffMult(true) * eqAtkPassive;
-    let baseDmg          = Math.floor(baseAtk * mult * fmAtkMult) + extraDmg;
+    // 計算基礎傷害（使用攻擊者 ATK）
+    const baseAtk   = attacker ? attacker.atk : 60;
+    const mult      = isThunder ? 1.5 : 1.0;
+    let baseDmg     = Math.floor(baseAtk * mult) + extraDmg;
     // 酒 buff
-    if (wineBuff > 0 && sel && sel.name && (sel.name.includes('殺') || sel.name.includes('道術') || sel.name.includes('三昧真火') || sel.name.includes('天雷劈') || sel.name.includes('水遁'))) {
+    if (wineBuff > 0 && sel && sel.name && (sel.name.includes('殺') || sel.name.includes('突擊'))) {
         const wb = wineBuff; wineBuff = 0;
         const wineBonus = Math.floor(baseAtk * 0.30 * wb);
         baseDmg += wineBonus;
         toast(`🍷 <b>酒勁爆發</b>（${attacker?.name || '未知武將'}）— 額外 ${wineBonus} 傷！`, 'skill'); // H-7 Fix
     }
-    // 火殺：完全無視防禦；套用防守方陣法+裝備減傷
-    const rawDmg        = isFire ? baseDmg : Math.max(1, baseDmg - (card.def || 0));
-    const eqDmgReduce   = 1 - getEquipPassive(false, 'passiveDmgReduce');
-    let dmg             = Math.max(1, Math.round(rawDmg * getFormationDmgReduce(false) * eqDmgReduce));
+    // 火殺：完全無視防禦，不減 DEF
+    let dmg = isFire ? baseDmg : Math.max(1, baseDmg - (card.def || 0));
     if (unDodgeable) toast(`⚔ <b>${isFire ? '火殺' : '霸王'}</b> — 攻擊無法閃避！`, 'skill');
     if (ignoreFirstDodge) toast('⚔ <b>水戰</b> — 無視對手第一張固守！', 'skill');
 
     // 在主機模式下：如果對手（客方）有防禦卡，向客方詢問
     if (window.GAME_MODE === 'host' && Network.connected) {
         const guestHasDodge = !unDodgeable && oppHandData.some(c =>
-            c.name && (c.name.includes('護法') || c.name.includes('空城計') || c.name.includes('道術')));
+            c.name && (c.name.includes('固守') || c.name.includes('空城計') || c.name.includes('突擊')));
 
         if (guestHasDodge) {
             if (interactionState.pendingCardIndex >= 0) _consumeHandCard(interactionState.pendingCardIndex, sel);
@@ -2713,23 +2154,6 @@ function handleOppCardClick(card, zone, idx) {
             card.hp = Math.max(0, card.hp - dmg);
             spawnDmgPopup(dmg, getSlotEl('opp-' + zone + '-zone', idx));
             toast(`🛡 <b>${card.name}</b> 固守減傷！（防禦削減至 ${dmg}）`, 'info');
-            // Fix G：固守減傷後若仍致死，需處理死亡邏輯
-            if (card.hp <= 0) {
-                card.hp = 0;
-                spawnSkillFx('💀', getSlotEl('opp-' + zone + '-zone', idx));
-                toast(`💀 <b>${card.name}</b> 固守後仍不敵，戰死沙場！`, 'danger', 3000);
-                _SFX.death();
-                const dodgeKillAttacker = attacker || myBoard.active.find(c => c !== null);
-                if (card.skillName === '再造' && !card._reborn) {
-                    card._reborn = true; card.hp = card.maxHp;
-                    toast(`✨ <b>${card.name} · 再造</b> — 奇蹟復活！全場限一次`, 'gold', 3000);
-                    _SFX.heal();
-                } else {
-                    execOnKill(dodgeKillAttacker, card, true);
-                    oppBoard[zone][idx] = null;
-                    oppBoard.discard.push(card);
-                }
-            }
         } else {
             toast(`🛡 <b>${card.name}</b> 固守完全格擋！`, 'info');
             _SFX.dodge();
@@ -2767,28 +2191,14 @@ function handleOppCardClick(card, zone, idx) {
                 toast(`⚔ <b>${pozheng.name} · 破陣</b> — 磨去對手 1 張牌！`, 'skill');
             }
             // 火燒連營（陸遜）：擊中君主，追加 25 傷害給隨機敵將
-            if (hasFireLianYing && card.type === '聖人') {
+            if (hasFireLianYing && card.type === '君王') {
                 const extras = [...oppBoard.active, ...oppBoard.bench].filter(u => u && u !== card && u.hp > 0);
                 if (extras.length > 0) {
                     const extraTgt = extras[Math.floor(Math.random() * extras.length)];
-                    // Fix R3-7a：正確判斷被波及單位所在的 zone 與 idx
-                    const exZone = oppBoard.active.indexOf(extraTgt) !== -1 ? 'active' : 'bench';
-                    const ei = exZone === 'active' ? oppBoard.active.indexOf(extraTgt) : oppBoard.bench.indexOf(extraTgt);
+                    const ei = oppBoard.active.indexOf(extraTgt) !== -1 ? oppBoard.active.indexOf(extraTgt) : 0;
                     extraTgt.hp = Math.max(0, extraTgt.hp - 25);
-                    spawnDmgPopup(25, getSlotEl(`opp-${exZone}-zone`, ei));
+                    spawnDmgPopup(25, getSlotEl('opp-active-zone', ei));
                     toast(`🔥 <b>火燒連營</b> — 連環引燃，波及 ${extraTgt.name}！`, 'danger', 2000);
-                    // Fix R3-7b：火燒連營連鎖致命傷時，需呼叫 execOnKill 並移除被波及武將
-                    if (extraTgt.hp <= 0) {
-                        extraTgt.hp = 0;
-                        toast(`💀 <b>${extraTgt.name}</b> 在火燒連營中陣亡！`, 'danger', 3000);
-                        _SFX.death();
-                        const fireAttacker = attacker || myBoard.active.find(c => c !== null);
-                        execOnKill(fireAttacker, extraTgt, true); // 玩家側火燒連營，isPlayerAttacking=true
-                        oppBoard[exZone][ei] = null;
-                        oppBoard.discard.push(extraTgt);
-                        renderOppBoard(); updateHUDs();
-                        checkWinCondition();
-                    }
                 }
             }
         } else {
@@ -2817,7 +2227,7 @@ function handleOppCardClick(card, zone, idx) {
         if (hasAoE) setTimeout(() => execAoEDamage(idx, zone, true), 400);
 
         // 水殺：命中後補抽一張牌
-        if (sel && sel.name && sel.name.includes('水遁')) {
+        if (sel && sel.name && sel.name.includes('水殺')) {
             toast('💧 <b>水殺</b> — 水到渠成，補抽一張牌！', 'skill');
             setTimeout(() => drawCard(true), 500);
         }
@@ -2888,53 +2298,49 @@ function clearHighlights() {
 // ==============================================================
 function checkWinCondition() {
     // ── 大將軍/將軍 陣亡條件 ─────────────────────────────────
-    const myGenDeaths = myBoard.discard.filter(c => c.type === '大神' || c.type === '天仙').length;
+    const myGenDeaths = myBoard.discard.filter(c => c.type === '大將軍' || c.type === '將軍').length;
     if (myGenDeaths >= 2) {
         toast('💀 我方兩位大將軍/將軍相繼陣亡，軍心崩潰！', 'danger', 3500);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
-    const oppGenDeaths = oppBoard.discard.filter(c => c.type === '大神' || c.type === '天仙').length;
+    const oppGenDeaths = oppBoard.discard.filter(c => c.type === '大將軍' || c.type === '將軍').length;
     if (oppGenDeaths >= 2) {
         toast('🏆 敵方兩位大將軍/將軍相繼陣亡，敵軍潰散！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
     }
 
     // ── 我方系統崩潰 → 我方敗 ────────────────────────────────
-    if (isSystemCritical(myBoard, '靈獸')) {
+    if (isSystemCritical(myBoard, '後勤')) {
         toast('🌾 後勤崩潰！糧草告急，<b>捉襟見肘</b>，軍隊無以為繼！', 'danger', 3500);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
-    if (isSystemCritical(myBoard, '巫族')) {
+    if (isSystemCritical(myBoard, '內政')) {
         toast('🏛 民心盡失！<b>民怨四起</b>，王朝根基動搖！', 'danger', 3500);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
-    if (isSystemCritical(myBoard, '妖族')) {
+    if (isSystemCritical(myBoard, '監察')) {
         toast('👁 忠誠崩潰！<b>人人自危</b>，臣心離散！', 'danger', 3500);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
         _SFX.lose(); triggerGameOver(false); return true;
     }
 
     // ── 敵方系統崩潰 → 我方勝 ────────────────────────────────
-    if (isSystemCritical(oppBoard, '靈獸')) {
+    if (isSystemCritical(oppBoard, '後勤')) {
         toast('🏆 敵方糧道斷絕，<b>捉襟見肘</b>，敵軍不戰自潰！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
     }
-    if (isSystemCritical(oppBoard, '巫族')) {
+    if (isSystemCritical(oppBoard, '內政')) {
         toast('🏆 敵境<b>民怨四起</b>，後方大亂，敵軍渙散！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
     }
-    if (isSystemCritical(oppBoard, '妖族')) {
+    if (isSystemCritical(oppBoard, '監察')) {
         toast('🏆 敵方<b>人人自危</b>，叛亂四起，土崩瓦解！', 'gold', 3500);
-        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！',hostWon:true}); triggerGameOver(true); return true;
+        _SFX.win(); if (window.GAME_MODE === 'host') Network.send('game_over',{winnerMsg:'🏆 主機獲勝！'}); triggerGameOver(true); return true;
     }
 
     // ── 敵方全軍覆沒且無牌可打 ───────────────────────────────
     const oppForces = [...oppBoard.active, ...oppBoard.bench].filter(c => c !== null);
     if (oppForces.length === 0 && oppHandData.length === 0 && oppDeck.length === 0) {
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！', hostWon: true });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！' });
         _SFX.win(); triggerGameOver(true); return true;
     }
     // ── 擊殺對方君主 ─────────────────────────────────────────
@@ -2942,14 +2348,14 @@ function checkWinCondition() {
     if (oppMonarch && oppMonarch.hp <= 0) {
         toast(`👑 <b>${oppMonarch.name}</b> 君主陣亡！`, 'gold', 3000);
         oppBoard.active[2] = null; oppBoard.discard.push(oppMonarch);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！', hostWon: true });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 主機獲勝！' });
         _SFX.win(); triggerGameOver(true); return true;
     }
     // ── 我方君主陣亡 ─────────────────────────────────────────
     const myMonarch = myBoard.active[2];
     if (myMonarch && myMonarch.hp <= 0) {
         toast(`💔 <b>${myMonarch.name}</b> 君主陣亡！城破國滅！`, 'danger', 3000);
-        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！', hostWon: false });
+        if (window.GAME_MODE === 'host') Network.send('game_over', { winnerMsg: '🏆 客方獲勝！' });
         _SFX.lose(); triggerGameOver(false); return true;
     }
     return false;
@@ -2975,17 +2381,20 @@ function _saveLeaderboardRecord(name, bestStreak) {
 }
 
 function triggerGameOver(win) {
-    if (!gameActive) return; // L-8 Fix：防止雙重觸發
+    if (!gameActive) return; // 防止雙重觸發
     gameActive = false;
     window.gameActive = false;
+
+    // 遊戲結束：還原左上角按鈕群
+    const _topBtns = document.getElementById('top-left-btns');
+    if (_topBtns) _topBtns.style.display = '';
 
     // 清除觀戰廣播狀態
     _clearSpectateState();
 
     // 教學模式：強制清除教學面板與輪詢器，避免殘留在結束畫面之上
     if (window.TUTORIAL_MODE && typeof window._endTutorial === 'function') {
-        if (win) localStorage.setItem('hua_tutorial_done', '1'); // L-10 Fix：教學勝利解鎖成就
-        window._endTutorial(false);
+        window._endTutorial(false); // false = 不跳回大廳，讓 game-over 畫面正常顯示
     }
 
     // 清除房間聊天紀錄
@@ -3020,9 +2429,7 @@ function triggerGameOver(win) {
         // ----------------
 
         // --- 寫入 Firebase 對戰記錄 ---
-        // H-1 Fix：PvP 時只由 host 端寫入，guest 端不重複
-        const _shouldRecord = !isPvP || window.GAME_MODE === 'host';
-        if (_shouldRecord && typeof Auth !== 'undefined' && Auth.current()) {
+        if (typeof Auth !== 'undefined' && Auth.current()) {
             const opponent = window.opponentNickname || (isPvP ? '未知對手' : 'AI 對手');
             Auth.recordBattle(window.GAME_MODE || 'ai', win, opponent, turnCount, totalReward).then(() => {
                 // 對戰記錄寫入後，立即檢查成就
@@ -3059,9 +2466,8 @@ function triggerGameOver(win) {
             window._updateHUD();
         }
         
-        // Fix I：AI 模式不顯示 PvP 連勝計數，避免誤導
-        const streakMsg = isPvP ? (win ? `🔥 連勝中：${currStreak}` : `💀 連勝中斷`) : '';
-        toast(`💰 結算：${win ? '勝利' : '敗北'} 獲得 ${totalReward} 銀兩！${streakMsg ? ' ' + streakMsg : ''}`, win ? 'success' : 'warn', 5000);
+        const streakMsg = win ? `🔥 連勝中：${currStreak}` : `💀 連勝中斷`;
+        toast(`💰 結算：${win ? '勝利' : '敗北'} 獲得 ${totalReward} 銀兩！ ${streakMsg}`, win ? 'success' : 'warn', 5000);
     }
 
     setTimeout(() => {
@@ -3149,10 +2555,6 @@ function applyHostState(state) {
 function startOpponentTurn() {
     if (!gameActive) return;
 
-    // 對手回合開始：對手陣法回血/點傷
-    tickFormation(false);
-    // 對手回合末：陣法倒計時（在 AI 回合後觸發，此處先留存，AI 邏輯末尾再調用）
-
     // ── 教學模式：AI 直接跳過，僅做象徵性動作 ──
     if (window.TUTORIAL_MODE) {
         isPlayerTurn = false;
@@ -3191,7 +2593,6 @@ function startOpponentTurn() {
     isPlayerTurn = false;
     currentPhaseIndex = 0;
     turnCount++;
-    tickdownFormation(false); // AI 回合末陣法倒計時
     // 紅色閃屏
     const _gc = document.getElementById('game-container');
     if (_gc) { _gc.classList.remove('my-turn-flash'); void _gc.offsetWidth; _gc.classList.add('opp-turn-flash'); setTimeout(() => _gc.classList.remove('opp-turn-flash'), 800); }
@@ -3271,7 +2672,7 @@ function aiAttackPhase() {
         let nanDelay = 500;
         nanMyTargets.forEach(tgt => {
             setTimeout(() => {
-                const killIdx = myHand.findIndex(c => c.name && c.name.includes('殺') || name.includes('道術') || name.includes('三昧真火') || name.includes('天雷劈') || name.includes('水遁'));
+                const killIdx = myHand.findIndex(c => c.name && c.name.includes('殺'));
                 if (killIdx !== -1) {
                     const kc = myHand.splice(killIdx, 1)[0];
                     myBoard.discard.push(kc);
@@ -3283,11 +2684,7 @@ function aiAttackPhase() {
                     tgt.hp = Math.max(0, tgt.hp - 25);
                     spawnDmgPopup(25, getSlotEl('my-' + tgtZone + '-zone', tgtIdx));
                     toast(`⚔ <b>${tgt.name}</b> 無法應對，受 25 點傷害！`, 'danger', 1500);
-                    if (tgt.hp <= 0) {
-                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）（execOnKill 內部已呼叫 execOnDeath）
-                        myBoard[tgtZone][tgtIdx] = null;
-                        myBoard.discard.push(tgt);
-                    }
+                    if (tgt.hp <= 0) { execOnKill(null, tgt, true); myBoard[tgtZone][tgtIdx] = null; myBoard.discard.push(tgt); }
                 }
                 renderBoard(); updateHUDs();
             }, nanDelay);
@@ -3317,7 +2714,7 @@ function aiAttackPhase() {
         let wanDelay = 500;
         wanMyTargets.forEach(tgt => {
             setTimeout(() => {
-                const dodgeIdx = myHand.findIndex(c => c.name && c.name.includes('護法'));
+                const dodgeIdx = myHand.findIndex(c => c.name && c.name.includes('固守'));
                 if (dodgeIdx !== -1) {
                     const dc = myHand.splice(dodgeIdx, 1)[0];
                     myBoard.discard.push(dc);
@@ -3329,11 +2726,7 @@ function aiAttackPhase() {
                     tgt.hp = Math.max(0, tgt.hp - 25);
                     spawnDmgPopup(25, getSlotEl('my-' + tgtZone + '-zone', tgtIdx));
                     toast(`🏹 <b>${tgt.name}</b> 無法閃避，受 25 點傷害！`, 'danger', 1500);
-                    if (tgt.hp <= 0) {
-                        execOnKill(null, tgt, false); // Fix：isPlayerAttacking=false（AI 的術殺掉玩家）（execOnKill 內部已呼叫 execOnDeath）
-                        myBoard[tgtZone][tgtIdx] = null;
-                        myBoard.discard.push(tgt);
-                    }
+                    if (tgt.hp <= 0) { execOnKill(null, tgt, true); myBoard[tgtZone][tgtIdx] = null; myBoard.discard.push(tgt); }
                 }
                 renderBoard(); updateHUDs();
             }, wanDelay);
@@ -3388,13 +2781,11 @@ function aiAttackPhase() {
             () => { setTimeout(aiAttackPhase, 800); },  // 抵消
             () => {
                 const pbi = myBoard.bench.indexOf(playerBenchTarget);
-                const fudiAiAttacker = oppBoard.active.find(u => u !== null);
-                execOnKill(fudiAiAttacker, playerBenchTarget, false); // Fix：AI 釜底抽薪，isPlayerAttacking=false（execOnKill 內部已呼叫 execOnDeath）
+                execOnDeath(playerBenchTarget, myBoard, true);
                 myBoard.bench[pbi] = null;
                 myBoard.discard.push(playerBenchTarget);
                 toast(`🔥 對手發動<b>釜底抽薪</b>，摧毀了 <b>${playerBenchTarget.name}</b>！`, 'danger', 2500);
                 renderBoard(); updateHUDs();
-                if (checkWinCondition()) return; // Fix：釜底抽薪後檢查勝負
                 setTimeout(aiAttackPhase, 900);
             }
         );
@@ -3403,7 +2794,7 @@ function aiAttackPhase() {
 
     // ─ 酒：若AI準備出殺，先飲酒增傷（50% 機率）
     const jiuAiIdx = oppHandData.findIndex(c => c.name && (c.name === '酒' || c.name.startsWith('酒')));
-    const hasKillCard = oppHandData.some(c => c.name && c.name.includes('殺') || name.includes('道術') || name.includes('三昧真火') || name.includes('天雷劈') || name.includes('水遁'));
+    const hasKillCard = oppHandData.some(c => c.name && c.name.includes('殺'));
     if (jiuAiIdx !== -1 && hasKillCard && !window._aiWineBuff && Math.random() < 0.55) {
         const jiuAiCard = oppHandData.splice(jiuAiIdx, 1)[0];
         oppBoard.discard.push(jiuAiCard);
@@ -3435,12 +2826,12 @@ function aiAttackPhase() {
 
     if (atkIdx !== -1 && hasGen && targets.length > 0) {
         // 優先：君主 → 最低血量
-        const monarchTgt = targets.find(t => t.c.type === '聖人');
+        const monarchTgt = targets.find(t => t.c.type === '君王');
         const target = monarchTgt || targets.reduce((low, t) => t.c.hp < low.c.hp ? t : low, targets[0]);
         const atkCard = oppHandData.splice(atkIdx, 1)[0];
         oppBoard.discard.push(atkCard);
         renderOppHandUI(); updateHUDs();
-        const atkEmoji = atkCard.name.includes('三昧真火') ? '🔥' : atkCard.name.includes('天雷劈') ? '⚡' : atkCard.name.includes('水遁') ? '💧' : '⚔';
+        const atkEmoji = atkCard.name.includes('火殺') ? '🔥' : atkCard.name.includes('雷殺') ? '⚡' : atkCard.name.includes('水殺') ? '💧' : '⚔';
         toast(`${atkEmoji} 敵軍對 <b>${target.c.name}</b> 發動【${atkCard.name}】！`, 'danger', 2000);
         // 標記特殊殺類型到 promptPlayerDefense，選攻擊力最高的 AI 武將
         window._aiLastAtkCard = atkCard;
@@ -3482,8 +2873,8 @@ function promptPlayerDefense(targetCard, zoneIdx, zone) {
     let isAiThunder = false;
     let isAiFire = false;
     if (_aiAtk) {
-        if (_aiAtk.name && _aiAtk.name.includes('三昧真火')) { unDodgeable = true; isAiFire = true; toast('🔥 <b>火殺</b> — 無法用固守閃避！', 'skill'); }
-        if (_aiAtk.name && _aiAtk.name.includes('天雷劈')) { isAiThunder = true; toast('⚡ <b>雷殺</b> — 雷擊威力 1.5×！', 'skill'); }
+        if (_aiAtk.name && _aiAtk.name.includes('火殺')) { unDodgeable = true; isAiFire = true; toast('🔥 <b>火殺</b> — 無法用固守閃避！', 'skill'); }
+        if (_aiAtk.name && _aiAtk.name.includes('雷殺')) { isAiThunder = true; toast('⚡ <b>雷殺</b> — 雷擊威力 1.5×！', 'skill'); }
         window._aiLastAtkCard = null;
     }
     const aiMult = isAiThunder ? 1.5 : 1.0;
@@ -3511,7 +2902,7 @@ function promptPlayerDefense(targetCard, zoneIdx, zone) {
     }
 
     // 大隕石術（光武帝劉秀）：每回合首次受攻擊，天火反擊敵方主公 1 HP
-    if (targetCard && targetCard.type === '聖人' && targetCard.skillName === '大隕石術' && !targetCard._daHitUsed) {
+    if (targetCard && targetCard.type === '君王' && targetCard.skillName === '大隕石術' && !targetCard._daHitUsed) {
         targetCard._daHitUsed = true;
         const em = oppBoard.active[2];
         if (em) {
@@ -3525,10 +2916,10 @@ function promptPlayerDefense(targetCard, zoneIdx, zone) {
         }
     }
 
-    const dodgeIdx  = myHand.findIndex(c => c.name && c.name.includes('護法'));
+    const dodgeIdx  = myHand.findIndex(c => c.name && c.name.includes('固守'));
     const spaceIdx  = myHand.findIndex(c => c.name && c.name.includes('空城計'));
     const zhaoYunIdx= (targetCard.skillName === '龍膽')
-        ? myHand.findIndex(c => c.name && c.name.includes('道術')) : -1;
+        ? myHand.findIndex(c => c.name && c.name.includes('突擊')) : -1;
     const hasDodge  = !unDodgeable && !ignoreFirstDodge && (dodgeIdx !== -1 || spaceIdx !== -1 || zhaoYunIdx !== -1);
 
     let dodgeLabel = '🛡 無防禦可用';
@@ -3590,23 +2981,13 @@ function _resolveDefenseDodge() {
     // 奪槊（尉遲恭）：閃避成功時，攻擊者 -25 HP
     const wtg = myBoard.active.find(c => c && c.skillName === '奪槊');
     if (wtg) {
-        const dodgeAttacker = oppBoard.active.find(c => c && c.type !== '聖人') || oppBoard.active.find(c => c !== null);
+        const dodgeAttacker = oppBoard.active.find(c => c && c.type !== '君王') || oppBoard.active.find(c => c !== null);
         if (dodgeAttacker) {
             const ai = oppBoard.active.indexOf(dodgeAttacker);
             dodgeAttacker.hp = Math.max(0, dodgeAttacker.hp - 25);
             spawnDmgPopup(25, getSlotEl('opp-active-zone', ai));
             toast(`🗡 <b>${wtg.name} · 奪槊</b> — 反奪兵器，刺傷 ${dodgeAttacker.name}！`, 'skill', 2500);
-            // Fix R3-5：奪槊反奪致命傷時，需呼叫 execOnKill 並移除敵將，檢查勝負
-            if (dodgeAttacker.hp <= 0) {
-                dodgeAttacker.hp = 0;
-                toast(`💀 <b>${dodgeAttacker.name}</b> 被奪槊擊殺！`, 'danger', 3000);
-                _SFX.death();
-                execOnKill(wtg, dodgeAttacker, true); // 尉遲恭（player側）反擊，isPlayerAttacking=true
-                oppBoard.active[ai] = null;
-                oppBoard.discard.push(dodgeAttacker);
-            }
             renderOppBoard(); updateHUDs();
-            if (checkWinCondition()) return;
         }
     }
 
@@ -3622,25 +3003,16 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
     execDamageResponse(targetCard, true);
 
     // 驍勇（李文忠）：主公受到傷害時，立刻對攻擊者發起反擊
-    if (targetCard.type === '聖人' && dmg > 0 && targetCard.hp > 0) {
+    if (targetCard.type === '君王' && dmg > 0 && targetCard.hp > 0) {
         const liWZ = [...myBoard.active, ...myBoard.bench].find(c => c && c.skillName === '驍勇' && c.hp > 0);
         if (liWZ) {
-            const oppAtk = oppBoard.active.find(c => c && c.type !== '聖人') || oppBoard.active.find(c => c !== null);
+            const oppAtk = oppBoard.active.find(c => c && c.type !== '君王') || oppBoard.active.find(c => c !== null);
             if (oppAtk) {
                 const oi = oppBoard.active.indexOf(oppAtk);
                 oppAtk.hp = Math.max(0, oppAtk.hp - 25);
                 spawnSkillFx('⚔', getSlotEl('opp-active-zone', oi));
                 spawnDmgPopup(25, getSlotEl('opp-active-zone', oi));
                 toast(`⚔ <b>${liWZ.name} · 驍勇</b> — 護主反擊，刺傷 ${oppAtk.name}！`, 'skill', 2500);
-                // Fix R3-4：驍勇反擊致命傷時，需呼叫 execOnKill 並移除敵將
-                if (oppAtk.hp <= 0) {
-                    oppAtk.hp = 0;
-                    toast(`💀 <b>${oppAtk.name}</b> 被驍勇擊殺！`, 'danger', 3000);
-                    _SFX.death();
-                    execOnKill(liWZ, oppAtk, true); // 李文忠（player側）反擊，isPlayerAttacking=true
-                    oppBoard.active[oi] = null;
-                    oppBoard.discard.push(oppAtk);
-                }
                 renderOppBoard(); updateHUDs();
                 if (checkWinCondition()) return;
             }
@@ -3648,13 +3020,13 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
     }
 
     // 靖難（朱棣）：受到突擊時，從手牌打出突擊反擊
-    if (targetCard.type === '聖人' && targetCard.skillName === '靖難' && targetCard.hp > 0) {
-        const atkIdx2 = myHand.findIndex(c => c.name && c.name.includes('道術'));
+    if (targetCard.type === '君王' && targetCard.skillName === '靖難' && targetCard.hp > 0) {
+        const atkIdx2 = myHand.findIndex(c => c.name && c.name.includes('突擊'));
         if (atkIdx2 !== -1) {
             const counterCard = myHand.splice(atkIdx2, 1)[0];
             myBoard.discard.push(counterCard);
             renderHand();
-            const enemy = oppBoard.active.find(c => c !== null && c.type !== '聖人') || oppBoard.active[2];
+            const enemy = oppBoard.active.find(c => c !== null && c.type !== '君王') || oppBoard.active[2];
             if (enemy) {
                 const ei = oppBoard.active.indexOf(enemy);
                 enemy.hp = Math.max(0, enemy.hp - 25);
@@ -3662,15 +3034,6 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 spawnDmgPopup(25, getSlotEl('opp-active-zone', ei));
                 toast(`⚔ <b>${targetCard.name} · 靖難</b> — 以攻代守，反擊 <b>${enemy.name}</b>！`, 'skill');
                 _SFX.attack();
-                // Fix R3-3：靖難反擊致命傷時，需呼叫 execOnKill 並移除敵將
-                if (enemy.hp <= 0) {
-                    enemy.hp = 0;
-                    toast(`💀 <b>${enemy.name}</b> 被靖難反擊擊殺！`, 'danger', 3000);
-                    _SFX.death();
-                    execOnKill(targetCard, enemy, true); // 君主（player）反擊，isPlayerAttacking=true
-                    oppBoard.active[ei] = null;
-                    oppBoard.discard.push(enemy);
-                }
                 renderOppBoard(); updateHUDs();
                 if (checkWinCondition()) return;
             }
@@ -3678,7 +3041,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
     }
 
     // 火燒連營（陸遜，AI方）：玩家君主受傷時，追加 25 傷害給玩家隨機武將
-    if (targetCard.type === '聖人' && dmg > 0) {
+    if (targetCard.type === '君王' && dmg > 0) {
         const luXun = [...oppBoard.active, ...oppBoard.bench].find(c => c && c.skillName === '火燒連營' && c.hp > 0);
         if (luXun) {
             const extras = [...myBoard.active, ...myBoard.bench].filter(u => u && u !== targetCard && u.hp > 0);
@@ -3689,17 +3052,6 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 exTgt.hp = Math.max(0, exTgt.hp - 25);
                 spawnDmgPopup(25, getSlotEl(`my-${exZone}-zone`, exIdx));
                 toast(`🔥 <b>${luXun.name} · 火燒連營</b> — 連環引燃，波及 ${exTgt.name}！`, 'danger', 2500);
-                // Fix R3-6：火燒連營連鎖致命傷時，需呼叫 execOnKill 並移除被波及武將
-                if (exTgt.hp <= 0) {
-                    exTgt.hp = 0;
-                    toast(`💀 <b>${exTgt.name}</b> 在火燒連營中陣亡！`, 'danger', 3000);
-                    _SFX.death();
-                    execOnKill(luXun, exTgt, false); // 陸遜（AI側）造成傷害，isPlayerAttacking=false
-                    myBoard[exZone][exIdx] = null;
-                    myBoard.discard.push(exTgt);
-                    renderBoard(); updateHUDs();
-                    checkWinCondition();
-                }
             }
         }
     }
@@ -3744,7 +3096,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                         spawnSkillFx('💀', slotEl);
                         _SFX.death();
                         const oppAttacker2 = oppBoard.active.find(c => c !== null);
-                        execOnKill(oppAttacker2, targetCard, false); // Fix：execOnKill 內部已呼叫 execOnDeath（酒放棄路徑）
+                        execOnKill(oppAttacker2, targetCard, false);
                         myBoard[zone][zoneIdx] = null;
                         myBoard.discard.push(targetCard);
                         renderBoard(); updateHUDs();
@@ -3759,7 +3111,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
             spawnSkillFx('💀', slotEl);
             _SFX.death();
             const oppAttacker = oppBoard.active.find(c => c !== null);
-            execOnKill(oppAttacker, targetCard, false); // Fix：execOnKill 內部已呼叫 execOnDeath（一般防禦失敗路徑）
+            execOnKill(oppAttacker, targetCard, false);
             myBoard[zone][zoneIdx] = null;
             myBoard.discard.push(targetCard);
 
@@ -3769,10 +3121,7 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
                 spawnDmgPopup(30, getSlotEl('my-active-zone', 2));
                 toast(`🩸 <b>${oppBaiqiBA.name} · 坑殺</b> — 波及我方主公！`, 'skill');
                 if (myBoard.active[2].hp <= 0) {
-                    const _deadMonarch = myBoard.active[2];
-                    execOnKill(oppBaiqiBA, _deadMonarch, false); // Fix R3-1：坑殺致命傷應呼叫 execOnKill（含 on-kill 加成），isPlayerAttacking=false（敵方坑殺）
                     myBoard.active[2] = null;
-                    myBoard.discard.push(_deadMonarch);
                     triggerGameOver(false); return;
                 }
             }
@@ -3839,7 +3188,7 @@ function _execWuGu() {
         revealed.forEach((rc, ri) => {
             const div = document.createElement('div');
             div.style.cssText = `cursor:${isPlayerTurn ? 'pointer' : 'default'};border:2px solid #444;border-radius:10px;padding:12px 10px;background:#1a1c22;min-width:110px;max-width:130px;transition:all 0.2s;`;
-            const rarity = rc.type === '聖人' ? '#ffd700' : rc.type === '大神' ? '#c084fc' : rc.type === '金仙' ? '#60a5fa' : '#aaa';
+            const rarity = rc.type === '君王' ? '#ffd700' : rc.type === '大將軍' ? '#c084fc' : rc.type === '軍師' ? '#60a5fa' : '#aaa';
             div.innerHTML = `
                 <div style="font-size:13px;color:${rarity};font-weight:bold;margin-bottom:5px;">${rc.name}</div>
                 <div style="font-size:11px;color:#666;margin-bottom:6px;">${rc.type}</div>
@@ -3853,7 +3202,7 @@ function _execWuGu() {
                     revealed.splice(ri, 1);
                     renderHand(); updateHUDs();
                     toast(`🌾 你獲得了 <b>${rc.name}</b>！`, 'success', 1500);
-                    if (revealed.length === 0) { if (modal.parentNode) modal.parentNode.removeChild(modal); _maybeSyncHost(); return; } // L-7 Fix
+                    if (revealed.length === 0) { document.body.removeChild(modal); _maybeSyncHost(); return; }
                     // AI 的回合
                     renderWuGu(false);
                     setTimeout(() => {
@@ -3863,7 +3212,7 @@ function _execWuGu() {
                         oppHandData.push(aiPref);
                         renderOppHandUI();
                         toast(`🤖 對手獲得了 <b>${aiPref.name}</b>！`, 'info', 1500);
-                        if (revealed.length === 0) { if (modal.parentNode) modal.parentNode.removeChild(modal); _maybeSyncHost(); return; } // L-7 Fix
+                        if (revealed.length === 0) { document.body.removeChild(modal); _maybeSyncHost(); return; }
                         // 再次輪到玩家
                         renderWuGu(true);
                     }, 900);
@@ -3919,10 +3268,10 @@ async function _writeSpectateState() {
     if (!gameActive || window.GAME_MODE !== 'host') return;
     if (!window._roomCode) return;
 
-    const myMonarch  = myBoard.active.find(c => c && c.type === '聖人')
-                    || myBoard.bench.find(c  => c && c.type === '聖人');
-    const oppMonarch = oppBoard.active.find(c => c && c.type === '聖人')
-                    || oppBoard.bench.find(c  => c && c.type === '聖人');
+    const myMonarch  = myBoard.active.find(c => c && c.type === '君王')
+                    || myBoard.bench.find(c  => c && c.type === '君王');
+    const oppMonarch = oppBoard.active.find(c => c && c.type === '君王')
+                    || oppBoard.bench.find(c  => c && c.type === '君王');
 
     const state = {
         hostNick:   window.playerNickname   || '主機玩家',

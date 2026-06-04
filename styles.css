@@ -1,5 +1,5 @@
 /* ============================================================
-   洪荒 – 萬仙爭霸  Cinematic RPG Card Game UI
+   華夏風雲錄 – Cinematic RPG Card Game UI
 
    Copyright © 2026 linus622wang@gmail.com
    All Rights Reserved.
@@ -11,17 +11,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Cinzel:wght@700&display=swap');
 
 :root {
-    --gold:     #e8c547;
-    --gold-dim: #b8950a;
-    --crimson:  #7b2fbe;
-    --bg:       #04060f;
-    --panel:    #080d1c;
-    --border:   rgba(160,120,255,0.35);
-    --text:     #c8d8f0;
+    --gold:     #d4af37;
+    --gold-dim: #aa8620;
+    --crimson:  #c0392b;
+    --bg:       #080c10;
+    --panel:    #10161e;
+    --border:   rgba(212,175,55,0.3);
+    --text:     #c9d1d9;
     --radius:   8px;
-    --mystic:   #a07aff;
-    --divine:   #4fc3f7;
-    --chaos:    #ff6b9d;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,9 +30,7 @@ body {
     height: 100vh;
     overflow: hidden;
     background-image:
-        radial-gradient(ellipse 80% 60% at 30% 20%, rgba(80,20,160,0.25) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 70% 80%, rgba(20,60,120,0.2) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 50% 50%, rgba(120,40,200,0.1) 0%, var(--bg) 100%);
+        radial-gradient(ellipse 60% 40% at 50% 50%, #12202e 0%, var(--bg) 100%);
 }
 
 .hidden { display: none !important; }
@@ -99,11 +94,7 @@ body {
 }
 #splash-bg {
     position: absolute; inset: 0;
-    background:
-        radial-gradient(ellipse 100% 80% at 50% 0%, rgba(100,40,220,0.6) 0%, transparent 60%),
-        radial-gradient(ellipse 80% 60% at 80% 100%, rgba(20,80,180,0.4) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 20% 60%, rgba(160,60,255,0.3) 0%, transparent 50%),
-        linear-gradient(180deg, #050210 0%, #0a0520 40%, #060315 100%);
+    background: url('assets/華夏文明人皇銘文圖.png') center/cover no-repeat;
     opacity: 0;
     transition: opacity 2s ease;
     filter: brightness(0.8);
@@ -407,36 +398,6 @@ body {
     box-shadow: 0 0 6px #ff9900; z-index: 5;
     white-space: nowrap; max-width: 44px; overflow: hidden; text-overflow: ellipsis;
 }
-/* 陣法卡主題 */
-.theme-formation { --card-bg-start:#1a0a3e; --card-bg-end:#0a0420; --card-border:#7b2fbe; --flavor-color:#d4a0ff; }
-/* 裝備卡主題 */
-.theme-equipment { --card-bg-start:#1a1200; --card-bg-end:#0a0800; --card-border:#e8c547; --flavor-color:#ffe066; }
-/* 陣法卡手牌特效 */
-.card.theme-formation {
-    border-color: #7b2fbe;
-    box-shadow: 0 0 14px rgba(123,47,190,0.5), 0 4px 16px rgba(0,0,0,0.8);
-}
-.card.theme-formation:hover {
-    box-shadow: 0 0 24px rgba(160,80,255,0.8), 0 8px 24px rgba(0,0,0,0.9);
-    transform: translateY(-8px) scale(1.06);
-}
-
-/* 修為境界指示器 */
-.card-xiuwei {
-    position: absolute; top: 18px; right: 2px;
-    font-size: 8px; font-weight: 900;
-    padding: 1px 4px; border-radius: 3px;
-    z-index: 5; white-space: nowrap;
-    background: rgba(0,0,0,0.7);
-    color: #a07aff;
-    border: 1px solid rgba(160,120,255,0.5);
-    text-shadow: 0 0 6px rgba(160,120,255,0.8);
-}
-.card-xiuwei:has-text("化神") { color: #00e5ff; border-color: rgba(0,229,255,0.5); text-shadow: 0 0 8px #00e5ff; }
-.card-xiuwei:has-text("元嬰") { color: #f1c40f; border-color: rgba(241,196,15,0.5); }
-.card-xiuwei:has-text("金丹") { color: #9b59b6; border-color: rgba(155,89,182,0.5); }
-.card-xiuwei:has-text("築基") { color: #3498db; border-color: rgba(52,152,219,0.5); }
-.card-xiuwei:has-text("煉氣") { color: #e67e22; border-color: rgba(230,126,34,0.5); }
 .card-art {
     flex: 1; border-radius: 4px; overflow: hidden;
     position: relative; background: #000;
@@ -550,20 +511,13 @@ body {
 }
 
 /* ===================== CARD THEMES ===================== */
-/* 聖人：至尊紫金 */
-.theme-monarch    { --card-bg-start:#2e0a70; --card-bg-end:#0d0030; --card-border:#e8c547; --flavor-color:#ffe066; }
-/* 大神：蒼天神藍 */
-.theme-commander  { --card-bg-start:#0a1f60; --card-bg-end:#030a28; --card-border:#4fc3f7; --flavor-color:#81d4fa; }
-/* 天仙：仙境碧綠 */
-.theme-general    { --card-bg-start:#0a3d30; --card-bg-end:#041a14; --card-border:#26c6da; --flavor-color:#80deea; }
-/* 金仙：琥珀金光 */
-.theme-tactician  { --card-bg-start:#3d2000; --card-bg-end:#1a0d00; --card-border:#ffa726; --flavor-color:#ffcc80; }
-/* 靈獸：森林靈氣 */
-.theme-logistics  { --card-bg-start:#0d3d20; --card-bg-end:#041508; --card-border:#66bb6a; --flavor-color:#a5d6a7; }
-/* 巫族：大地骨氣 */
-.theme-domestic   { --card-bg-start:#3d1a00; --card-bg-end:#1a0a00; --card-border:#ff8a65; --flavor-color:#ffab91; }
-/* 妖族：血煞赤紅 */
-.theme-inspector  { --card-bg-start:#4a0020; --card-bg-end:#1e000d; --card-border:#ef5350; --flavor-color:#ff8a80; }
+.theme-monarch    { --card-bg-start:#3b1c4a; --card-bg-end:#1a0033; --card-border:#ffd700; --flavor-color:#ffd700; }
+.theme-commander  { --card-bg-start:#660000; --card-bg-end:#220000; --card-border:#e74c3c; --flavor-color:#ff4d4d; }
+.theme-general    { --card-bg-start:#5a2d0c; --card-bg-end:#2a1506; --card-border:#cd7f32; --flavor-color:#f39c12; }
+.theme-tactician  { --card-bg-start:#0e3c4a; --card-bg-end:#051a21; --card-border:#3498db; --flavor-color:#5dade2; }
+.theme-logistics  { --card-bg-start:#5d4037; --card-bg-end:#2d1b11; --card-border:#a1887f; --flavor-color:#d7ccc8; }
+.theme-domestic   { --card-bg-start:#1b5e20; --card-bg-end:#0a2e10; --card-border:#2ecc71; --flavor-color:#82e0aa; }
+.theme-inspector  { --card-bg-start:#455a64; --card-bg-end:#1c2427; --card-border:#90a4ae; --flavor-color:#cfd8dc; }
 .theme-spell      { --card-bg-start:#006064; --card-bg-end:#002a2c; --card-border:#00bcd4; --flavor-color:#b2ebf2; }
 .theme-trap       { --card-bg-start:#4a148c; --card-bg-end:#2a0a4d; --card-border:#9c27b0; --flavor-color:#e1bee7; }
 .theme-default    { --card-bg-start:#2a2a2a; --card-bg-end:#1a1a1a; --card-border:#555; --flavor-color:#888; }
@@ -909,9 +863,8 @@ body {
     position: fixed; inset: 0;
     background: var(--bg);
     background-image:
-        radial-gradient(ellipse 90% 70% at 20% 30%, rgba(100,30,200,0.3) 0%, transparent 60%),
-        radial-gradient(ellipse 70% 50% at 80% 70%, rgba(20,60,160,0.25) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(160,60,255,0.15) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 60% at 30% 40%, #1a2640 0%, var(--bg) 70%),
+        radial-gradient(ellipse 50% 40% at 80% 70%, #2a1010 0%, transparent 60%);
     display: flex; align-items: center; justify-content: center;
     z-index: 8500;
 }
@@ -920,8 +873,8 @@ body {
 .lobby-bg-deco {
     position: absolute; inset: 0; pointer-events: none;
     background-image:
-        radial-gradient(circle at 15% 20%, rgba(160,120,255,0.08) 0%, transparent 40%),
-        radial-gradient(circle at 85% 80%, rgba(80,160,255,0.08) 0%, transparent 40%);
+        radial-gradient(circle at 15% 20%, rgba(212,175,55,0.06) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(192,57,43,0.06) 0%, transparent 40%);
 }
 
 .lobby-wrap {
@@ -3134,12 +3087,9 @@ body {
 
 .login-bg {
     position: absolute; inset: 0;
-    background:
-        radial-gradient(ellipse 120% 60% at 50% 0%,   rgba(120,40,220,0.55) 0%, transparent 55%),
-        radial-gradient(ellipse 80%  80% at 10% 100%,  rgba(20,60,180,0.4)  0%, transparent 55%),
-        radial-gradient(ellipse 60%  40% at 90% 50%,  rgba(200,80,255,0.25) 0%, transparent 50%),
-        linear-gradient(180deg, #050210 0%, #08041a 40%, #030118 100%);
-    filter: brightness(0.85);
+    background: url('assets/帝王觀星長城背影圖.png') center/cover no-repeat,
+                linear-gradient(160deg, #060a12 0%, #0d1520 50%, #06090f 100%);
+    filter: brightness(0.6);
     pointer-events: none;
 }
 
