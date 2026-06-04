@@ -1,6 +1,6 @@
-﻿﻿﻿﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- ============================================================
-     洪荒 — 萬仙爭霸
+     華夏風雲錄 — 歷史卡牌對決
      Copyright © 2026 linus622wang@gmail.com  All Rights Reserved.
      未經開發者書面授權，嚴禁複製、修改或散佈本程式碼。
      ============================================================ -->
@@ -13,7 +13,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>洪荒 — 萬仙爭霸</title>
+    <title>華夏風雲錄 — 歷史卡牌對戰</title>
 
     <!-- P3：CSP — 限制資料外送目標，防止 XSS 資料竊取 -->
     <meta http-equiv="Content-Security-Policy"
@@ -72,7 +72,7 @@
 <div id="loading-screen" class="hidden">
     <div class="loading-content">
         <span class="loading-dragon">🐉</span>
-        <h1 class="loading-title">洪荒</h1>
+        <h1 class="loading-title">華夏風雲錄</h1>
         <p class="loading-sub">PREPARING FOR GLORY</p>
         <div class="loading-bar-wrap"><div id="loading-bar"></div></div>
     </div>
@@ -125,8 +125,8 @@
 <div id="intro-screen">
     <div id="intro-ui">
         <div style="text-align:center; padding-top:40px;">
-            <h1 class="intro-game-title">洪荒</h1>
-            <p class="intro-game-subtitle">諸聖並起 · 萬仙爭霸</p>
+            <h1 class="intro-game-title">華夏風雲錄</h1>
+            <p class="intro-game-subtitle">千古英雄 · 全球對決</p>
         </div>
 
         <div id="river-of-time-layer">
@@ -149,8 +149,8 @@
     <div class="login-container">
         <div class="login-logo-area">
             <span style="font-size:56px;">🐉</span>
-            <h1 class="login-game-title">洪荒</h1>
-            <p class="login-game-sub">諸聖並起 · 萬仙爭霸</p>
+            <h1 class="login-game-title">華夏風雲錄</h1>
+            <p class="login-game-sub">千古英雄 · 全球對決</p>
         </div>
 
         <!-- 帳密登入表單 -->
@@ -318,16 +318,6 @@
             <div id="profile-message-msg" class="profile-msg hidden"></div>
             <button class="profile-save-btn" id="profile-msg-save-btn">儲存留言</button>
         </div>
-
-        <!-- ④ 清除本地快取 -->
-        <div class="profile-section">
-            <div class="profile-section-title">🗑️ 清除登入快取</div>
-            <p class="profile-msg-note" style="color:#e74c3c;font-size:12px;">清除後將登出並移除本地快取的帳號資料（不影響雲端資料）</p>
-            <button class="profile-save-btn" id="profile-clear-cache-btn"
-                style="background:linear-gradient(135deg,#5a0000,#8b0000);border-color:#c0392b;color:#fff;margin-top:4px;">
-                🗑️ 清除快取並登出
-            </button>
-        </div>
     </div>
 </div>
 
@@ -336,13 +326,13 @@
     <div class="lobby-wrap">
         <div class="lobby-logo-area">
             <span class="loading-dragon" style="font-size:72px;">🐉</span>
-            <h1 class="lobby-title">洪荒</h1>
-            <p class="lobby-subtitle">諸聖並起 · 萬仙爭霸</p>
+            <h1 class="lobby-title">華夏風雲錄</h1>
+            <p class="lobby-subtitle">千古英雄 · 全球對決</p>
             <div id="lobby-silver-display" style="color:var(--gold); font-weight:900; font-size:20px; margin-top:10px; text-shadow:0 0 10px rgba(212,175,55,0.5);">💰 當前餘額: 0 兩</div>
         </div>
         <div class="lobby-card" style="margin-top:0;">
             <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 召仙臺（招募仙神）</button>
+                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
                 <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
             </div>
             <button id="btn-tutorial" class="lobby-btn" onclick="window._startTutorial()" style="background:linear-gradient(135deg, #1a2a3a, #163050); color:#87ceeb; border-color:#1e4060; margin-bottom:8px;">🎓 新手教學（互動式入門）</button>
@@ -491,7 +481,7 @@
         <span id="phase-display" class="phase-chip"></span>
         <div style="flex:1;"></div>
         <div class="corner-info opp-corner">
-            <div class="corner-name opp-cname">👺 敵方仙陣</div>
+            <div class="corner-name opp-cname">👺 敵軍大本營</div>
             <div class="corner-lp-row">
                 <div class="monarch-hp-bar-outer" style="width:130px;">
                     <div id="opp-monarch-hp-fill" class="monarch-hp-fill opp-fill" style="width:100%"></div>
@@ -525,23 +515,19 @@
             <div class="battlefield" id="opp-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 敵方陣法顯示 -->
-            <div id="opp-formation-display" style="display:none;align-items:center;justify-content:center;gap:8px;padding:3px 10px;margin:0 auto 4px;border-radius:6px;background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.3);font-family:'Noto Serif TC',serif;max-width:420px;"></div>
             <!-- 敵方前排 -->
             <div class="battlefield" id="opp-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
 
             <div class="battle-divider">
-                <div class="divider-text">洪 荒 大 界</div>
+                <div class="divider-text">楚 河 漢 界</div>
             </div>
 
             <!-- 我方前排 -->
             <div class="battlefield" id="my-active-zone">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot monarch-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
             </div>
-            <!-- 己方陣法顯示 -->
-            <div id="my-formation-display" style="display:none;align-items:center;justify-content:center;gap:8px;padding:3px 10px;margin:4px auto 0;border-radius:6px;background:rgba(79,195,247,0.10);border:1px solid rgba(79,195,247,0.3);font-family:'Noto Serif TC',serif;max-width:420px;"></div>
             <!-- 我方後排 -->
             <div class="battlefield" id="my-bench-zone" style="opacity:0.8; transform:scale(0.9);">
                 <div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div><div class="card-slot"></div>
@@ -581,7 +567,7 @@
         <div style="display:flex; align-items:center; gap:12px;">
             <div class="hud-avatar-my" style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;">🛡️</div>
             <div class="corner-info my-corner">
-                <div class="corner-name my-cname">🛡️ 我方仙陣</div>
+                <div class="corner-name my-cname">🛡️ 我軍大門</div>
                 <div class="corner-lp-row">
                     <div class="monarch-hp-bar-outer" style="width:130px;">
                         <div id="my-monarch-hp-fill" class="monarch-hp-fill my-fill" style="width:100%"></div>
@@ -725,7 +711,7 @@
 <!-- 君王選擇 Modal -->
 <div id="monarch-select-modal" class="gacha-modal hidden">
     <div class="lobby-wrap" style="width:95vw; max-width:1200px; text-align:center; background:rgba(0,0,0,0.8); padding:40px; border-radius:30px; border:2px solid var(--gold);">
-        <h2 style="color:var(--gold); font-size:36px; margin-bottom:30px; letter-spacing:8px;">請選擇出征聖人</h2>
+        <h2 style="color:var(--gold); font-size:36px; margin-bottom:30px; letter-spacing:8px;">請選擇出征君主</h2>
         <div id="monarch-select-list" class="card-grid-5" style="max-height:60vh; overflow-y:auto;"></div>
         <div style="margin-top:40px; display:flex; gap:20px; justify-content:center;">
             <button id="btn-confirm-monarch" class="lobby-btn" style="width:200px; font-size:20px;" disabled>確認出征</button>
@@ -739,23 +725,21 @@
     <div id="gacha-sidebar" class="modal-sidebar">
         <h3 style="color:var(--gold); text-align:center; margin-bottom:20px; font-size:18px; border-bottom:1px solid #333; padding-bottom:10px;">分類篩選</h3>
         <button class="filter-btn active" data-type="all">📔 全部卡牌</button>
-        <button class="filter-btn" data-type="聖人">☯️ 聖人</button>
-        <button class="filter-btn" data-type="大神">⚡ 大神</button>
-        <button class="filter-btn" data-type="天仙">⚔️ 天仙</button>
-        <button class="filter-btn" data-type="金仙">📜 金仙</button>
-        <button class="filter-btn" data-type="靈獸">🐉 靈獸</button>
-        <button class="filter-btn" data-type="巫族">🌿 巫族</button>
-        <button class="filter-btn" data-type="妖族">👁 妖族</button>
+        <button class="filter-btn" data-type="君王">👑 君主</button>
+        <button class="filter-btn" data-type="大將軍">⚔️ 大將軍</button>
+        <button class="filter-btn" data-type="將軍">🐎 將軍</button>
+        <button class="filter-btn" data-type="軍師">📜 軍師</button>
+        <button class="filter-btn" data-type="後勤">🏛️ 後勤</button>
+        <button class="filter-btn" data-type="內政">🏮 內政</button>
+        <button class="filter-btn" data-type="監察">⚖️ 監察</button>
         <button class="filter-btn" data-type="計策">♟️ 計策卡</button>
         <button class="filter-btn" data-type="突發事件">🌩️ 突發事件</button>
-        <button class="filter-btn" data-type="陣法">🔱 陣法</button>
-        <button class="filter-btn" data-type="裝備">⚙️ 裝備</button>
     </div>
     
     <div class="modal-main">
         <div class="modal-close-btn" id="btn-gacha-close">×</div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h1 id="gacha-title" style="color:var(--gold); margin:0; font-size:32px; letter-spacing:4px;">洪荒萬仙</h1>
+            <h1 id="gacha-title" style="color:var(--gold); margin:0; font-size:32px; letter-spacing:4px;">天下豪傑</h1>
             <div style="display:flex; gap:15px; align-items:center;">
                 <div id="gacha-silver-banner" style="background:rgba(212,175,55,0.15); padding:8px 20px; border-radius:30px; border:1px solid var(--gold); font-size:14px; color:var(--gold); font-weight:bold; box-shadow:0 0 10px rgba(212,175,55,0.2);">
                     💰 當前餘額：<span id="gacha-silver-val">1000</span> 兩
@@ -770,12 +754,12 @@
             <div id="gacha-controls-area" class="gacha-controls" style="padding-top:10px;">
 
                 <div class="gacha-actions-stack" style="display:flex; flex-direction:column; gap:15px;">
-                    <button id="btn-gacha-single" class="lobby-btn" style="background:#444;">招募一位（50 靈石）</button>
-                    <button id="btn-gacha-ten" class="lobby-btn" style="background:linear-gradient(135deg, #8b0000, #b22222); border-color:var(--gold);">十連招募（500 靈石）</button>
-                    <button id="btn-gacha-twenty-five" class="lobby-btn" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; border-color:#fff; text-shadow:0 0 5px #fff; font-weight:900;">二十五連招募（1200 靈石）</button>
+                    <button id="btn-gacha-single" class="lobby-btn" style="background:#444;">招募一位 (50 銀兩)</button>
+                    <button id="btn-gacha-ten" class="lobby-btn" style="background:linear-gradient(135deg, #8b0000, #b22222); border-color:var(--gold);">十連招募 (500 銀兩)</button>
+                    <button id="btn-gacha-twenty-five" class="lobby-btn" style="background:linear-gradient(135deg, #d4af37, #b8860b); color:#000; border-color:#fff; text-shadow:0 0 5px #fff; font-weight:900;">二十五連招募 (1200 銀兩)</button>
                     <button id="btn-gacha-pool-view" class="lobby-btn" style="background:#222; border:1px solid #444;">📜 查看完整圖鑑</button>
                 </div>
-                <div id="gacha-result-hint" style="margin-top:20px; color:#666; font-size:12px; font-style:italic;">召仙結果將顯示於此...</div>
+                <div id="gacha-result-hint" style="margin-top:20px; color:#666; font-size:12px; font-style:italic;">招募結果將顯示於此...</div>
             </div>
             
             <div id="gacha-pool" class="gacha-pool card-grid-5">
