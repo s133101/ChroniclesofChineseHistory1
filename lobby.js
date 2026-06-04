@@ -552,9 +552,17 @@
     }
     window._renderPmAchievements = _renderPmAchievements;
 
-    // 模式切換（從天機閣大廳跳轉）
+    // 模式切換：直接跳到對應遊戲
     window._switchGameMode = function(mode) {
-        window.location.href = '../index.html';
+        const paths = {
+            huaxia:   null,                        // 目前就是這個，不跳
+            honghang: '../Saved Games/index.html'  // 直接進洪荒
+        };
+        if (mode === 'huaxia') {
+            window._closeProfileModal();           // 關閉視圖就好
+        } else if (paths[mode]) {
+            window.location.href = paths[mode];
+        }
     };
 
     window._openProfileModal = function() {
