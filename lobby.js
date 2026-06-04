@@ -1,4 +1,4 @@
-﻿﻿/* ============================================================
+﻿﻿﻿/* ============================================================
    華夏風雲錄 — lobby.js
 
    Copyright © 2026 linus622wang@gmail.com
@@ -23,7 +23,8 @@
 
     // ── 收集系統數據 ──
     window.playerOwnedCards    = JSON.parse(localStorage.getItem('hua_owned_cards')      || '[]');
-    window.playerSilver        = parseInt(localStorage.getItem('hua_player_silver')       || '1000');
+    window.playerSilver        = parseInt(localStorage.getItem('hua_player_silver')       || '100');
+    window.playerLingShi       = parseInt(localStorage.getItem('hua_player_lingshi')      || '0');
     window.playerCardStars     = JSON.parse(localStorage.getItem('hua_card_stars')        || '{}');
     window.playerCardFragments = JSON.parse(localStorage.getItem('hua_card_fragments')    || '{}');
     window.playerAchievements  = JSON.parse(localStorage.getItem('hua_achievements')      || '[]');
@@ -32,15 +33,31 @@
     const _defaultNames = ['無名大將','草莽英雄','天涯俠客','亂世豪傑','江湖遊俠','蕭何再世'];
     window.playerNickname = localStorage.getItem('hua_nickname') || _defaultNames[Math.floor(Math.random() * _defaultNames.length)];
     localStorage.setItem('hua_nickname', window.playerNickname);
-    
+
     function _saveCollection() {
-        localStorage.setItem('hua_owned_cards',    JSON.stringify(window.playerOwnedCards));
-        localStorage.setItem('hua_player_silver',  window.playerSilver.toString());
-        localStorage.setItem('hua_card_stars',     JSON.stringify(window.playerCardStars));
-        localStorage.setItem('hua_card_fragments', JSON.stringify(window.playerCardFragments));
-        localStorage.setItem('hua_achievements',   JSON.stringify(window.playerAchievements));
+        localStorage.setItem('hua_owned_cards',      JSON.stringify(window.playerOwnedCards));
+        localStorage.setItem('hua_player_silver',    window.playerSilver.toString());
+        localStorage.setItem('hua_player_lingshi',   window.playerLingShi.toString());
+        localStorage.setItem('hua_card_stars',       JSON.stringify(window.playerCardStars));
+        localStorage.setItem('hua_card_fragments',   JSON.stringify(window.playerCardFragments));
+        localStorage.setItem('hua_achievements',     JSON.stringify(window.playerAchievements));
     }
     window._saveCollection = _saveCollection;
+
+    /** 靈石兌換仙石（100 靈石 = 1 仙石） */
+    window._convertLingShi = function() {
+        const canConvert = Math.floor((window.playerLingShi || 0) / 100);
+        if (canConvert <= 0) {
+            if (typeof toast === 'function') toast('💎 靈石不足 100 枚，無法兌換', 'warn', 2500);
+            return;
+        }
+        window.playerLingShi -= canConvert * 100;
+        window.playerSilver  += canConvert;
+        _saveCollection();
+        _updateHUD();
+        if (typeof toast === 'function')
+            toast(`✨ 兌換成功！${canConvert * 100} 靈石 → ${canConvert} 仙石`, 'gold', 3000);
+    };
 
     // ══════════════════════════════════════════
     //  DOMContentLoaded
@@ -450,7 +467,7 @@
             const data = await r.json();
             if (!data) return;
 
-            // 同步靈石（以 Firebase 為準）
+            // 同步仙石（以 Firebase 為準）
             if (typeof data.silver === 'number') {
                 window.playerSilver = data.silver;
                 localStorage.setItem('hua_player_silver', data.silver.toString());
@@ -1297,7 +1314,7 @@
                 if (tier1) tier1.classList.add('active');
                 selectedTier = 1;
                 selectedCost = 10;
-                annConfirm.textContent = `確認發布 (10 兩)`;
+                annConfirm.textContent = `確認發布 (10 仙石)`;
             });
         }
 
@@ -1309,7 +1326,7 @@
                 let isDev = (selectedTier === 9);
                 if (!isDev) {
                     if (window.playerSilver < selectedCost) {
-                        toast('銀兩不足！目前當前餘額：' + window.playerSilver, 'danger');
+                        toast('仙石不足！目前當前餘額：' + window.playerSilver, 'danger');
                         return;
                     }
                 }
@@ -1530,7 +1547,7 @@
                     <div style="font-size:11px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">對手：${_escHtml(r.opponent)} · ${r.rounds} 回合</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:12px;color:var(--gold);">+${r.silver} 兩</div>
+                    <div style="font-size:12px;color:var(--gold);">+${r.silver} 仙石</div>
                     <div style="font-size:10px;color:#444;">${d}</div>
                 </div>
             </div>`;
@@ -1584,7 +1601,7 @@
             return;
         }
         
-        const monarchs = window.cardDatabase ? window.cardDatabase.filter(c => c.type === '聖人') : [];
+        const monarchs = window.cardDatabase ? window.cardDatabase.filter(c => c.type === '君王') : [];
         let html = '';
         monarchs.forEach(m => {
             const isOwned = window.playerOwnedCards.includes(m.id);
@@ -1719,12 +1736,12 @@
                 // 更新進度條
                 _updateCollectionProgress();
                 
-                // 更新銀兩顯示
+                // 更新仙石顯示
                 const silverVal = document.getElementById('gacha-silver-val');
                 if (silverVal) silverVal.textContent = window.playerSilver;
                 
                 const lobbySilver = document.getElementById('lobby-silver-display');
-                if (lobbySilver) lobbySilver.textContent = `💰 當前餘額: ${window.playerSilver} 兩`;
+                if (lobbySilver) lobbySilver.textContent = `💰 當前餘額: ${window.playerSilver} 仙石`;
             }
         };
 
@@ -1744,7 +1761,7 @@
                 // 進入招募模式時，清空池子預覽或顯示簡單引導
                 if (pool) pool.innerHTML = '<div style="grid-column: span 5; color:#555; padding:40px;">招募英雄，助我華夏大業！<br>(點擊左側進行招募)</div>';
                 
-                // 修正：進入招募模式時也需要刷新銀兩顯示
+                // 修正：進入招募模式時也需要刷新仙石顯示
                 const gv = document.getElementById('gacha-silver-val');
                 if (gv) gv.textContent = window.playerSilver;
             } else {
@@ -1780,7 +1797,7 @@
             const card = window.cardDatabase.find(c => c.id === cardId);
             if (!card) return;
             
-            const ART_MAP = { '聖人':'☯️', '大神':'⚡', '天仙':'⚔️', '金仙':'📜', '計策':'✨', '突發事件':'⚡', '靈獸':'🐉', '巫族':'🌿', '妖族':'👁️', '陣法':'🔱', '裝備':'⚙️' };
+            const ART_MAP = { '君王':'👑', '大將軍':'⚔️', '將軍':'🐎', '軍師':'📜', '計策':'✨', '突發事件':'⚡', '後勤':'🏛️', '內政':'🏮', '監察':'⚖️' };
             // 特定卡牌圖示
             const nameArtMap = { '火殺 (火)':'🔥', '雷殺 (雷)':'⚡', '水殺 (水)':'💧', '酒':'🍷', '南蠻入侵':'🛡', '萬箭齊發':'🏹', '桃園結義':'🍑', '五穀豐登':'🌾', '無中生有':'✨', '過河拆橋':'🌉', '順手牽羊':'🐑', '無懈可擊':'⚡' };
             
@@ -1797,10 +1814,9 @@
             const typeEl = document.getElementById('detail-card-type');
             typeEl.textContent = card.isBasic ? `基本卡 · ${card.type}` : card.type;
             const typeBg = {
-                '聖人':'#f1c40f', '大神':'#e74c3c', '天仙':'#c0392b',
-                '金仙':'#2980b9', '計策':'#8e44ad', '突發事件':'#d35400',
-                '靈獸':'#27ae60', '巫族':'#16a085', '妖族':'#7f8c8d',
-                '陣法':'#6b4c94', '裝備':'#b8860b'
+                '君王':'#f1c40f', '大將軍':'#e74c3c', '將軍':'#c0392b',
+                '軍師':'#2980b9', '計策':'#8e44ad', '突發事件':'#d35400',
+                '後勤':'#27ae60', '內政':'#16a085', '監察':'#7f8c8d'
             };
             typeEl.style.backgroundColor = typeBg[card.type] || '#34495e';
             typeEl.style.color = card.type === '君王' ? '#000' : '#fff';
@@ -1990,7 +2006,7 @@
         let _first10Done = localStorage.getItem('hua_first10_done') === '1';
         const doGacha = (times, cost, isFree = false, showWheel = true) => {
             if (!isFree && window.playerSilver < cost) {
-                toast('銀兩不足！需要 ' + cost + ' 兩。', 'danger');
+                toast('仙石不足！需要 ' + cost + ' 仙石。', 'danger');
                 _updateHUD();
                 return;
             }
@@ -2022,7 +2038,7 @@
                     return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
                 };
                 // 8 種保底
-                const guaranteed = ['聖人','大神','天仙','金仙','靈獸','妖族','計策','突發事件']
+                const guaranteed = ['君王','大將軍','將軍','軍師','後勤','監察','計策','突發事件']
                     .map(t => _pick(t))
                     .filter(Boolean);
                 // 補足到10張（隨機）
@@ -2060,7 +2076,7 @@
                 localStorage.setItem('hua_pity', _pityCounter);
             }
 
-            // 更新收集庫與重複返還機制（重複卡給碎片 + 少量銀兩）
+            // 更新收集庫與重複返還機制（重複卡給碎片 + 少量仙石）
             let silverGained = 0;
             let fragsGainedCount = 0;
             resData.forEach(c => {
@@ -2081,7 +2097,7 @@
                     else if (c.type === '天仙' || c.type === '金仙') fragsGiven = 2;
                     window.playerCardFragments[c.id] = (window.playerCardFragments[c.id] || 0) + fragsGiven;
                     fragsGainedCount += fragsGiven;
-                    // 銀兩（靈石）回饋
+                    // 仙石（仙石）回饋
                     if (c.type === '聖人')      silverGained += 30;
                     else if (c.type === '大神') silverGained += 15;
                     else silverGained += 5;
@@ -2091,7 +2107,7 @@
             if (fragsGainedCount > 0 || silverGained > 0) {
                 window.playerSilver += silverGained;
                 const fragMsg = fragsGainedCount > 0 ? `，獲得 ${fragsGainedCount} 個修為碎片` : '';
-                const silMsg  = silverGained > 0      ? `+${silverGained} 靈石` : '';
+                const silMsg  = silverGained > 0      ? `+${silverGained} 仙石` : '';
                 setTimeout(() => toast(`重複角色轉化！${silMsg}${fragMsg}`, 'success', 3000), 500);
             }
             _saveCollection();
@@ -2107,10 +2123,10 @@
         //  5×2 翻牌式抽卡演出
         // ══════════════════════════════════════════
         const _runGridReveal = (resData, times) => {
-            const _CE  = { '聖人':'☯️','大神':'⚡','天仙':'⚔️','金仙':'📜',
-                           '靈獸':'🐉','巫族':'🌿','妖族':'👁️','計策':'✨','突發事件':'🌩️','陣法':'🔱','裝備':'⚙️' };
-            const _rc  = c => c.type==='聖人'?'ssr':c.type==='大神'?'sr':'r';
-            const _col = c => c.type==='聖人'?'#f1c40f':c.type==='大神'?'#e74c3c':'#bdc3c7';
+            const _CE  = { '君王':'👑','大將軍':'⚔️','將軍':'🐎','軍師':'📜',
+                           '後勤':'🌾','內政':'🏛️','監察':'👁️','計策':'✨','突發事件':'🌩️' };
+            const _rc  = c => c.type==='君王'?'ssr':c.type==='大將軍'?'sr':'r';
+            const _col = c => c.type==='君王'?'#f1c40f':c.type==='大將軍'?'#e74c3c':'#bdc3c7';
 
             // ── 建立每張卡的 HTML ──────────────────────────────────
             const cardsHtml = resData.map((c, i) => {
@@ -2148,7 +2164,7 @@
                                     <span class="ggc-lname" style="color:${col};">${c.name}</span>
                                     <span class="ggc-ltype">${_CE[c.type]||''} ${c.type}</span>
                                 </div>
-                                ${c.isDuplicate ? '<div class="ggc-dup">重複+銀兩</div>' : ''}
+                                ${c.isDuplicate ? '<div class="ggc-dup">重複+仙石</div>' : ''}
                             </div>
                         </div>
                     </div>`;
@@ -2218,7 +2234,7 @@
             // Fix：開局大禮應使用正向提示，而非 _showError（錯誤樣式）
             const el = document.getElementById('lobby-error');
             if (el) {
-                el.textContent = '📜 新主公駕到，特賜「1000銀兩」祝大展宏圖！招募天下英雄吧！';
+                el.textContent = '📜 新主公駕到，特賜「1000仙石」祝大展宏圖！招募天下英雄吧！';
                 el.style.color = '#d4af37';
                 el.classList.remove('hidden');
                 setTimeout(() => { el.classList.add('hidden'); el.style.color = ''; }, 5000);
@@ -2232,9 +2248,9 @@
         const btnTen = document.getElementById('btn-gacha-ten');
         const btnTwentyFive = document.getElementById('btn-gacha-twenty-five');
         
-        if (btnSingle) btnSingle.onclick = () => doGacha(1, 50);
-        if (btnTen) btnTen.onclick = () => doGacha(10, 500);
-        if (btnTwentyFive) btnTwentyFive.onclick = () => doGacha(25, 1200);
+        if (btnSingle) btnSingle.onclick = () => doGacha(1, 5);
+        if (btnTen) btnTen.onclick = () => doGacha(10, 50);
+        if (btnTwentyFive) btnTwentyFive.onclick = () => doGacha(25, 120);
 
         // 恢復遺漏的開關監聽器
         if (btnOpen) {
@@ -2256,13 +2272,26 @@
 
     function _updateHUD() {
         const HUD_ELS = {
-            'lobby-silver-display': '💰 當前餘額: ' + window.playerSilver + ' 兩',
-            'gacha-silver-val': window.playerSilver,
-            'btn-publish-board': '發布皇榜 - 當前餘額: ' + window.playerSilver
+            'lobby-silver-display': '💰 仙石: ' + window.playerSilver,
+            'gacha-silver-val':     window.playerSilver,
+            'btn-publish-board':    '發布皇榜 - 仙石: ' + window.playerSilver
         };
         for (const [id, val] of Object.entries(HUD_ELS)) {
             const el = document.getElementById(id);
             if (el) el.textContent = val;
+        }
+        // 更新靈石顯示
+        const lsEl = document.getElementById('lobby-lingshi-display');
+        if (lsEl) lsEl.textContent = '💎 靈石: ' + (window.playerLingShi || 0) + ' 枚';
+        // 更新兌換按鈕提示
+        const cvBtn = document.getElementById('btn-convert-lingshi');
+        if (cvBtn) {
+            const canConvert = Math.floor((window.playerLingShi || 0) / 100);
+            cvBtn.textContent = canConvert > 0
+                ? `兌換 ${canConvert} 仙石（${canConvert * 100} 靈石）`
+                : '兌換仙石（需100靈石）';
+            cvBtn.disabled = canConvert <= 0;
+            cvBtn.style.opacity = canConvert > 0 ? '1' : '0.4';
         }
     }
     window._updateHUD = _updateHUD;
@@ -2293,12 +2322,13 @@
             });
         }
 
-        // 建立房間
+        // 建立房間（先取消任何進行中的配對，避免衝突）
         document.getElementById('btn-create-room').addEventListener('click', () => {
             if (typeof Peer === 'undefined') {
                 _showError('網路不可用（請確認已連上網際網路）');
                 return;
             }
+            _mmCleanup(); // 若正在配對佇列中，先移除
             _openMonarchSelect('create');
         });
 
@@ -3652,11 +3682,19 @@
         const me = typeof Auth !== 'undefined' ? Auth.current() : null;
         if (!me) { _showError('請先登入後才能配對！'); return; }
 
-        // 顯示「配對中」loading 狀態，避免重複點擊
-        const btn = document.getElementById('btn-matchmaking');
-        const origText = btn ? btn.textContent : '';
-        const _restoreBtn = () => { if (btn) { btn.disabled = false; btn.textContent = origText; } };
-        if (btn) { btn.disabled = true; btn.textContent = '🔍 搜尋對手中…'; }
+        // 顯示「配對中」loading 狀態，鎖定所有戰鬥按鈕避免衝突
+        const btn       = document.getElementById('btn-matchmaking');
+        const btnCreate = document.getElementById('btn-create-room');
+        const btnJoin   = document.getElementById('btn-join-room');
+        const origText  = btn ? btn.textContent : '';
+        const _restoreBtn = () => {
+            if (btn)       { btn.disabled = false;       btn.textContent = origText; }
+            if (btnCreate) { btnCreate.disabled = false; }
+            if (btnJoin)   { btnJoin.disabled   = false; }
+        };
+        if (btn)       { btn.disabled = true;       btn.textContent = '🔍 搜尋對手中…'; }
+        if (btnCreate) { btnCreate.disabled = true; } // 防止配對中途切換建立房間
+        if (btnJoin)   { btnJoin.disabled   = true; }
 
         try {
             // ① 讀取 Firebase 配對佇列
