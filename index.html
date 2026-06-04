@@ -453,25 +453,28 @@
 
     </div><!-- end lby-body -->
 
-    <!-- ③ 底部列 -->
+    <!-- ③ 底部列（兩行）-->
     <div class="lby-bottombar">
-        <!-- 左：通訊入口（點開全螢幕通訊）-->
-        <button class="lby-bb-comm-btn" onclick="window._openCommPanel()">
-            <span class="lby-bb-channel-tag" id="lby-channel-tag">[全域]</span>
-            <span class="lby-bb-comm-preview" id="lby-comm-preview">點擊查看聊天...</span>
-            <span class="lby-bb-expand-arrow">▲</span>
-        </button>
-
-        <!-- 右：快捷功能 -->
-        <div class="lby-bb-btns">
-            <button onclick="window._openLibrary()" class="lby-bb-btn">
-                <span class="lby-bb-icon">📚</span>
-                <span class="lby-bb-lbl">牌庫</span>
+        <!-- 第一行：通訊入口 -->
+        <div class="lby-bb-row1">
+            <button class="lby-bb-comm-btn" onclick="window._openCommPanel()">
+                <span class="lby-bb-channel-tag" id="lby-channel-tag">[全域]</span>
+                <span class="lby-bb-comm-preview" id="lby-comm-preview">點擊查看聊天...</span>
+                <span class="lby-bb-expand-arrow">▲</span>
             </button>
-            <button id="btn-spectate" class="lby-bb-btn hidden" onclick="window._openSpectateModal()">
-                <span class="lby-bb-icon">🔭</span>
-                <span class="lby-bb-lbl">觀戰</span>
-            </button>
+        </div>
+        <!-- 第二行：快捷功能 -->
+        <div class="lby-bb-row2">
+            <div class="lby-bb-btns">
+                <button onclick="window._openLibrary()" class="lby-bb-btn">
+                    <span class="lby-bb-icon">📚</span>
+                    <span class="lby-bb-lbl">牌庫</span>
+                </button>
+                <button id="btn-spectate" class="lby-bb-btn hidden" onclick="window._openSpectateModal()">
+                    <span class="lby-bb-icon">🔭</span>
+                    <span class="lby-bb-lbl">觀戰</span>
+                </button>
+            </div>
         </div>
     </div>
 
