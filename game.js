@@ -1288,7 +1288,8 @@ function execOnDeath(deadCard, ownerBoard, isOwnerPlayer) {
 
 function execDamageResponse(injured, isPlayerInjured) {
     if (!injured) return;
-    if (injured.skillName === '奸雄' || injured.skillName === '突陣') {
+    // 奸雄（曹操）：受到傷害時，隨機丟棄對手一張手牌（防禦觸發）
+    if (injured.skillName === '奸雄') {
         const opHand = isPlayerInjured ? oppHandData : myHand;
         const opDiscard = isPlayerInjured ? oppBoard.discard : myBoard.discard;
         if (opHand.length > 0) {
@@ -1297,9 +1298,10 @@ function execDamageResponse(injured, isPlayerInjured) {
             opDiscard.push(dropped);
             if (!isPlayerInjured) { renderHand(); updateHUDs(); }
             else { renderOppHandUI(); updateHUDs(); }
-            toast(`🦅 <b>${injured.name} · ${injured.skillName}</b> — 奪取對手 1 張手牌！`, 'skill');
+            toast(`🦅 <b>${injured.name} · 奸雄</b> — 受傷奪取對手 1 張手牌！`, 'skill');
         }
     }
+    // 突陣（張遼）：攻擊命中觸發，不在此（受傷端）處理 — 見 handleOppCardClick / _resolveDefenseTake
     if (injured.skillName === '遺計' && isPlayerInjured) {
         drawCard(true); drawCard(true);
         toast(`📜 <b>郭嘉 · 遺計</b> — 受傷連抽 2 張！`, 'skill');
@@ -2176,6 +2178,15 @@ function handleOppCardClick(card, zone, idx) {
         _SFX.attack();
         execDamageResponse(card, false);
 
+        // 突陣（張遼）：玩家攻擊命中時，從對手手牌奪取 1 張（攻擊觸發，修正原先誤放在受傷端）
+        if (attacker && attacker.skillName === '突陣' && dmg > 0 && oppHandData.length > 0) {
+            const _tdi = Math.floor(Math.random() * oppHandData.length);
+            const _taken = oppHandData.splice(_tdi, 1)[0];
+            oppBoard.discard.push(_taken);
+            renderOppHandUI(); updateHUDs();
+            toast(`🦅 <b>${attacker.name} · 突陣</b> — 突陣命中，奪取對手手牌！`, 'skill');
+        }
+
         if (card.hp > 0) {
             toast(`⚔ 命中！<b>${card.name}</b> 受到 ${dmg} 點傷害！(兵力 ${card.hp}/${card.maxHp})`, 'attack');
             // 籌謀（李善長）：命中後補抽 1 張
@@ -2195,9 +2206,10 @@ function handleOppCardClick(card, zone, idx) {
                 const extras = [...oppBoard.active, ...oppBoard.bench].filter(u => u && u !== card && u.hp > 0);
                 if (extras.length > 0) {
                     const extraTgt = extras[Math.floor(Math.random() * extras.length)];
-                    const ei = oppBoard.active.indexOf(extraTgt) !== -1 ? oppBoard.active.indexOf(extraTgt) : 0;
+                    const exZone = oppBoard.active.indexOf(extraTgt) !== -1 ? 'active' : 'bench';
+                    const ei = exZone === 'active' ? oppBoard.active.indexOf(extraTgt) : oppBoard.bench.indexOf(extraTgt);
                     extraTgt.hp = Math.max(0, extraTgt.hp - 25);
-                    spawnDmgPopup(25, getSlotEl('opp-active-zone', ei));
+                    spawnDmgPopup(25, getSlotEl(`opp-${exZone}-zone`, ei));
                     toast(`🔥 <b>火燒連營</b> — 連環引燃，波及 ${extraTgt.name}！`, 'danger', 2000);
                 }
             }
@@ -3001,6 +3013,16 @@ function _resolveDefenseTake(targetCard, zoneIdx, zone, dmg) {
     spawnDmgPopup(dmg, slotEl);
     _SFX.attack();
     execDamageResponse(targetCard, true);
+
+    // 突陣（張遼）：AI 攻擊命中時，從玩家手牌奪取 1 張
+    const _aiZhaoLiao = window._aiLastAttacker;
+    if (_aiZhaoLiao && _aiZhaoLiao.skillName === '突陣' && dmg > 0 && myHand.length > 0) {
+        const _atdi = Math.floor(Math.random() * myHand.length);
+        const _atkn = myHand.splice(_atdi, 1)[0];
+        myBoard.discard.push(_atkn);
+        renderHand(); updateHUDs();
+        toast(`🦅 <b>${_aiZhaoLiao.name} · 突陣</b> — 突陣命中，奪取你的手牌！`, 'danger');
+    }
 
     // 驍勇（李文忠）：主公受到傷害時，立刻對攻擊者發起反擊
     if (targetCard.type === '君王' && dmg > 0 && targetCard.hp > 0) {

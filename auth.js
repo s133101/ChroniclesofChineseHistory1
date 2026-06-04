@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  華夏風雲錄 — auth.js
 //  帳號驗證系統（Firebase Realtime Database）
 //  Copyright © 2026 linus622wang@gmail.com
@@ -329,7 +329,7 @@ const Auth = (() => {
             elo: 1200,   // ELO 初始積分
             wins: 0,
             losses: 0,
-            silver: 100  // 新手銀兩
+            silver: 100  // 新手仙石
         });
         _fw?.logDbAccess('WRITE', '/users/' + uname, uname);
         if (!userOk) return {ok: false, err: '帳號建立失敗，請稍後再試'};
@@ -437,7 +437,7 @@ const Auth = (() => {
         return { winnerNew: winnerElo + delta, loserNew: loserElo - delta, delta };
     }
 
-    // 對局結束後更新雙方 ELO、勝敗數、銀兩
+    // 對局結束後更新雙方 ELO、勝敗數、仙石
     async function recordGameResult(winnerUsername, loserUsername) {
         try {
             const [wData, lData] = await Promise.all([
@@ -459,7 +459,7 @@ const Auth = (() => {
                 _fbPatch('/users/' + loserUsername, {
                     elo:    Math.max(800, loserNew), // 最低 800 分
                     losses: (lData.losses || 0) + 1,
-                    silver: (lData.silver || 0) + 10  // 敗者也有少量銀兩
+                    silver: (lData.silver || 0) + 10  // 敗者也有少量仙石
                 })
             ]);
 
