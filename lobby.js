@@ -2503,6 +2503,9 @@
         // 返回大廳時確保戰鬥 Modal 已關閉
         const bm = document.getElementById('battle-modal');
         if (bm) bm.classList.add('hidden');
+        // 新大廳：隱藏舊玻璃側欄（已整合進右欄）
+        const sidebar = document.getElementById('social-sidebar');
+        if (sidebar) sidebar.style.display = 'none';
         // 房間頻道：每場結束返回大廳時清除（下次切換到房間頻道會自動刷新）
         localStorage.removeItem('hua_chat_room');
         // 🛡 返回大廳時刷新防火牆指示燈 + 記錄操作

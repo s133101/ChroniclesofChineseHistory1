@@ -3719,6 +3719,10 @@ body {
    大廳 v2（三角洲風格）
    ============================================================ */
 
+/* 大廳顯示時：隱藏舊玻璃側欄 */
+#lobby-screen:not(.hidden) ~ #social-sidebar,
+body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important; }
+
 /* 大廳根容器：全螢幕 */
 #lobby-screen {
     position: fixed; inset: 0;
