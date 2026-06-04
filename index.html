@@ -369,26 +369,110 @@
 </div><!-- end pm-wrap -->
 </div><!-- end profile-modal -->
 
-<!-- 大廳畫面 -->
+<!-- ════════ 大廳畫面（三角洲風格）════════ -->
 <div id="lobby-screen" class="hidden">
-    <div class="lobby-wrap">
-        <div class="lobby-logo-area">
-            <span class="loading-dragon" style="font-size:72px;">🐉</span>
-            <h1 class="lobby-title">華夏風雲錄</h1>
-            <p class="lobby-subtitle">千古英雄 · 全球對決</p>
-            <div id="lobby-silver-display" style="color:var(--gold); font-weight:900; font-size:20px; margin-top:10px; text-shadow:0 0 10px rgba(212,175,55,0.5);">💰 當前餘額: 0 兩</div>
-        </div>
-        <div class="lobby-card" style="margin-top:0;">
-            <div style="display:flex; gap:10px; margin-bottom:15px;">
-                <button id="btn-gacha-open" class="lobby-btn" style="flex:2; background:linear-gradient(135deg, #8b0000, #b22222); color:#ffd700; border-color:#d4af37; margin:0;">⛩️ 點將臺 (招募名將)</button>
-                <button id="btn-library-open" class="lobby-btn" style="flex:1; background:#333; color:var(--gold); border-color:var(--gold); margin:0;" onclick="window._openLibrary()">🏟️ 牌庫</button>
+
+    <!-- ① 頂部導覽列 -->
+    <div class="lby-topbar">
+        <div class="lby-top-left">
+            <div id="player-avatar-btn" class="player-avatar-btn hidden" onclick="window._openProfileModal()" style="position:static;">
+                <img id="player-avatar-img" src="" alt="" class="player-avatar-img hidden">
+                <span id="player-avatar-icon" class="player-avatar-icon">👤</span>
+                <span id="player-avatar-name" class="player-avatar-name">玩家</span>
             </div>
-            <button id="btn-tutorial" class="lobby-btn" onclick="window._startTutorial()" style="background:linear-gradient(135deg, #1a2a3a, #163050); color:#87ceeb; border-color:#1e4060; margin-bottom:8px;">🎓 新手教學（互動式入門）</button>
-            <button id="btn-battle-open" class="lobby-btn" onclick="window._openBattleModal()" style="background:linear-gradient(135deg,#5c0000,#8b0000); color:#ffd700; border-color:#c0392b; font-size:17px; font-weight:900; letter-spacing:3px; padding:18px;">⚔️ 戰　鬥</button>
-            <button id="btn-spectate" class="lobby-btn hidden" onclick="window._openSpectateModal()" style="background:linear-gradient(135deg, #1a1a3a, #2d2d6a); color:#aaaaff; border-color:#2d2d6a; margin-top:8px;">🔭 觀戰（旁觀進行中的對局）</button>
+            <div id="fw-indicator" onclick="window._openSecurityDashboard?.()" style="cursor:pointer;">
+                <div id="fw-status-light" style="width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);"></div>
+                <span id="fw-status-label" style="font-size:11px;color:#00ff88;font-weight:700;letter-spacing:1px;">安全</span>
+            </div>
+        </div>
+        <nav class="lby-top-nav">
+            <button id="btn-gacha-open"  class="lby-nav-btn">⛩️ 點將臺</button>
+            <button onclick="window._openLibrary()" class="lby-nav-btn">📚 牌庫</button>
+            <button onclick="window._openSecurityDashboard?.()" id="btn-monitor" class="lby-nav-btn hidden">🛡 監控</button>
+        </nav>
+        <div class="lby-top-right">
+            <div id="lobby-silver-display" class="lby-silver">💰 <span id="lby-silver-val">0</span> 兩</div>
         </div>
     </div>
-</div>
+
+    <!-- ② 主體 -->
+    <div class="lby-body">
+
+        <!-- 左側欄 -->
+        <aside class="lby-left">
+            <div class="lby-player-card">
+                <div class="lby-player-avatar" onclick="window._openProfileModal()">
+                    <img id="lby-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    <span id="lby-avatar-icon" style="font-size:36px;">👤</span>
+                </div>
+                <div class="lby-player-name" id="lby-player-name">玩家</div>
+                <div class="lby-player-stats">
+                    <div class="lby-stat"><span class="lby-stat-val" id="lby-elo-val">1200</span><span class="lby-stat-lbl">ELO</span></div>
+                    <div class="lby-stat-sep"></div>
+                    <div class="lby-stat"><span class="lby-stat-val" id="lby-silver-left">0</span><span class="lby-stat-lbl">銀兩</span></div>
+                </div>
+            </div>
+
+            <div class="lby-quick-btns">
+                <button id="btn-tutorial" class="lby-quick-btn" onclick="window._startTutorial()">
+                    <span class="lby-qb-icon">🎓</span>
+                    <span class="lby-qb-label">新手教學</span>
+                </button>
+                <button id="btn-spectate" class="lby-quick-btn hidden" onclick="window._openSpectateModal()">
+                    <span class="lby-qb-icon">🔭</span>
+                    <span class="lby-qb-label">觀戰</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 中央展示區 -->
+        <div class="lby-center">
+            <div class="lby-center-art">
+                <div class="lby-center-logo">🐉</div>
+                <h1 class="lby-center-title">華夏風雲錄</h1>
+                <p class="lby-center-sub">千古英雄 · 全球對決</p>
+            </div>
+        </div>
+
+        <!-- 右側欄 -->
+        <aside class="lby-right">
+            <!-- 聊天/社交側欄縮小版 -->
+            <div class="lby-right-social">
+                <div class="lby-social-tabs">
+                    <button class="lby-stab active" onclick="window._switchLobbyTab?.('global',this)">🏠 全域</button>
+                    <button class="lby-stab" onclick="window._switchLobbyTab?.('room',this)">⚔️ 房間</button>
+                    <button class="lby-stab" onclick="window._switchLobbyTab?.('friend',this)">👤 好友</button>
+                </div>
+                <div id="chat-messages" class="lby-chat-messages"></div>
+                <div class="lby-chat-input-row">
+                    <input id="chat-input" class="lby-chat-input" placeholder="運籌帷幄...">
+                    <button id="btn-chat-send" class="lby-chat-send">發送</button>
+                </div>
+            </div>
+
+            <!-- 模式選擇 + 開戰按鈕 -->
+            <div class="lby-action-panel">
+                <div class="lby-mode-row">
+                    <button id="btn-vs-ai" class="lby-mode-btn">
+                        <span>🤖</span> AI 對決
+                    </button>
+                    <button id="btn-matchmaking" class="lby-mode-btn lby-mode-pvp">
+                        <span>⚔️</span> 配對 PVP
+                    </button>
+                </div>
+                <div class="lby-room-row">
+                    <button id="btn-create-room" class="lby-room-btn">🌐 建立房間</button>
+                    <input id="join-code-input" maxlength="5" placeholder="5位代碼" class="lby-join-input">
+                    <button id="btn-join-room" class="lby-join-btn">加入</button>
+                </div>
+                <div id="lobby-error" class="hidden" style="color:#e74c3c;font-size:12px;text-align:center;padding:4px 0;"></div>
+            </div>
+        </aside>
+
+    </div><!-- end lby-body -->
+
+    <!-- ③ 等待室（隱藏） -->
+</div><!-- end lobby-screen -->
 
 <!-- ════════════════════════════════════════════════════════════
      戰鬥模式選擇 Modal

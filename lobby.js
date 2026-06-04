@@ -2148,14 +2148,33 @@
     }
 
     function _updateHUD() {
+        const s = window.playerSilver;
         const HUD_ELS = {
-            'lobby-silver-display': '💰 當前餘額: ' + window.playerSilver + ' 兩',
-            'gacha-silver-val': window.playerSilver,
-            'btn-publish-board': '發布皇榜 - 當前餘額: ' + window.playerSilver
+            'lobby-silver-display': '💰 當前餘額: ' + s + ' 兩',
+            'lby-silver-val':       s,
+            'lby-silver-left':      s,
+            'gacha-silver-val':     s,
+            'btn-publish-board':    '發布皇榜 - 當前餘額: ' + s
         };
         for (const [id, val] of Object.entries(HUD_ELS)) {
             const el = document.getElementById(id);
             if (el) el.textContent = val;
+        }
+        // 新版左側欄玩家名稱 + 頭像
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        if (me) {
+            const nameEl = document.getElementById('lby-player-name');
+            if (nameEl) nameEl.textContent = me.nickname || me.username;
+            const eloEl  = document.getElementById('lby-elo-val');
+            if (eloEl)  eloEl.textContent = me.elo || 1200;
+            // 同步頭像
+            const lbyAvImg  = document.getElementById('lby-avatar-img');
+            const lbyAvIcon = document.getElementById('lby-avatar-icon');
+            if (me.avatar && lbyAvImg) {
+                lbyAvImg.src = me.avatar;
+                lbyAvImg.style.display = 'block';
+                if (lbyAvIcon) lbyAvIcon.style.display = 'none';
+            }
         }
     }
     window._updateHUD = _updateHUD;

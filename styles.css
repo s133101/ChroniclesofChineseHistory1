@@ -3716,6 +3716,284 @@ body {
 .elo-badge.silver   { border-color: #c0c0c0; color: #c0c0c0; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); }
 
 /* ============================================================
+   大廳 v2（三角洲風格）
+   ============================================================ */
+
+/* 大廳根容器：全螢幕 */
+#lobby-screen {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    background: #080c10;
+    overflow: hidden;
+    font-family: 'Noto Serif TC', 'Microsoft JhengHei', serif;
+}
+#lobby-screen.hidden { display: none !important; }
+
+/* ── 頂部導覽列 ─────────────────────────── */
+.lby-topbar {
+    display: flex; align-items: center;
+    padding: 0 16px;
+    height: 52px; flex-shrink: 0;
+    background: rgba(5,8,14,0.95);
+    border-bottom: 1px solid rgba(212,175,55,0.12);
+    gap: 12px;
+    z-index: 10;
+}
+.lby-top-left {
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+}
+.lby-top-nav {
+    display: flex; gap: 4px;
+    flex: 1; justify-content: center;
+}
+.lby-nav-btn {
+    background: none; border: none;
+    color: #666; font-size: 13px; font-weight: 700;
+    padding: 8px 16px; border-radius: 6px;
+    cursor: pointer; font-family: inherit; letter-spacing: 1px;
+    transition: all .18s;
+}
+.lby-nav-btn:hover { color: #d4af37; background: rgba(212,175,55,0.07); }
+.lby-top-right { flex-shrink: 0; }
+.lby-silver {
+    font-size: 13px; font-weight: 900;
+    color: #d4af37; letter-spacing: 1px;
+}
+
+/* ── 主體 ───────────────────────────────── */
+.lby-body {
+    flex: 1; display: flex;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* ── 左側欄 ─────────────────────────────── */
+.lby-left {
+    width: 200px; flex-shrink: 0;
+    background: rgba(5,8,14,0.92);
+    border-right: 1px solid rgba(212,175,55,0.08);
+    display: flex; flex-direction: column;
+    padding: 20px 14px;
+    gap: 16px; overflow-y: auto;
+}
+
+/* 玩家卡片 */
+.lby-player-card {
+    background: rgba(212,175,55,0.05);
+    border: 1px solid rgba(212,175,55,0.15);
+    border-radius: 12px;
+    padding: 16px 12px;
+    text-align: center;
+}
+.lby-player-avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(212,175,55,0.4);
+    background: #1a1a2e;
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; cursor: pointer;
+    transition: border-color .2s;
+}
+.lby-player-avatar:hover { border-color: #d4af37; }
+.lby-player-name {
+    font-size: 14px; font-weight: 900;
+    color: #d4af37; letter-spacing: 1px;
+    margin-bottom: 10px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lby-player-stats {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.lby-stat { text-align: center; }
+.lby-stat-val { display: block; font-size: 16px; font-weight: 900; color: #fff; }
+.lby-stat-lbl { display: block; font-size: 10px; color: #555; letter-spacing: 1px; margin-top: 2px; }
+.lby-stat-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.08); }
+
+/* 快捷按鈕 */
+.lby-quick-btns { display: flex; flex-direction: column; gap: 8px; }
+.lby-quick-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #888; font-size: 13px; font-family: inherit;
+    cursor: pointer; transition: all .18s; text-align: left;
+}
+.lby-quick-btn:hover { background: rgba(212,175,55,0.07); border-color: rgba(212,175,55,0.2); color: #d4af37; }
+.lby-qb-icon { font-size: 18px; }
+.lby-qb-label { font-weight: 700; letter-spacing: 1px; }
+
+/* ── 中央展示區 ─────────────────────────── */
+.lby-center {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 60%, rgba(180,80,0,0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 50% 80%, rgba(212,175,55,0.08) 0%, transparent 60%),
+        linear-gradient(180deg, #080c10 0%, #0e1018 50%, #080c10 100%);
+}
+.lby-center::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(212,175,55,0.02) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(212,175,55,0.02) 40px);
+}
+.lby-center-art {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -55%);
+    text-align: center;
+    z-index: 2;
+}
+.lby-center-logo {
+    font-size: 80px;
+    filter: drop-shadow(0 0 30px rgba(212,175,55,0.4));
+    margin-bottom: 12px;
+    animation: lbyFloat 4s ease-in-out infinite;
+}
+@keyframes lbyFloat {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-12px); }
+}
+.lby-center-title {
+    font-size: 42px; font-weight: 900;
+    letter-spacing: 8px;
+    background: linear-gradient(135deg, #8b6000, #d4af37, #fff8dc, #d4af37);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(212,175,55,0.3));
+    margin-bottom: 8px;
+}
+.lby-center-sub {
+    font-size: 13px; letter-spacing: 4px;
+    color: #3a2a10;
+}
+
+/* ── 右側欄 ─────────────────────────────── */
+.lby-right {
+    width: 300px; flex-shrink: 0;
+    background: rgba(5,8,14,0.92);
+    border-left: 1px solid rgba(212,175,55,0.08);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+
+/* 社交/聊天區 */
+.lby-right-social {
+    flex: 1; display: flex; flex-direction: column;
+    min-height: 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.lby-social-tabs {
+    display: flex; gap: 2px;
+    padding: 8px 10px 0;
+    flex-shrink: 0;
+}
+.lby-stab {
+    flex: 1; padding: 7px 0;
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    color: #555; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; letter-spacing: 1px;
+    transition: all .18s;
+}
+.lby-stab:hover { color: #aaa; }
+.lby-stab.active { color: #d4af37; border-bottom-color: #d4af37; }
+.lby-chat-messages {
+    flex: 1; overflow-y: auto;
+    padding: 8px 12px; min-height: 0;
+    font-size: 12px; line-height: 1.7;
+    scrollbar-width: thin; scrollbar-color: #1a1a1a transparent;
+}
+.lby-chat-input-row {
+    display: flex; gap: 6px;
+    padding: 8px 10px;
+    flex-shrink: 0;
+}
+.lby-chat-input {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; padding: 8px 10px;
+    color: #fff; font-size: 12px; font-family: inherit;
+    outline: none; transition: border-color .2s;
+}
+.lby-chat-input:focus { border-color: rgba(212,175,55,0.3); }
+.lby-chat-send {
+    padding: 8px 14px; border-radius: 6px;
+    background: rgba(212,175,55,0.12);
+    border: 1px solid rgba(212,175,55,0.25);
+    color: #d4af37; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: background .2s;
+}
+.lby-chat-send:hover { background: rgba(212,175,55,0.22); }
+
+/* 行動面板 */
+.lby-action-panel {
+    padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+}
+.lby-mode-row { display: flex; gap: 8px; }
+.lby-mode-btn {
+    flex: 1; padding: 12px 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; color: #888;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: all .2s; display: flex;
+    align-items: center; justify-content: center; gap: 6px;
+}
+.lby-mode-btn:hover {
+    background: rgba(212,175,55,0.08);
+    border-color: rgba(212,175,55,0.3); color: #d4af37;
+}
+.lby-mode-pvp:hover {
+    background: rgba(45,200,45,0.08);
+    border-color: rgba(45,200,45,0.3); color: #7dff7d;
+}
+.lby-room-row { display: flex; gap: 6px; align-items: stretch; }
+.lby-room-btn {
+    flex: 1; padding: 10px 8px;
+    background: rgba(30,60,160,0.15);
+    border: 1px solid rgba(30,60,200,0.25);
+    border-radius: 8px; color: #8ab4f8;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all .2s;
+}
+.lby-room-btn:hover { background: rgba(30,60,160,0.28); }
+.lby-join-input {
+    width: 80px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 8px 6px;
+    color: #fff; font-size: 14px;
+    text-align: center; font-family: monospace; letter-spacing: 3px;
+    outline: none;
+}
+.lby-join-btn {
+    padding: 8px 12px; border-radius: 6px;
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.25);
+    color: #d4af37; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: background .2s;
+}
+.lby-join-btn:hover { background: rgba(212,175,55,0.2); }
+
+/* 手機版 */
+@media (max-width: 768px) {
+    .lby-left { display: none; }
+    .lby-right { width: 100%; border-left: none; }
+    .lby-center { display: none; }
+    #lobby-screen { flex-direction: column; }
+}
+
+/* ============================================================
    Phase 2 — 升星 / 成就 / 賽季
    ============================================================ */
 
