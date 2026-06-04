@@ -625,6 +625,40 @@
     // 初始化顯示
     _updateCurModeDisplay();
 
+    // 新大廳右欄 tab 切換（直接操作，不依賴舊側欄 DOM）
+    window._switchLobbyTab = function(mode, btn) {
+        // 更新 tab 視覺
+        document.querySelectorAll('.lby-stab').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        const msgArea    = document.getElementById('chat-messages');
+        const friendArea = document.getElementById('friend-list-area');
+
+        if (mode === 'friend') {
+            // 好友模式：顯示好友列表在聊天區
+            if (friendArea && msgArea) {
+                if (!msgArea.contains(friendArea)) msgArea.prepend(friendArea);
+                friendArea.classList.remove('hidden');
+            }
+            if (typeof window.selectFriend === 'function' && !window._targetFriend) {
+                // 若尚未選好友，先渲染好友列表
+                if (typeof window._openFriendsList === 'function') window._openFriendsList();
+            }
+        } else {
+            if (friendArea) friendArea.classList.add('hidden');
+        }
+
+        // 渲染對應歷史訊息
+        if (typeof window._renderChatHistory === 'function') {
+            window._renderChatHistory(mode);
+        }
+
+        // 同步舊系統狀態
+        if (typeof window.switchChatMode === 'function') {
+            window.switchChatMode(mode);
+        }
+    };
+
     // Tab 切換
     window._pmTab = function(tabId, btn) {
         document.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
@@ -858,6 +892,7 @@
     function _setupSocialCenter() {
         const chatInput = document.getElementById('chat-input');
         const btnSend = document.getElementById('btn-send-chat');
+        // 新大廳：id="chat-messages"；舊側欄已改名 chat-messages-sidebar
         const chatMessages = document.getElementById('chat-messages');
 
         // ── 暱稱初始化 ──
