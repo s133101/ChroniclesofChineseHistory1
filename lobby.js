@@ -458,8 +458,7 @@
             _avatarBtn.classList.remove('hidden');
             _avatarBtn.style.display = 'flex'; // 強制顯示，防止 hidden 殘留
         }
-        const _achBtn = document.getElementById('btn-achievements');
-        if (_achBtn) _achBtn.classList.remove('hidden');
+        // 成就已移至頭像視圖，不再獨立顯示按鈕
         // 監控面板按鈕：僅 claude 帳號顯示
         const _monBtn = document.getElementById('btn-monitor');
         if (_monBtn) {
