@@ -4360,12 +4360,14 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
     z-index: 20;
 }
 
-/* 第一行：全域聊天預覽（細條，像三角洲底部聊天行）*/
+/* 第一行：全域聊天預覽（寬度只涵蓋左側按鈕區）*/
 .lby-bb-row1 {
     display: flex; align-items: center;
     height: 30px;
     border-bottom: 1px solid rgba(255,255,255,0.04);
     padding: 0 12px;
+    width: fit-content; /* 不撐滿整行 */
+    max-width: 400px;   /* 最寬與牌庫/觀戰對齊 */
 }
 
 /* 第二行：快捷功能大按鈕 */
@@ -4390,10 +4392,10 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
 .lby-bb-icon { font-size: 26px; }
 .lby-bb-lbl { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
 
-/* 通訊入口（細條版）*/
+/* 通訊入口（細條版，寬度跟隨內容）*/
 .lby-bb-comm-btn {
-    flex: 1; display: flex; align-items: center; gap: 8px;
-    padding: 0 12px; height: 100%;
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 100%; width: 340px;
     background: none; border: none;
     cursor: pointer; font-family: inherit; transition: background .18s;
     text-align: left;
