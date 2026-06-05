@@ -3723,7 +3723,7 @@ body {
 #lobby-screen:not(.hidden) ~ #social-sidebar,
 body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important; }
 
-/* ── 頂部導覽列 ──────────────────────────── */
+/* ── 頂部導覽列（參考三角洲間距）──────────── */
 .lby-topbar {
     height: 68px !important;
     padding: 0 !important;
@@ -3731,21 +3731,24 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
 .lby-top-right {
     display: flex !important;
     align-items: center !important;
+    padding-right: 24px !important;
+    gap: 2px !important;
 }
 .lby-top-icon-btn {
-    padding: 8px 20px !important;
-    min-width: 72px !important;
-    gap: 4px !important;
+    padding: 8px 16px !important;
+    min-width: 68px !important;
+    gap: 5px !important;
 }
-.lby-top-icon-btn > span:first-child { font-size: 24px !important; }
-.lby-top-icon-btn > span:nth-child(2) { font-size: 12px !important; letter-spacing: 1px; }
+.lby-top-icon-btn > span:first-child { font-size: 22px !important; }
+.lby-top-icon-btn > span:nth-child(2) { font-size: 11px !important; letter-spacing: 1px; }
 /* 頂部分隔線 */
 .lby-topbar-sep {
-    width: 1px; height: 28px; background: rgba(255,255,255,0.08); margin: 0 4px; flex-shrink: 0;
+    width: 1px; height: 28px; background: rgba(255,255,255,0.1);
+    margin: 0 8px; flex-shrink: 0;
 }
 /* 銀兩顯示 */
 .lby-silver {
-    font-size: 14px !important;
+    font-size: 14px !important; padding: 0 16px 0 8px !important;
     font-weight: 900; color: #d4af37; letter-spacing: 1px;
     white-space: nowrap;
 }
@@ -4370,25 +4373,27 @@ body:has(#lobby-screen:not(.hidden)) #social-sidebar { display: none !important;
     max-width: 400px;   /* 最寬與牌庫/觀戰對齊 */
 }
 
-/* 第二行：快捷功能大按鈕 */
+/* 第二行：快捷功能大按鈕（參考三角洲底部）*/
 .lby-bb-row2 {
     display: flex; align-items: stretch;
-    height: 68px;
-    padding-left: 12px;
+    height: 72px;
+    padding-left: 20px;
+    gap: 4px;
 }
 
 /* 快捷按鈕 */
 .lby-bb-btns {
-    display: flex; align-items: stretch;
+    display: flex; align-items: stretch; gap: 4px;
 }
 .lby-bb-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 5px; padding: 8px 28px;
-    background: none; border: none; border-right: 1px solid rgba(255,255,255,0.05);
+    gap: 5px; padding: 8px 26px;
+    background: none; border: none;
+    border-radius: 8px;
     color: #666; cursor: pointer; font-family: inherit;
-    transition: all .18s; min-width: 80px;
+    transition: all .18s; min-width: 90px;
 }
-.lby-bb-btn:hover { color: #d4af37; background: rgba(212,175,55,0.06); }
+.lby-bb-btn:hover { color: #d4af37; background: rgba(212,175,55,0.08); }
 .lby-bb-icon { font-size: 26px; }
 .lby-bb-lbl { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
 

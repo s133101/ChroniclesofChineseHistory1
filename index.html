@@ -254,21 +254,78 @@
 </div>
 
 <!-- 玩家設定 Modal（三角洲風格） -->
+<!-- ══ 簡化頭像視圖（點頭像開啟）══ -->
+<div id="profile-simple-modal" class="profile-modal hidden">
+<div class="pm-wrap" style="width:min(560px,95vw);height:min(580px,88vh);">
+    <div class="pm-topbar">
+        <button class="pm-back-btn" onclick="window._closeProfileModal()">← 返回</button>
+        <span class="pm-topbar-title" id="psm-player-title">玩家</span>
+        <button class="pm-close-btn" onclick="window._closeProfileModal()">✕</button>
+    </div>
+    <div class="pm-body">
+        <nav class="pm-nav">
+            <button class="pm-nav-item active" data-tab="psm-profile" onclick="window._psmTab('psm-profile',this)">玩家資料</button>
+            <button class="pm-nav-item" data-tab="psm-history" onclick="window._psmTab('psm-history',this)">查看戰績</button>
+        </nav>
+        <div class="pm-content">
+            <!-- 玩家資料 -->
+            <div id="pm-tab-psm-profile" class="pm-tab active">
+                <div class="pm-tab-title">玩家資料</div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">🖼 頭像</div>
+                    <div class="pm-avatar-row">
+                        <div class="pm-avatar-big" id="profile-avatar-preview">
+                            <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            <span id="profile-avatar-preview-icon" style="font-size:52px;">👤</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <label class="pm-btn-outline" for="profile-avatar-upload">📁 選擇圖片</label>
+                            <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
+                            <button class="pm-btn-primary" id="profile-avatar-save-btn">儲存頭像</button>
+                        </div>
+                    </div>
+                    <div id="profile-avatar-msg" class="profile-msg hidden"></div>
+                </div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">🏷️ 名號</div>
+                    <input type="text" id="nickname-input" class="pm-input" maxlength="12" placeholder="請輸入名號">
+                    <div id="profile-nickname-msg" class="profile-msg hidden"></div>
+                    <button class="pm-btn-primary" id="profile-nickname-save-btn">儲存名號</button>
+                </div>
+                <div class="pm-field-group">
+                    <div class="pm-field-label">💬 個人留言</div>
+                    <textarea id="profile-message" class="pm-textarea" placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
+                    <div id="profile-message-msg" class="profile-msg hidden"></div>
+                    <button class="pm-btn-primary" id="profile-msg-save-btn">儲存留言</button>
+                </div>
+            </div>
+            <!-- 查看戰績 -->
+            <div id="pm-tab-psm-history" class="pm-tab">
+                <div class="pm-tab-title">查看戰績</div>
+                <div id="psm-history-list" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+                    <div style="color:#444;text-align:center;padding:40px;font-size:13px;">載入中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ══ 設定 Modal（⚙️按鈕開啟）══ -->
 <div id="profile-modal" class="profile-modal hidden">
 <div class="pm-wrap">
 
     <!-- ── 頂部列 ── -->
     <div class="pm-topbar">
-        <button class="pm-back-btn" onclick="window._closeProfileModal()">← 返回</button>
-        <span class="pm-topbar-title">玩家設定</span>
-        <button class="pm-close-btn" onclick="window._closeProfileModal()">✕</button>
+        <button class="pm-back-btn" onclick="window._closeSettingsModal()">← 返回</button>
+        <span class="pm-topbar-title">設定</span>
+        <button class="pm-close-btn" onclick="window._closeSettingsModal()">✕</button>
     </div>
 
     <div class="pm-body">
-        <!-- ── 左側導覽列 ── -->
+        <!-- ── 左側導覽列（設定：無玩家資料）── -->
         <nav class="pm-nav">
             <button class="pm-nav-item active" data-tab="mode" onclick="window._pmTab('mode',this)">模式切換</button>
-            <button class="pm-nav-item" data-tab="profile" onclick="window._pmTab('profile',this)">玩家資料</button>
             <button class="pm-nav-item" data-tab="password" onclick="window._pmTab('password',this)">更改密碼</button>
             <button class="pm-nav-item" data-tab="achievement" onclick="window._pmTab('achievement',this)">成就</button>
             <div class="pm-nav-spacer"></div>
@@ -299,41 +356,6 @@
                             <div class="pm-mode-desc">踏入洪荒世界，召喚天仙神將，以神力征服萬界。仙道爭霸，誰主沉浮。</div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- TAB：玩家資料 -->
-            <div id="pm-tab-profile" class="pm-tab">
-                <div class="pm-tab-title">玩家資料</div>
-                <!-- 頭像 -->
-                <div class="pm-field-group">
-                    <div class="pm-field-label">🖼 頭像</div>
-                    <div class="pm-avatar-row">
-                        <div class="pm-avatar-big" id="profile-avatar-preview">
-                            <img id="profile-avatar-preview-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
-                            <span id="profile-avatar-preview-icon" style="font-size:52px;">👤</span>
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            <label class="pm-btn-outline" for="profile-avatar-upload">📁 選擇圖片</label>
-                            <input type="file" id="profile-avatar-upload" accept="image/*" style="display:none;">
-                            <button class="pm-btn-primary" id="profile-avatar-save-btn">儲存頭像</button>
-                        </div>
-                    </div>
-                    <div id="profile-avatar-msg" class="profile-msg hidden"></div>
-                </div>
-                <!-- 名號 -->
-                <div class="pm-field-group">
-                    <div class="pm-field-label">🏷️ 名號</div>
-                    <input type="text" id="nickname-input" class="pm-input" maxlength="12" placeholder="請輸入名號">
-                    <div id="profile-nickname-msg" class="profile-msg hidden"></div>
-                    <button class="pm-btn-primary" id="profile-nickname-save-btn">儲存名號</button>
-                </div>
-                <!-- 個人留言 -->
-                <div class="pm-field-group">
-                    <div class="pm-field-label">💬 個人留言</div>
-                    <textarea id="profile-message" class="pm-textarea" placeholder="這個人暫無留言" maxlength="120" rows="3"></textarea>
-                    <div id="profile-message-msg" class="profile-msg hidden"></div>
-                    <button class="pm-btn-primary" id="profile-msg-save-btn">儲存留言</button>
                 </div>
             </div>
 
@@ -385,8 +407,8 @@
         <!-- 彈性空間 -->
         <div style="flex:1;"></div>
 
-        <!-- 右：點將臺 | 社交 | 郵件 | 💰 -->
-        <div class="lby-top-right" style="padding-right:20px;gap:4px;">
+        <!-- 右：點將臺 | 社交 | 郵件 | ⚙️設定 | 💰 -->
+        <div class="lby-top-right">
             <button id="btn-gacha-open" class="lby-top-icon-btn">
                 <span>⛩️</span><span>點將臺</span>
             </button>
@@ -398,8 +420,11 @@
                 <span>✉️</span><span>郵件</span>
                 <span id="lby-mail-badge" class="lby-badge hidden">!</span>
             </button>
+            <button class="lby-top-icon-btn" onclick="window._openSettingsModal()">
+                <span>⚙️</span><span>設定</span>
+            </button>
             <div class="lby-topbar-sep"></div>
-            <div class="lby-silver" style="padding:0 16px;">💰 <span id="lby-silver-val">0</span> 兩</div>
+            <div class="lby-silver">💰 <span id="lby-silver-val">0</span> 兩</div>
         </div>
     </div>
 

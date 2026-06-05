@@ -831,10 +831,12 @@
         }
     };
 
-    // Tab 切換
+    // Tab 切換（設定 modal 內部，不影響簡化視圖）
     window._pmTab = function(tabId, btn) {
-        document.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.pm-nav-item').forEach(b => b.classList.remove('active'));
+        const settingsModal = document.getElementById('profile-modal');
+        if (!settingsModal) return;
+        settingsModal.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
+        settingsModal.querySelectorAll('.pm-nav-item').forEach(b => b.classList.remove('active'));
         const tab = document.getElementById('pm-tab-' + tabId);
         if (tab) tab.classList.add('active');
         if (btn) btn.classList.add('active');
@@ -873,13 +875,65 @@
         }
     };
 
+    // ── 點頭像：開啟簡化視圖（玩家資料 + 戰績）──────────
     window._openProfileModal = function() {
+        const modal = document.getElementById('profile-simple-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        // 更新標題為實際暱稱
+        const me = typeof Auth !== 'undefined' ? Auth.current() : null;
+        const titleEl = document.getElementById('psm-player-title');
+        if (titleEl && me) titleEl.textContent = me.nickname || me.username || '玩家';
+        // 預設顯示玩家資料
+        window._psmTab('psm-profile', document.querySelector('.pm-nav-item[data-tab="psm-profile"]'));
+    };
+
+    // 簡化視圖 tab 切換
+    window._psmTab = function(tabId, btn) {
+        document.querySelectorAll('#profile-simple-modal .pm-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('#profile-simple-modal .pm-nav-item').forEach(b => b.classList.remove('active'));
+        const tab = document.getElementById('pm-tab-' + tabId);
+        if (tab) tab.classList.add('active');
+        if (btn) btn.classList.add('active');
+        if (tabId === 'psm-history') _renderBattleHistory();
+    };
+
+    // 戰績渲染
+    async function _renderBattleHistory() {
+        const listEl = document.getElementById('psm-history-list');
+        if (!listEl) return;
+        listEl.innerHTML = '<div style="color:#444;text-align:center;padding:20px;">載入中...</div>';
+        try {
+            const history = typeof Auth !== 'undefined' ? (await Auth.getBattleHistory() || []) : [];
+            if (!history.length) {
+                listEl.innerHTML = '<div style="color:#444;text-align:center;padding:40px;font-size:13px;">暫無戰績記錄</div>';
+                return;
+            }
+            listEl.innerHTML = history.slice(0, 20).map(r => {
+                const win   = r.result === 'win';
+                const date  = r.time ? new Date(r.time).toLocaleDateString('zh-TW') : '';
+                const mode  = r.mode === 'pvp' ? 'PvP' : 'AI';
+                return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size:20px;">${win?'🏆':'💀'}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px;font-weight:700;color:${win?'#d4af37':'#888'};">${win?'勝利':'敗北'} · ${mode}</div>
+                        <div style="font-size:11px;color:#444;margin-top:2px;">對手：${r.opponent||'—'} · 回合：${r.rounds||0} · ${date}</div>
+                    </div>
+                    <div style="font-size:12px;color:${win?'#7fff7f':'#ff8888'};font-weight:700;">${win?'+':'-'}${r.silver||0} 兩</div>
+                </div>`;
+            }).join('');
+        } catch { listEl.innerHTML = '<div style="color:#444;text-align:center;padding:40px;">載入失敗</div>'; }
+    }
+
+    // ── ⚙️設定按鈕：開啟系統設定 Modal ──────────────────
+    window._openSettingsModal = function() {
         const modal = document.getElementById('profile-modal');
         if (!modal) return;
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         // 預設顯示「模式切換」tab
-        window._pmTab('mode', document.querySelector('.pm-nav-item[data-tab="mode"]'));
+        window._pmTab('mode', document.querySelector('#profile-modal .pm-nav-item[data-tab="mode"]'));
 
         const user = Auth.current();
 
@@ -1000,6 +1054,12 @@
     };
 
     window._closeProfileModal = function() {
+        // 關閉簡化視圖
+        const simple = document.getElementById('profile-simple-modal');
+        if (simple) simple.classList.add('hidden');
+    };
+
+    window._closeSettingsModal = function() {
         const modal = document.getElementById('profile-modal');
         if (modal) modal.classList.add('hidden');
         ['profile-old-pwd','profile-new-pwd','profile-confirm-pwd'].forEach(id => {
