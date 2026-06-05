@@ -374,17 +374,23 @@
 
     <!-- ① 頂部導覽列 -->
     <div class="lby-topbar">
-        <div class="lby-top-left">
-            <!-- 安全監控 -->
-            <div id="fw-indicator" onclick="window._openSecurityDashboard?.()" style="cursor:pointer;display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;transition:background .18s;" onmouseover="this.style.background='rgba(0,255,136,0.07)'" onmouseout="this.style.background='none'">
-                <div id="fw-status-light" style="width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);flex-shrink:0;"></div>
-                <span id="fw-status-label" style="font-size:11px;color:#00ff88;font-weight:700;letter-spacing:1px;">安全監控</span>
+        <!-- 左：安全監控 -->
+        <div class="lby-top-left" style="padding-left:16px;">
+            <div id="fw-indicator" onclick="window._openSecurityDashboard?.()" style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;transition:background .18s;" onmouseover="this.style.background='rgba(0,255,136,0.07)'" onmouseout="this.style.background='none'">
+                <div id="fw-status-light" style="width:9px;height:9px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px rgba(0,255,136,0.6);flex-shrink:0;"></div>
+                <span id="fw-status-label" style="font-size:12px;color:#00ff88;font-weight:700;letter-spacing:1px;">安全監控</span>
             </div>
         </div>
-        <nav class="lby-top-nav">
-            <button id="btn-gacha-open" class="lby-nav-btn">⛩️ 點將臺</button>
-        </nav>
-        <div class="lby-top-right">
+
+        <!-- 彈性空間 -->
+        <div style="flex:1;"></div>
+
+        <!-- 右：點將臺 | 社交 | 郵件 | 💰 -->
+        <div class="lby-top-right" style="padding-right:20px;gap:4px;">
+            <button id="btn-gacha-open" class="lby-top-icon-btn">
+                <span>⛩️</span><span>點將臺</span>
+            </button>
+            <div class="lby-topbar-sep"></div>
             <button class="lby-top-icon-btn" onclick="window._openSocialPanel()">
                 <span>👥</span><span>社交</span>
             </button>
@@ -392,7 +398,8 @@
                 <span>✉️</span><span>郵件</span>
                 <span id="lby-mail-badge" class="lby-badge hidden">!</span>
             </button>
-            <div class="lby-silver">💰 <span id="lby-silver-val">0</span> 兩</div>
+            <div class="lby-topbar-sep"></div>
+            <div class="lby-silver" style="padding:0 16px;">💰 <span id="lby-silver-val">0</span> 兩</div>
         </div>
     </div>
 
