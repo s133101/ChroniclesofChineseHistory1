@@ -1302,10 +1302,7 @@ function execDamageResponse(injured, isPlayerInjured) {
         }
     }
     // 突陣（張遼）：攻擊命中觸發，不在此（受傷端）處理 — 見 handleOppCardClick / _resolveDefenseTake
-    if (injured.skillName === '遺計' && isPlayerInjured) {
-        drawCard(true); drawCard(true);
-        toast(`📜 <b>郭嘉 · 遺計</b> — 受傷連抽 2 張！`, 'skill');
-    }
+    // 遺計（郭嘉）：僅在陣亡時觸發（execOnDeath），不在受傷時重複觸發 — M-20 Fix
 }
 
 // ==============================================================
